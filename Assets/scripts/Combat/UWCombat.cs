@@ -5,6 +5,11 @@ public class UWCombat : Combat
 {
     public static UWCombat instance;
 
+    [Header("VR Pose Abstractions")]
+    [SerializeField] private MonoBehaviour interactionSourceBehaviour;
+
+    private IInteractionSource interactionSource;
+
     /// The melee weapon currently held by the player.
     public WeaponMelee currWeapon;
     /// The current ranged weapon held by the player
@@ -48,6 +53,44 @@ public class UWCombat : Combat
     private void Awake()
     {
         instance = this;
+        ResolveInteractionSource();
+    }
+
+    private void ResolveInteractionSource()
+    {
+        interactionSource = interactionSourceBehaviour as IInteractionSource;
+        if (interactionSource != null)
+        {
+            return;
+        }
+
+        interactionSource = FindAnyObjectByType<DesktopInteractionSource>(FindObjectsInactive.Include);
+        if (interactionSource == null)
+        {
+            var fallback = gameObject.AddComponent<DesktopInteractionSource>();
+            interactionSource = fallback;
+        }
+    }
+
+    private Ray GetAimRay()
+    {
+        if (interactionSource == null)
+        {
+            ResolveInteractionSource();
+        }
+
+        if (interactionSource != null)
+        {
+            return interactionSource.GetInteractionRay();
+        }
+
+        var fallbackCam = Camera.main;
+        if (fallbackCam != null)
+        {
+            return fallbackCam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+        }
+
+        return new Ray(transform.position, transform.forward);
     }
 
 
@@ -133,15 +176,7 @@ public class UWCombat : Combat
     {
         yield return new WaitForSeconds(0.4f);
 
-        Ray ray;
-        if (UWCharacter.Instance.MouseLookEnabled == true)
-        {
-            ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-        }
-        else
-        {
-            ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        }
+        Ray ray = GetAimRay();
 
         RaycastHit hit = new RaycastHit();
         if (Physics.Raycast(ray, out hit, weaponRange))
@@ -440,15 +475,7 @@ public class UWCombat : Combat
     {
         if (currentAmmo != null)
         {
-            Ray ray;
-            if (UWCharacter.Instance.MouseLookEnabled == true)
-            {
-                ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            }
-            else
-            {
-                ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            }
+            Ray ray = GetAimRay();
 
             RaycastHit hit = new RaycastHit();
             float dropRange = 0.5f;
