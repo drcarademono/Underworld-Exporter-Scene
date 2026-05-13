@@ -1,12 +1,17 @@
 #if UNITY_EDITOR
+using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Utilities;
 using UnityEngine.SceneManagement;
 using Unity.XR.CoreUtils;
 
 public static class SetupXRScene
 {
+    private const string ActionsAssetPath = "Assets/XRI/Actions/UnderworldXRActions.inputactions";
+
     [MenuItem("Tools/VR/Setup XR Origin In Active Scene")]
     public static void SetupInActiveScene()
     {
@@ -38,15 +43,88 @@ public static class SetupXRScene
             origin.Camera = camObj.GetComponent<Camera>();
         }
 
-        EnsureController(origin, "Left Controller", true);
-        EnsureController(origin, "Right Controller", false);
+        EnsureController(origin, "Left Controller");
+        EnsureController(origin, "Right Controller");
         EnsureInstaller(origin);
 
         EditorSceneManager.MarkSceneDirty(scene);
         Debug.Log("XR scene setup complete. Save scene to persist XR Origin/controller wiring.");
     }
 
-    private static void EnsureController(XROrigin origin, string controllerName, bool left)
+    [MenuItem("Tools/VR/Wire Default XR Controller Actions")]
+    public static void WireDefaultControllerActions()
+    {
+        var asset = LoadOrCreateActionsAsset();
+        var leftProvider = FindControllerProvider("Left Controller");
+        var rightProvider = FindControllerProvider("Right Controller");
+
+        if (leftProvider == null || rightProvider == null)
+        {
+            Debug.LogError("Could not find Left Controller or Right Controller with XRControllerPoseProvider. Run scene setup first.");
+            return;
+        }
+
+        AssignProviderActions(leftProvider, asset, "LeftTrigger", "LeftGrip", "LeftThumbstick", "LeftSecondary");
+        AssignProviderActions(rightProvider, asset, "RightTrigger", "RightGrip", "RightThumbstick", "RightSecondary");
+
+        EditorUtility.SetDirty(leftProvider);
+        EditorUtility.SetDirty(rightProvider);
+        Debug.Log("Default XR controller actions wired to XRControllerPoseProvider components.");
+    }
+
+    private static void AssignProviderActions(XRControllerPoseProvider provider, InputActionAsset asset, string trigger, string grip, string stick, string secondary)
+    {
+        var so = new SerializedObject(provider);
+        SetActionProperty(so.FindProperty("triggerAction"), asset, trigger);
+        SetActionProperty(so.FindProperty("gripAction"), asset, grip);
+        SetActionProperty(so.FindProperty("thumbstickAction"), asset, stick);
+        SetActionProperty(so.FindProperty("secondaryUseAction"), asset, secondary);
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private static void SetActionProperty(SerializedProperty property, InputActionAsset asset, string actionName)
+    {
+        var action = asset.FindAction(actionName, throwIfNotFound: true);
+        property.FindPropertyRelative("m_UseReference").boolValue = false;
+        property.FindPropertyRelative("m_Action").stringValue = action.ToString();
+    }
+
+    private static XRControllerPoseProvider FindControllerProvider(string controllerName)
+    {
+        var controller = GameObject.Find(controllerName);
+        return controller != null ? controller.GetComponent<XRControllerPoseProvider>() : null;
+    }
+
+    private static InputActionAsset LoadOrCreateActionsAsset()
+    {
+        var asset = AssetDatabase.LoadAssetAtPath<InputActionAsset>(ActionsAssetPath);
+        if (asset != null)
+        {
+            return asset;
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(ActionsAssetPath));
+        asset = ScriptableObject.CreateInstance<InputActionAsset>();
+        var map = new InputActionMap("XRControllers");
+
+        var leftTrigger = map.AddAction("LeftTrigger", InputActionType.Button, "<XRController>{LeftHand}/triggerPressed");
+        var rightTrigger = map.AddAction("RightTrigger", InputActionType.Button, "<XRController>{RightHand}/triggerPressed");
+        var leftGrip = map.AddAction("LeftGrip", InputActionType.Value, "<XRController>{LeftHand}/grip");
+        var rightGrip = map.AddAction("RightGrip", InputActionType.Value, "<XRController>{RightHand}/grip");
+        var leftThumb = map.AddAction("LeftThumbstick", InputActionType.Value, "<XRController>{LeftHand}/primary2DAxis");
+        var rightThumb = map.AddAction("RightThumbstick", InputActionType.Value, "<XRController>{RightHand}/primary2DAxis");
+        var leftSecondary = map.AddAction("LeftSecondary", InputActionType.Button, "<XRController>{LeftHand}/secondaryButton");
+        var rightSecondary = map.AddAction("RightSecondary", InputActionType.Button, "<XRController>{RightHand}/secondaryButton");
+
+        _ = leftTrigger; _ = rightTrigger; _ = leftGrip; _ = rightGrip; _ = leftThumb; _ = rightThumb; _ = leftSecondary; _ = rightSecondary;
+
+        asset.AddActionMap(map);
+        AssetDatabase.CreateAsset(asset, ActionsAssetPath);
+        AssetDatabase.SaveAssets();
+        return asset;
+    }
+
+    private static void EnsureController(XROrigin origin, string controllerName)
     {
         var existing = origin.transform.Find("Camera Offset/" + controllerName);
         GameObject controllerObj;
@@ -64,16 +142,7 @@ public static class SetupXRScene
         var provider = controllerObj.GetComponent<XRControllerPoseProvider>();
         if (provider == null)
         {
-            provider = Undo.AddComponent<XRControllerPoseProvider>(controllerObj);
-        }
-
-        if (left)
-        {
-            controllerObj.name = "Left Controller";
-        }
-        else
-        {
-            controllerObj.name = "Right Controller";
+            _ = Undo.AddComponent<XRControllerPoseProvider>(controllerObj);
         }
     }
 

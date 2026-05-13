@@ -5,6 +5,9 @@ public class XRControllerPoseProvider : MonoBehaviour, IAimPoseProvider, IViewPo
 {
     [SerializeField] private Transform poseTransform;
     [SerializeField] private InputActionProperty triggerAction;
+    [SerializeField] private InputActionProperty gripAction;
+    [SerializeField] private InputActionProperty thumbstickAction;
+    [SerializeField] private InputActionProperty secondaryUseAction;
 
     private Transform ActivePose => poseTransform != null ? poseTransform : transform;
 
@@ -15,6 +18,21 @@ public class XRControllerPoseProvider : MonoBehaviour, IAimPoseProvider, IViewPo
     public bool IsPrimaryUsePressed()
     {
         return triggerAction.action != null && triggerAction.action.WasPressedThisFrame();
+    }
+
+    public bool IsSecondaryUsePressed()
+    {
+        return secondaryUseAction.action != null && secondaryUseAction.action.WasPressedThisFrame();
+    }
+
+    public float GripValue()
+    {
+        return gripAction.action != null ? gripAction.action.ReadValue<float>() : 0f;
+    }
+
+    public Vector2 ThumbstickValue()
+    {
+        return thumbstickAction.action != null ? thumbstickAction.action.ReadValue<Vector2>() : Vector2.zero;
     }
 
     public Ray GetInteractionRay()
