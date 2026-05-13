@@ -1,76 +1,52 @@
 using UnityEngine;
 #if UNITY_XR_MANAGEMENT || UNITY_OPENXR || UNITY_EDITOR
 using Unity.XR.CoreUtils;
-using UnityEngine.SpatialTracking;
-using UnityEngine.XR;
-using UnityEngine.XR.Interaction.Toolkit;
 #endif
 
+/// <summary>
+/// Scene binding helper for XR. Intentionally avoids spawning rig objects at runtime;
+/// XR Origin/controllers should be authored in-scene.
+/// </summary>
 public class XRRuntimeRigInstaller : MonoBehaviour
 {
 #if UNITY_XR_MANAGEMENT || UNITY_OPENXR || UNITY_EDITOR
-    [SerializeField] private bool spawnIfMissing = true;
-    [SerializeField] private bool createEditorSimulator = true;
+    [SerializeField] private XROrigin sceneXrOrigin;
+    [SerializeField] private XRControllerPoseProvider leftControllerPoseProvider;
+    [SerializeField] private XRControllerPoseProvider rightControllerPoseProvider;
 
     private void Awake()
     {
-        EnsureXROrigin();
-#if UNITY_EDITOR
-        if (createEditorSimulator)
+        if (sceneXrOrigin == null)
         {
-            EnsureXRDeviceSimulator();
+            sceneXrOrigin = FindAnyObjectByType<XROrigin>(FindObjectsInactive.Include);
         }
-#endif
-    }
 
-    private static void EnsureXROrigin()
-    {
-        var origin = FindAnyObjectByType<XROrigin>();
-        if (origin != null)
+        if (sceneXrOrigin == null)
         {
+            Debug.LogWarning("XRRuntimeRigInstaller: No XROrigin found in-scene. Please add and wire an XR Origin in the Unity scene.");
             return;
         }
 
-        var originObj = new GameObject("XR Origin");
-        origin = originObj.AddComponent<XROrigin>();
-
-        var cameraOffset = new GameObject("Camera Offset");
-        cameraOffset.transform.SetParent(originObj.transform, false);
-        origin.CameraFloorOffsetObject = cameraOffset;
-
-        var cameraObj = new GameObject("Main Camera");
-        cameraObj.tag = "MainCamera";
-        cameraObj.transform.SetParent(cameraOffset.transform, false);
-        cameraObj.AddComponent<Camera>();
-        cameraObj.AddComponent<AudioListener>();
-        cameraObj.AddComponent<TrackedPoseDriver>();
-        origin.Camera = cameraObj.GetComponent<Camera>();
-
-        CreateController("Left Controller", cameraOffset.transform, XRNode.LeftHand);
-        CreateController("Right Controller", cameraOffset.transform, XRNode.RightHand);
-    }
-
-    private static void CreateController(string name, Transform parent, XRNode node)
-    {
-        var controller = new GameObject(name);
-        controller.transform.SetParent(parent, false);
-        controller.AddComponent<XRController>();
-        var pose = controller.AddComponent<TrackedPoseDriver>();
-        pose.SetPoseSource(TrackedPoseDriver.DeviceType.GenericXRController, node == XRNode.LeftHand ? TrackedPoseDriver.TrackedPose.LeftPose : TrackedPoseDriver.TrackedPose.RightPose);
-        controller.AddComponent<XRControllerPoseProvider>();
-    }
-
-#if UNITY_EDITOR
-    private static void EnsureXRDeviceSimulator()
-    {
-        if (FindAnyObjectByType<XRDeviceSimulator>() != null)
+        if (leftControllerPoseProvider == null || rightControllerPoseProvider == null)
         {
-            return;
+            var providers = sceneXrOrigin.GetComponentsInChildren<XRControllerPoseProvider>(true);
+            foreach (var provider in providers)
+            {
+                if (provider.gameObject.name.ToLowerInvariant().Contains("left") && leftControllerPoseProvider == null)
+                {
+                    leftControllerPoseProvider = provider;
+                }
+                else if (provider.gameObject.name.ToLowerInvariant().Contains("right") && rightControllerPoseProvider == null)
+                {
+                    rightControllerPoseProvider = provider;
+                }
+            }
         }
 
-        var simulator = new GameObject("XR Device Simulator");
-        simulator.AddComponent<XRDeviceSimulator>();
+        if (leftControllerPoseProvider == null || rightControllerPoseProvider == null)
+        {
+            Debug.LogWarning("XRRuntimeRigInstaller: Missing left/right XRControllerPoseProvider on XR Origin children. Assign them in scene.");
+        }
     }
-#endif
 #endif
 }
