@@ -4,7 +4,7 @@
         "mouseY": 15.0
     },
     "paths": {
-        "PATH_UW1": "C:\\Games\\UW1\\game\\UW\\",
+        "PATH_UW1": "/home/eric/Games/Heroic/UltimaUnderworld/UW",
         "PATH_UW2": "C:\\Games\\UW2\\game\\UW2",
         "PATH_UWDEMO": "c:\\games\\uwdemo3",
         "PATH_SHOCK": "C:\\Games\\SystemShock\\",
