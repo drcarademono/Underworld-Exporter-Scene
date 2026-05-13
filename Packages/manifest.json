@@ -45,6 +45,10 @@
     "com.unity.modules.video": "1.0.0",
     "com.unity.modules.vr": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
-    "com.unity.modules.xr": "1.0.0"
+    "com.unity.modules.xr": "1.0.0",
+    "com.unity.inputsystem": "1.11.2",
+    "com.unity.xr.management": "4.5.0",
+    "com.unity.xr.openxr": "1.14.0",
+    "com.unity.xr.interaction.toolkit": "3.0.4"
   }
 }
