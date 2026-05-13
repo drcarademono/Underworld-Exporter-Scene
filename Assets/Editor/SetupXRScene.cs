@@ -50,6 +50,7 @@ public static class SetupXRScene
         EnsureController(origin, "Left Controller");
         EnsureController(origin, "Right Controller");
         EnsureInstaller(origin);
+        EnsureVrModeCoordinator(origin);
 
         EditorSceneManager.MarkSceneDirty(scene);
         Debug.Log("XR scene setup complete. Save scene to persist XR Origin/controller wiring.");
@@ -148,6 +149,21 @@ public static class SetupXRScene
         {
             _ = Undo.AddComponent<XRControllerPoseProvider>(controllerObj);
         }
+    }
+
+
+    private static void EnsureVrModeCoordinator(XROrigin origin)
+    {
+        var coordinator = Object.FindAnyObjectByType<VRModeCoordinator>(FindObjectsInactive.Include);
+        if (coordinator == null)
+        {
+            coordinator = Undo.AddComponent<VRModeCoordinator>(origin.gameObject);
+        }
+
+        var installer = origin.GetComponent<XRRuntimeRigInstaller>();
+        var so = new SerializedObject(coordinator);
+        so.FindProperty("rigInstaller").objectReferenceValue = installer;
+        so.ApplyModifiedPropertiesWithoutUndo();
     }
 
     private static void EnsureInstaller(XROrigin origin)

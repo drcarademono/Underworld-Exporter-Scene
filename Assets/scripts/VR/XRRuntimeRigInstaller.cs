@@ -91,5 +91,10 @@ public class XRRuntimeRigInstaller : MonoBehaviour
             field.SetValue(target, value);
         }
     }
+
+    public XRControllerPoseProvider GetRightControllerProvider()
+    {
+        return rightControllerPoseProvider;
+    }
 #endif
 }
