@@ -492,16 +492,43 @@ public class GameSelect : GuiBase
         foreach (var item in requiredfiles)
         {
             var test = Path.Combine(path, item.Replace("\\", Path.DirectorySeparatorChar.ToString()));
-            if (!File.Exists(test))
+            if (!FileExistsCrossPlatform(test))
             {
                 PathStatus.text += "\n" + test + " not found!";
-                return true;
+                return false;
             }
         }
         PathStatus.text += "\nKnown required files found";
         return true;
     }
 
+
+    private bool FileExistsCrossPlatform(string fullPath)
+    {
+        if (File.Exists(fullPath))
+        {
+            return true;
+        }
+
+        string directory = Path.GetDirectoryName(fullPath);
+        string fileName = Path.GetFileName(fullPath);
+
+        if (string.IsNullOrEmpty(directory) || string.IsNullOrEmpty(fileName) || !Directory.Exists(directory))
+        {
+            return false;
+        }
+
+        var files = Directory.GetFiles(directory);
+        foreach (var file in files)
+        {
+            if (string.Equals(Path.GetFileName(file), fileName, System.StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
     public void OnClick()
     {
         if (!FolderTestPassed) { return; }
