@@ -41,6 +41,10 @@ public static class SetupXRScene
             camObj.AddComponent<Camera>();
             camObj.AddComponent<AudioListener>();
             origin.Camera = camObj.GetComponent<Camera>();
+            if (camObj.GetComponent<XRHmdViewPoseProvider>() == null)
+            {
+                camObj.AddComponent<XRHmdViewPoseProvider>();
+            }
         }
 
         EnsureController(origin, "Left Controller");
@@ -160,7 +164,14 @@ public static class SetupXRScene
         var so = new SerializedObject(installer);
         so.FindProperty("sceneXrOrigin").objectReferenceValue = origin;
         so.FindProperty("leftControllerPoseProvider").objectReferenceValue = left;
+        var hmd = origin.Camera != null ? origin.Camera.GetComponent<XRHmdViewPoseProvider>() : null;
+        if (hmd == null && origin.Camera != null)
+        {
+            hmd = Undo.AddComponent<XRHmdViewPoseProvider>(origin.Camera.gameObject);
+        }
+
         so.FindProperty("rightControllerPoseProvider").objectReferenceValue = right;
+        so.FindProperty("hmdViewPoseProvider").objectReferenceValue = hmd;
         so.ApplyModifiedPropertiesWithoutUndo();
     }
 }
