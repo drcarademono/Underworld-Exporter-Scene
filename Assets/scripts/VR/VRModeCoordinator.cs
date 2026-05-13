@@ -6,6 +6,7 @@ public class VRModeCoordinator : MonoBehaviour
     [SerializeField] private XRControllerPoseProvider rightController;
     [SerializeField] private Transform hmdTransform;
     [SerializeField] private Canvas gameUiCanvas;
+    [SerializeField] private bool keepHudFullscreen = true;
     [SerializeField] private Vector3 uiOffset = new Vector3(0f, -0.15f, 1.1f);
 
     private void Start()
@@ -34,13 +35,14 @@ public class VRModeCoordinator : MonoBehaviour
             rightController = rigInstaller.GetRightControllerProvider();
         }
 
-        if (gameUiCanvas == null)
+        if (UWHUD.instance != null && gameUiCanvas == null)
         {
-            var gameUi = GameObject.Find("GameUI");
-            if (gameUi != null)
-            {
-                gameUiCanvas = gameUi.GetComponentInChildren<Canvas>(true);
-            }
+            gameUiCanvas = UWHUD.instance.gameUi != null ? UWHUD.instance.gameUi.GetComponentInChildren<Canvas>(true) : null;
+        }
+
+        if (keepHudFullscreen && UWHUD.instance != null && UWHUD.instance.window != null)
+        {
+            UWHUD.instance.window.SetFullScreen();
         }
 
         if (gameUiCanvas != null)
@@ -56,6 +58,11 @@ public class VRModeCoordinator : MonoBehaviour
             var anchor = hmdTransform.TransformPoint(uiOffset);
             gameUiCanvas.transform.position = anchor;
             gameUiCanvas.transform.rotation = Quaternion.LookRotation(gameUiCanvas.transform.position - hmdTransform.position);
+        }
+
+        if (keepHudFullscreen && UWHUD.instance != null && UWHUD.instance.window != null && UWHUD.instance.window.FullScreen == false)
+        {
+            UWHUD.instance.window.SetFullScreen();
         }
 
         if (rightController != null && rightController.IsSecondaryUsePressed() && gameUiCanvas != null)
