@@ -12,6 +12,10 @@ public class OverworldTerrainController : MonoBehaviour
     public int TilesPerPixel = 8;
     public float TileWorldSize = 8f;
 
+    [Header("Chunking")]
+    [Range(16,128)] public int ChunkSizeSamples = 64;
+    [Range(1,6)] public int ActiveChunkRadius = 2;
+
     [Header("Terrain Shape")]
     [Range(1f, 120f)] public float HeightScale = 42f;
     [Range(0f, 10f)] public float PerlinStrength = 3.5f;

@@ -945,8 +945,20 @@ public class GameWorldController : UWEBase
         }
         else
         {
-            int sampleWidth = Mathf.Max(2, heightmap.width / tilesPerPixel);
-            int sampleHeight = Mathf.Max(2, heightmap.height / tilesPerPixel);
+            int totalSampleWidth = Mathf.Max(2, heightmap.width / tilesPerPixel);
+            int totalSampleHeight = Mathf.Max(2, heightmap.height / tilesPerPixel);
+
+            int centerSampleX = Mathf.Clamp(overworld.OverworldStartTile.x / tilesPerPixel, 0, totalSampleWidth - 1);
+            int centerSampleY = Mathf.Clamp(overworld.OverworldStartTile.y / tilesPerPixel, 0, totalSampleHeight - 1);
+            int sampleRadius = Mathf.Max(8, overworld.ChunkSizeSamples * overworld.ActiveChunkRadius);
+
+            int minSampleX = Mathf.Max(0, centerSampleX - sampleRadius);
+            int maxSampleX = Mathf.Min(totalSampleWidth - 1, centerSampleX + sampleRadius);
+            int minSampleY = Mathf.Max(0, centerSampleY - sampleRadius);
+            int maxSampleY = Mathf.Min(totalSampleHeight - 1, centerSampleY + sampleRadius);
+
+            int sampleWidth = Mathf.Max(2, (maxSampleX - minSampleX) + 1);
+            int sampleHeight = Mathf.Max(2, (maxSampleY - minSampleY) + 1);
             int vertexCount = sampleWidth * sampleHeight;
 
             Vector3[] vertices = new Vector3[vertexCount];
@@ -959,21 +971,23 @@ public class GameWorldController : UWEBase
                 for (int x = 0; x < sampleWidth; x++)
                 {
                     int index = z * sampleWidth + x;
+                    int globalX = minSampleX + x;
+                    int globalZ = minSampleY + z;
                     float u = (sampleWidth > 1) ? x / (float)(sampleWidth - 1) : 0f;
                     float v = (sampleHeight > 1) ? z / (float)(sampleHeight - 1) : 0f;
 
-                    int px = Mathf.Clamp(x * tilesPerPixel, 0, heightmap.width - 1);
-                    int pz = Mathf.Clamp(z * tilesPerPixel, 0, heightmap.height - 1);
+                    int px = Mathf.Clamp(globalX * tilesPerPixel, 0, heightmap.width - 1);
+                    int pz = Mathf.Clamp(globalZ * tilesPerPixel, 0, heightmap.height - 1);
                     float elevation = SampleSmoothedHeight(heightmap, px, pz);
                     float shapedElevation = Mathf.Pow(elevation, 1.65f);
-                    float noise = Mathf.PerlinNoise((x + 101.231f) * perlinScale, (z + 77.777f) * perlinScale) - 0.5f;
+                    float noise = Mathf.PerlinNoise((globalX + 101.231f) * perlinScale, (globalZ + 77.777f) * perlinScale) - 0.5f;
                     float y = shapedElevation * heightScale + noise * perlinStrength - seaLevelOffset;
                     if (y < seaLevel)
                     {
                         y = seaLevel;
                     }
 
-                    vertices[index] = new Vector3(x * tileWorldSize, y, z * tileWorldSize);
+                    vertices[index] = new Vector3(globalX * tileWorldSize, y, globalZ * tileWorldSize);
                     uvs[index] = new Vector2(u, v);
 
                     if ((x < sampleWidth - 1) && (z < sampleHeight - 1))
@@ -1145,21 +1159,21 @@ public class GameWorldController : UWEBase
 
     private Vector3 GetOverworldSpawnPosition(Texture2D heightmap, float tileWorldSize, int tilesPerPixel, float heightScale, float perlinScale, float perlinStrength, int tileX, int tileY)
     {
-        int sampleX = Mathf.Clamp(tileX / tilesPerPixel, 0, (heightmap.width / tilesPerPixel) - 1);
-        int sampleY = Mathf.Clamp(tileY / tilesPerPixel, 0, (heightmap.height / tilesPerPixel) - 1);
-        int px = Mathf.Clamp(sampleX * tilesPerPixel, 0, heightmap.width - 1);
-        int py = Mathf.Clamp(sampleY * tilesPerPixel, 0, heightmap.height - 1);
+        float sampleXf = tileX / (float)tilesPerPixel;
+        float sampleYf = tileY / (float)tilesPerPixel;
+        int px = Mathf.Clamp(Mathf.RoundToInt(sampleXf * tilesPerPixel), 0, heightmap.width - 1);
+        int py = Mathf.Clamp(Mathf.RoundToInt(sampleYf * tilesPerPixel), 0, heightmap.height - 1);
 
         float elevation = SampleSmoothedHeight(heightmap, px, py);
         float shapedElevation = Mathf.Pow(elevation, 1.65f);
-        float noise = Mathf.PerlinNoise((sampleX + 101.231f) * perlinScale, (sampleY + 77.777f) * perlinScale) - 0.5f;
+        float noise = Mathf.PerlinNoise((sampleXf + 101.231f) * perlinScale, (sampleYf + 77.777f) * perlinScale) - 0.5f;
         float y = shapedElevation * heightScale + noise * perlinStrength - GetOverworldController().SeaLevelOffset;
         if (y < 0f)
         {
             y = 0f;
         }
 
-        return new Vector3(sampleX * tileWorldSize, y + 2.5f, sampleY * tileWorldSize);
+        return new Vector3(tileX * (tileWorldSize / tilesPerPixel), y + 2.5f, tileY * (tileWorldSize / tilesPerPixel));
     }
 
     /// <summary>
