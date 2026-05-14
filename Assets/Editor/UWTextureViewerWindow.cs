@@ -42,6 +42,8 @@ public class UWTextureViewerWindow : EditorWindow
             if (GUILayout.Button("Load UW1")) { LoadUW1(); }
             if (GUILayout.Button("Load UW2")) { LoadUW2(); }
             if (GUILayout.Button("Load Both")) { LoadUW1(); LoadUW2(); }
+            if (GUILayout.Button("Export UW1 PNGs")) { ExportTextures(uw1Entries, "UW1"); }
+            if (GUILayout.Button("Export UW2 PNGs")) { ExportTextures(uw2Entries, "UW2"); }
             if (GUILayout.Button("Clear")) { uw1Entries.Clear(); uw2Entries.Clear(); }
         }
 
@@ -208,6 +210,32 @@ public class UWTextureViewerWindow : EditorWindow
             Debug.LogWarning($"UWTextureViewer: Skipping texture #{index} due to load failure: {ex.Message}");
             return false;
         }
+    }
+
+    private void ExportTextures(List<TextureEntry> entries, string prefix)
+    {
+        if (entries == null || entries.Count == 0)
+        {
+            EditorUtility.DisplayDialog("No Textures", "Load textures first.", "OK");
+            return;
+        }
+
+        string folder = EditorUtility.OpenFolderPanel("Export Textures", Application.dataPath, "");
+        if (string.IsNullOrEmpty(folder)) { return; }
+
+        int exported = 0;
+        foreach (var entry in entries)
+        {
+            if (entry.texture == null) { continue; }
+            byte[] png = entry.texture.EncodeToPNG();
+            if (png == null) { continue; }
+            string safeLabel = entry.label.Replace("#", "").Trim();
+            string fileName = $"{prefix}_{safeLabel}.png";
+            File.WriteAllBytes(Path.Combine(folder, fileName), png);
+            exported++;
+        }
+
+        EditorUtility.DisplayDialog("Export Complete", $"Exported {exported} textures to {folder}", "OK");
     }
 
     private static bool ValidateBasePath(string path)

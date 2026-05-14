@@ -37,4 +37,8 @@ public class OverworldTerrainController : MonoBehaviour
     [Range(0f, 0.2f)] public float WaterSurfaceEpsilon = 0.02f;
     public int GrassTextureIndex = 181;
     public int StoneTextureIndex = 253;
+
+    [Header("Custom Material Overrides")]
+    public Material GrassMaterialOverride;
+    public Material StoneMaterialOverride;
 }
