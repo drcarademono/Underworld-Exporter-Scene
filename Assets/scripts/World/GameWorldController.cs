@@ -865,7 +865,7 @@ public class GameWorldController : UWEBase
             UWHUD.instance.mainmenu.gameObject.SetActive(false);
             UWHUD.instance.RefreshPanels(UWHUD.HUD_MODE_INVENTORY);
 
-            if ((_RES == GAME_UW1) && (StartInOverworld))
+            if ((_RES == GAME_UW2) && (StartInOverworld))
             {
                 SetupOverworldStart();
             }
@@ -900,8 +900,26 @@ public class GameWorldController : UWEBase
         Renderer planeRenderer = overworldPlane.GetComponent<Renderer>();
         if (planeRenderer != null)
         {
-            Material planeMat = new Material(Shader.Find("Standard"));
-            planeMat.color = new Color(0.22f, 0.58f, 0.22f);
+            int textureIndex = 210;
+            Material sourceMaterial = null;
+            if ((MaterialMasterList != null) && (textureIndex >= 0) && (textureIndex < MaterialMasterList.Length))
+            {
+                sourceMaterial = MaterialMasterList[textureIndex];
+            }
+
+            Material planeMat = (sourceMaterial != null)
+                ? new Material(sourceMaterial)
+                : new Material(Shader.Find("Standard"));
+
+            if (planeMat.mainTexture == null)
+            {
+                planeMat.color = new Color(0.22f, 0.58f, 0.22f);
+            }
+
+            float planeSizeX = overworldPlane.transform.localScale.x * 10f;
+            float planeSizeZ = overworldPlane.transform.localScale.z * 10f;
+            planeMat.mainTextureScale = new Vector2(planeSizeX / 1.2f, planeSizeZ / 1.2f);
+
             planeRenderer.material = planeMat;
         }
 
