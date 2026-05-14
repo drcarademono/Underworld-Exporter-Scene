@@ -194,6 +194,7 @@ public class GameWorldController : UWEBase
     public static bool NavMeshReady = false;
     public bool[] NavMeshesReady = new bool[4];
     private static string LevelSignature;
+    private float nextAudioListenerCheckTime = 0f;
 
     /// <summary>
     /// What level the player starts on in a quick start
@@ -203,6 +204,10 @@ public class GameWorldController : UWEBase
     /// What start position for the player.
     /// </summary>
     public Vector3 StartPos = new Vector3(38f, 4f, 2.7f);
+
+    [Header("Overworld Start")]
+    public bool StartInOverworld = true;
+    public Vector3 OverworldStartPos = new Vector3(0f, 2f, 0f);
 
     /// <summary>
     /// Create object reports
@@ -573,6 +578,11 @@ public class GameWorldController : UWEBase
 
     void Update()
     {
+        if (Time.time >= nextAudioListenerCheckTime)
+        {
+            EnforceSingleAudioListener();
+            nextAudioListenerCheckTime = Time.time + 1f;
+        }
         PositionDetect();
     }
 
@@ -854,9 +864,77 @@ public class GameWorldController : UWEBase
             UWHUD.instance.CutsceneFullPanel.SetActive(false);
             UWHUD.instance.mainmenu.gameObject.SetActive(false);
             UWHUD.instance.RefreshPanels(UWHUD.HUD_MODE_INVENTORY);
-            SwitchLevel(startLevel);
+
+            if ((_RES == GAME_UW2) && (StartInOverworld))
+            {
+                SetupOverworldStart();
+            }
+            else
+            {
+                SwitchLevel(startLevel);
+            }
         }
         return;
+    }
+
+    public void SetupOverworldStart()
+    {
+        TileMapRenderer.EnableCollision = false;
+
+        GameObject existingPlane = GameObject.Find("OverworldPlane");
+        if (existingPlane != null) { Destroy(existingPlane); }
+        GameObject existingSun = GameObject.Find("OverworldSun");
+        if (existingSun != null) { Destroy(existingSun); }
+
+        if (LevelModel != null) { LevelModel.SetActive(false); }
+        if (SceneryModel != null) { SceneryModel.SetActive(false); }
+
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+        RenderSettings.ambientLight = new Color(0.55f, 0.68f, 0.55f);
+
+        GameObject overworldPlane = GameObject.CreatePrimitive(PrimitiveType.Plane);
+        overworldPlane.name = "OverworldPlane";
+        overworldPlane.transform.position = Vector3.zero;
+        overworldPlane.transform.localScale = new Vector3(50f, 1f, 50f);
+
+        Renderer planeRenderer = overworldPlane.GetComponent<Renderer>();
+        if (planeRenderer != null)
+        {
+            int textureIndex = 210;
+            Texture2D floorTexture = null;
+            if (texLoader != null)
+            {
+                floorTexture = texLoader.LoadImageAt(textureIndex, 0);
+            }
+
+            Material planeMat = new Material(Shader.Find("Standard"));
+            if (floorTexture != null)
+            {
+                floorTexture.wrapMode = TextureWrapMode.Repeat;
+                planeMat.mainTexture = floorTexture;
+            }
+            else
+            {
+                planeMat.color = new Color(0.22f, 0.58f, 0.22f);
+            }
+
+            float planeSizeX = overworldPlane.transform.localScale.x * 10f;
+            float planeSizeZ = overworldPlane.transform.localScale.z * 10f;
+            planeMat.mainTextureScale = new Vector2(planeSizeX / 1.2f, planeSizeZ / 1.2f);
+
+            planeRenderer.material = planeMat;
+        }
+
+        GameObject sun = new GameObject("OverworldSun");
+        Light sunLight = sun.AddComponent<Light>();
+        sunLight.type = LightType.Directional;
+        sunLight.color = new Color(1f, 0.97f, 0.9f);
+        sunLight.intensity = 1.2f;
+        sun.transform.rotation = Quaternion.Euler(45f, -30f, 0f);
+
+        UWCharacter.Instance.playerController.enabled = true;
+        UWCharacter.Instance.playerMotor.enabled = true;
+        UWCharacter.Instance.transform.position = OverworldStartPos;
     }
 
     /// <summary>
@@ -1266,6 +1344,31 @@ public class GameWorldController : UWEBase
         SwitchLevel(newLevelNo);
     }
 
+    private void EnforceSingleAudioListener()
+    {
+        AudioListener[] listeners = FindObjectsOfType<AudioListener>();
+        if ((listeners == null) || (listeners.Length <= 1))
+        {
+            return;
+        }
+
+        if ((UWCharacter.Instance == null) || (UWCharacter.Instance.playerCam == null))
+        {
+            return;
+        }
+
+        AudioListener preferred = UWCharacter.Instance.playerCam.GetComponent<AudioListener>();
+        if (preferred == null)
+        {
+            preferred = listeners[0];
+        }
+
+        for (int i = 0; i < listeners.Length; i++)
+        {
+            listeners[i].enabled = (listeners[i] == preferred);
+        }
+    }
+
     /// <summary>
     /// Detects where the player currently is an updates their swimming state and auto map as needed.
     /// </summary>
@@ -1279,6 +1382,11 @@ public class GameWorldController : UWEBase
         {
             return;
         }
+        if ((CurrentTileMap() == null) || (CurrentAutoMap() == null))
+        {
+            return;
+        }
+
         TileMap.visitTileX = (short)(UWCharacter.Instance.transform.position.x / 1.2f);
         TileMap.visitTileY = (short)(UWCharacter.Instance.transform.position.z / 1.2f);
 

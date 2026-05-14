@@ -687,9 +687,16 @@ public class MainMenuHud : GuiBase
     public void JourneyOnwards()
     {
         GameWorldController.LoadingGame = true;
-        GameWorldController.instance.SwitchLevel(GameWorldController.instance.startLevel);
 
-        UWCharacter.Instance.transform.position = GameWorldController.instance.StartPos;
+        if ((_RES == GAME_UW2) && (GameWorldController.instance.StartInOverworld))
+        {
+            GameWorldController.instance.SetupOverworldStart();
+        }
+        else
+        {
+            GameWorldController.instance.SwitchLevel(GameWorldController.instance.startLevel);
+            UWCharacter.Instance.transform.position = GameWorldController.instance.StartPos;
+        }
         UWHUD.instance.gameObject.SetActive(true);
         UWCharacter.Instance.playerController.enabled = true;
         UWCharacter.Instance.Death = false;
