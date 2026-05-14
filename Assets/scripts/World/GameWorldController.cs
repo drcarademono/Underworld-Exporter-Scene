@@ -881,8 +881,8 @@ public class GameWorldController : UWEBase
     {
         TileMapRenderer.EnableCollision = false;
 
-        GameObject existingPlane = GameObject.Find("OverworldPlane");
-        if (existingPlane != null) { Destroy(existingPlane); }
+        GameObject existingTerrain = GameObject.Find("OverworldTerrain");
+        if (existingTerrain != null) { Destroy(existingTerrain); }
         GameObject existingSun = GameObject.Find("OverworldSun");
         if (existingSun != null) { Destroy(existingSun); }
 
@@ -892,37 +892,105 @@ public class GameWorldController : UWEBase
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
         RenderSettings.ambientLight = new Color(0.55f, 0.68f, 0.55f);
 
-        GameObject overworldPlane = GameObject.CreatePrimitive(PrimitiveType.Plane);
-        overworldPlane.name = "OverworldPlane";
-        overworldPlane.transform.position = Vector3.zero;
-        overworldPlane.transform.localScale = new Vector3(50f, 1f, 50f);
+        const string heightMapPath = "UIX/Britannia_Corv_Heightmap";
+        const float tileWorldSize = 1f;
+        const int tilesPerPixel = 8;
+        const float heightScale = 140f;
+        const float perlinScale = 0.0045f;
+        const float perlinStrength = 12f;
 
-        Renderer planeRenderer = overworldPlane.GetComponent<Renderer>();
-        if (planeRenderer != null)
+        Texture2D heightmap = Resources.Load<Texture2D>(heightMapPath);
+        if (heightmap == null)
         {
+            Debug.LogWarning("Could not load overworld heightmap at Resources/" + heightMapPath + ". Falling back to flat plane.");
+            GameObject fallbackPlane = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            fallbackPlane.name = "OverworldTerrain";
+            fallbackPlane.transform.position = Vector3.zero;
+            fallbackPlane.transform.localScale = new Vector3(50f, 1f, 50f);
+        }
+        else
+        {
+            int sampleWidth = Mathf.Max(2, heightmap.width / tilesPerPixel);
+            int sampleHeight = Mathf.Max(2, heightmap.height / tilesPerPixel);
+            int vertexCount = sampleWidth * sampleHeight;
+
+            Vector3[] vertices = new Vector3[vertexCount];
+            Vector2[] uvs = new Vector2[vertexCount];
+            int[] triangles = new int[(sampleWidth - 1) * (sampleHeight - 1) * 6];
+
+            int triIndex = 0;
+            for (int z = 0; z < sampleHeight; z++)
+            {
+                for (int x = 0; x < sampleWidth; x++)
+                {
+                    int index = z * sampleWidth + x;
+                    float u = (sampleWidth > 1) ? x / (float)(sampleWidth - 1) : 0f;
+                    float v = (sampleHeight > 1) ? z / (float)(sampleHeight - 1) : 0f;
+
+                    int px = Mathf.Clamp(x * tilesPerPixel, 0, heightmap.width - 1);
+                    int pz = Mathf.Clamp(z * tilesPerPixel, 0, heightmap.height - 1);
+                    float elevation = heightmap.GetPixel(px, pz).grayscale;
+                    float noise = Mathf.PerlinNoise((x + 101.231f) * perlinScale, (z + 77.777f) * perlinScale) - 0.5f;
+                    float y = elevation * heightScale + noise * perlinStrength;
+
+                    vertices[index] = new Vector3(x * tileWorldSize, y, z * tileWorldSize);
+                    uvs[index] = new Vector2(u, v);
+
+                    if ((x < sampleWidth - 1) && (z < sampleHeight - 1))
+                    {
+                        int bottomLeft = index;
+                        int bottomRight = index + 1;
+                        int topLeft = index + sampleWidth;
+                        int topRight = index + sampleWidth + 1;
+
+                        triangles[triIndex++] = bottomLeft;
+                        triangles[triIndex++] = topLeft;
+                        triangles[triIndex++] = topRight;
+
+                        triangles[triIndex++] = bottomLeft;
+                        triangles[triIndex++] = topRight;
+                        triangles[triIndex++] = bottomRight;
+                    }
+                }
+            }
+
+            Mesh terrainMesh = new Mesh();
+            terrainMesh.name = "OverworldTerrainMesh";
+            terrainMesh.indexFormat = (vertexCount > 65535) ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
+            terrainMesh.vertices = vertices;
+            terrainMesh.triangles = triangles;
+            terrainMesh.uv = uvs;
+            terrainMesh.RecalculateNormals();
+            terrainMesh.RecalculateBounds();
+
+            GameObject terrainObject = new GameObject("OverworldTerrain");
+            MeshFilter meshFilter = terrainObject.AddComponent<MeshFilter>();
+            MeshRenderer meshRenderer = terrainObject.AddComponent<MeshRenderer>();
+            MeshCollider meshCollider = terrainObject.AddComponent<MeshCollider>();
+
+            meshFilter.sharedMesh = terrainMesh;
+            meshCollider.sharedMesh = terrainMesh;
+
+            Material terrainMat = new Material(Shader.Find("Standard"));
             int textureIndex = 210;
             Texture2D floorTexture = null;
             if (texLoader != null)
             {
                 floorTexture = texLoader.LoadImageAt(textureIndex, 0);
             }
-
-            Material planeMat = new Material(Shader.Find("Standard"));
             if (floorTexture != null)
             {
                 floorTexture.wrapMode = TextureWrapMode.Repeat;
-                planeMat.mainTexture = floorTexture;
+                terrainMat.mainTexture = floorTexture;
+                terrainMat.mainTextureScale = new Vector2(sampleWidth / 2.5f, sampleHeight / 2.5f);
             }
             else
             {
-                planeMat.color = new Color(0.22f, 0.58f, 0.22f);
+                terrainMat.color = new Color(0.22f, 0.58f, 0.22f);
             }
+            meshRenderer.material = terrainMat;
 
-            float planeSizeX = overworldPlane.transform.localScale.x * 10f;
-            float planeSizeZ = overworldPlane.transform.localScale.z * 10f;
-            planeMat.mainTextureScale = new Vector2(planeSizeX / 1.2f, planeSizeZ / 1.2f);
-
-            planeRenderer.material = planeMat;
+            OverworldStartPos = GetOverworldSpawnPosition(heightmap, tileWorldSize, tilesPerPixel, heightScale, perlinScale, perlinStrength, 725, 725);
         }
 
         GameObject sun = new GameObject("OverworldSun");
@@ -935,6 +1003,20 @@ public class GameWorldController : UWEBase
         UWCharacter.Instance.playerController.enabled = true;
         UWCharacter.Instance.playerMotor.enabled = true;
         UWCharacter.Instance.transform.position = OverworldStartPos;
+    }
+
+    private Vector3 GetOverworldSpawnPosition(Texture2D heightmap, float tileWorldSize, int tilesPerPixel, float heightScale, float perlinScale, float perlinStrength, int tileX, int tileY)
+    {
+        int sampleX = Mathf.Clamp(tileX / tilesPerPixel, 0, (heightmap.width / tilesPerPixel) - 1);
+        int sampleY = Mathf.Clamp(tileY / tilesPerPixel, 0, (heightmap.height / tilesPerPixel) - 1);
+        int px = Mathf.Clamp(sampleX * tilesPerPixel, 0, heightmap.width - 1);
+        int py = Mathf.Clamp(sampleY * tilesPerPixel, 0, heightmap.height - 1);
+
+        float elevation = heightmap.GetPixel(px, py).grayscale;
+        float noise = Mathf.PerlinNoise((sampleX + 101.231f) * perlinScale, (sampleY + 77.777f) * perlinScale) - 0.5f;
+        float y = elevation * heightScale + noise * perlinStrength;
+
+        return new Vector3(sampleX * tileWorldSize, y + 2.5f, sampleY * tileWorldSize);
     }
 
     /// <summary>
