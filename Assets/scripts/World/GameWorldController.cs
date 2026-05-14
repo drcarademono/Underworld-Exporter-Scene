@@ -871,9 +871,14 @@ public class GameWorldController : UWEBase
         return;
     }
 
-    private void SetupOverworldStart()
+    public void SetupOverworldStart()
     {
         TileMapRenderer.EnableCollision = false;
+
+        GameObject existingPlane = GameObject.Find("OverworldPlane");
+        if (existingPlane != null) { Destroy(existingPlane); }
+        GameObject existingSun = GameObject.Find("OverworldSun");
+        if (existingSun != null) { Destroy(existingSun); }
 
         if (LevelModel != null) { LevelModel.SetActive(false); }
         if (SceneryModel != null) { SceneryModel.SetActive(false); }
