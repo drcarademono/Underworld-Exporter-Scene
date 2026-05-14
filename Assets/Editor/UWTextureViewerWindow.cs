@@ -87,7 +87,15 @@ public class UWTextureViewerWindow : EditorWindow
     {
         using (new EditorGUILayout.VerticalScope(GUILayout.Width(thumbSize + 8)))
         {
-            GUILayout.Label(entry.texture, GUILayout.Width(thumbSize), GUILayout.Height(thumbSize));
+            Rect previewRect = GUILayoutUtility.GetRect(thumbSize, thumbSize, GUILayout.Width(thumbSize), GUILayout.Height(thumbSize));
+            if (entry.texture != null)
+            {
+                EditorGUI.DrawPreviewTexture(previewRect, entry.texture, null, ScaleMode.ScaleToFit);
+            }
+            else
+            {
+                EditorGUI.HelpBox(previewRect, "Missing", MessageType.None);
+            }
             EditorGUILayout.LabelField(entry.label, EditorStyles.miniLabel, GUILayout.Width(thumbSize + 8));
         }
     }
