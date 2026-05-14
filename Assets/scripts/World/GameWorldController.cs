@@ -981,7 +981,14 @@ public class GameWorldController : UWEBase
         UWCharacter.Instance.transform.position = overworld.OverworldStartPos;
 
         lastPlayerChunk = GetPlayerChunkCoord(overworld, UWCharacter.Instance.transform.position);
-        EnsureChunksAround(lastPlayerChunk, heightmap, overworld);
+        if (overworld.LoadWholeMapAtStartup)
+        {
+            EnsureAllChunks(heightmap, overworld);
+        }
+        else
+        {
+            EnsureChunksAround(lastPlayerChunk, heightmap, overworld);
+        }
         overworldStreamingInitialized = true;
 
         GameObject sun = new GameObject("OverworldSun");
@@ -999,6 +1006,30 @@ public class GameWorldController : UWEBase
         int chunkX = Mathf.FloorToInt(sampleX / Mathf.Max(1, overworld.ChunkSizeSamples));
         int chunkY = Mathf.FloorToInt(sampleY / Mathf.Max(1, overworld.ChunkSizeSamples));
         return new Vector2Int(chunkX, chunkY);
+    }
+
+    private void EnsureAllChunks(Texture2D heightmap, OverworldTerrainController overworld)
+    {
+        int tilesPerPixel = Mathf.Max(1, overworld.TilesPerPixel);
+        int chunkSize = Mathf.Max(2, overworld.ChunkSizeSamples);
+        int totalSampleWidth = Mathf.Max(2, heightmap.width / tilesPerPixel);
+        int totalSampleHeight = Mathf.Max(2, heightmap.height / tilesPerPixel);
+
+        int maxChunkX = Mathf.CeilToInt(totalSampleWidth / (float)chunkSize) - 1;
+        int maxChunkY = Mathf.CeilToInt(totalSampleHeight / (float)chunkSize) - 1;
+
+        for (int cy = 0; cy <= maxChunkY; cy++)
+        {
+            for (int cx = 0; cx <= maxChunkX; cx++)
+            {
+                Vector2Int cc = new Vector2Int(cx, cy);
+                if (!loadedOverworldChunks.ContainsKey(cc))
+                {
+                    GameObject chunk = BuildChunk(cc, heightmap, overworld);
+                    if (chunk != null) { loadedOverworldChunks[cc] = chunk; }
+                }
+            }
+        }
     }
 
     private void EnsureChunksAround(Vector2Int centerChunk, Texture2D heightmap, OverworldTerrainController overworld)

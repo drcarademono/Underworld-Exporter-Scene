@@ -15,6 +15,7 @@ public class OverworldTerrainController : MonoBehaviour
     [Header("Chunking")]
     [Range(16,128)] public int ChunkSizeSamples = 64;
     [Range(1,6)] public int ActiveChunkRadius = 2;
+    public bool LoadWholeMapAtStartup = false;
 
     [Header("Terrain Shape")]
     [Range(1f, 120f)] public float HeightScale = 42f;
