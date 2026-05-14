@@ -1007,19 +1007,9 @@ public class GameWorldController : UWEBase
             }
         }
 
-        overworldWaterMat = new Material(Shader.Find("Standard"));
-        overworldGrassMat = (overworld.GrassMaterialOverride != null) ? new Material(overworld.GrassMaterialOverride) : new Material(Shader.Find("Standard"));
-        overworldStoneMat = (overworld.StoneMaterialOverride != null) ? new Material(overworld.StoneMaterialOverride) : new Material(Shader.Find("Standard"));
-        ConfigureTerrainMaterial(overworldWaterMat, LoadUW2TerrainTexture(overworld.WaterTextureIndex), new Color(0.15f, 0.28f, 0.35f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
-        if (overworld.GrassMaterialOverride == null)
-        {
-            ConfigureTerrainMaterial(overworldGrassMat, LoadUW2TerrainTexture(overworld.GrassTextureIndex), new Color(0.22f, 0.58f, 0.22f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
-        }
-
-        if (overworld.StoneMaterialOverride == null)
-        {
-            ConfigureTerrainMaterial(overworldStoneMat, LoadUW2TerrainTexture(overworld.StoneTextureIndex), new Color(0.45f, 0.45f, 0.45f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
-        }
+        overworldWaterMat = BuildOverworldSurfaceMaterial(overworld.WaterTextureIndex, null, new Color(0.15f, 0.28f, 0.35f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
+        overworldGrassMat = BuildOverworldSurfaceMaterial(overworld.GrassTextureIndex, overworld.GrassMaterialOverride, new Color(0.22f, 0.58f, 0.22f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
+        overworldStoneMat = BuildOverworldSurfaceMaterial(overworld.StoneTextureIndex, overworld.StoneMaterialOverride, new Color(0.45f, 0.45f, 0.45f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
         if (overworld.AnimateWater)
         {
             int frameCount = Mathf.Max(1, (overworld.WaterTextureAnimEndIndex - overworld.WaterTextureIndex) + 1);
@@ -1283,6 +1273,41 @@ public class GameWorldController : UWEBase
         }
 
         return go;
+    }
+
+    private Material BuildOverworldSurfaceMaterial(int textureIndex, Material overrideMaterial, Color fallbackColor, int sampleWidth, int sampleHeight)
+    {
+        Material baseMat = null;
+        if ((MaterialMasterList != null) && (textureIndex >= 0) && (textureIndex < MaterialMasterList.Length))
+        {
+            baseMat = MaterialMasterList[textureIndex];
+        }
+
+        Material result = (baseMat != null) ? new Material(baseMat) : new Material(Shader.Find("Standard"));
+
+        if ((overrideMaterial != null) && (overrideMaterial.mainTexture != null))
+        {
+            Texture overrideTexture = overrideMaterial.mainTexture;
+            overrideTexture.wrapMode = TextureWrapMode.Repeat;
+            result.mainTexture = overrideTexture;
+
+            if ((baseMat != null) && (baseMat.mainTextureScale != Vector2.zero))
+            {
+                result.mainTextureScale = baseMat.mainTextureScale;
+            }
+            else
+            {
+                result.mainTextureScale = new Vector2(sampleWidth / 3f, sampleHeight / 3f);
+            }
+        }
+        else
+        {
+            ConfigureTerrainMaterial(result, LoadUW2TerrainTexture(textureIndex), fallbackColor, sampleWidth, sampleHeight);
+        }
+
+        result.SetFloat("_Glossiness", 0f);
+        result.SetFloat("_Metallic", 0f);
+        return result;
     }
 
     private Texture2D LoadUW2TerrainTexture(int textureIndex)
