@@ -615,6 +615,8 @@ public class GameWorldController : UWEBase
         if (!overworldStreamingInitialized) { return; }
         if (OverworldTerrainRoot == null) { return; }
 
+        UpdateOverworldTerrainType(overworld);
+
         Vector2Int currentChunk = GetPlayerChunkCoord(overworld, UWCharacter.Instance.transform.position);
         if (currentChunk == lastPlayerChunk)
         {
@@ -1036,6 +1038,25 @@ public class GameWorldController : UWEBase
         }
     }
 
+    private void UpdateOverworldTerrainType(OverworldTerrainController overworld)
+    {
+        if (UWCharacter.Instance == null) { return; }
+        float sampleX = UWCharacter.Instance.transform.position.x / Mathf.Max(0.01f, overworld.TileWorldSize);
+        float sampleY = UWCharacter.Instance.transform.position.z / Mathf.Max(0.01f, overworld.TileWorldSize);
+
+        //Semantic water classification for overworld: sea-level classified as Water.
+        if (UWCharacter.Instance.transform.position.y <= 0.35f)
+        {
+            UWCharacter.Instance.terrainType = TerrainDatLoader.TerrainTypes.Water;
+            UWCharacter.Instance.CurrentTerrain = TerrainDatLoader.Water;
+        }
+        else
+        {
+            UWCharacter.Instance.terrainType = TerrainDatLoader.TerrainTypes.Normal;
+            UWCharacter.Instance.CurrentTerrain = TerrainDatLoader.Normal;
+        }
+    }
+
     private void EnsureChunksAround(Vector2Int centerChunk, Texture2D heightmap, OverworldTerrainController overworld)
     {
         HashSet<Vector2Int> wanted = new HashSet<Vector2Int>();
@@ -1147,6 +1168,29 @@ public class GameWorldController : UWEBase
         mf.sharedMesh = mesh;
         mc.sharedMesh = mesh;
         mr.materials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
+        GameObject waterContact = new GameObject("WaterContact");
+        waterContact.transform.SetParent(go.transform, false);
+        float chunkWorldWidth = (sampleWidth - 1) * overworld.TileWorldSize;
+        float chunkWorldHeight = (sampleHeight - 1) * overworld.TileWorldSize;
+        waterContact.transform.position = new Vector3(
+            startX * overworld.TileWorldSize + (chunkWorldWidth * 0.5f),
+            0f,
+            startY * overworld.TileWorldSize + (chunkWorldHeight * 0.5f));
+
+        BoxCollider waterCol = waterContact.AddComponent<BoxCollider>();
+        waterCol.size = new Vector3(chunkWorldWidth, 0.5f, chunkWorldHeight);
+        waterCol.center = Vector3.zero;
+
+        waterContact.layer = LayerMask.NameToLayer("Water");
+        if ((_RES == GAME_UW2) && (overworld.WaterTextureIndex == 193))
+        {
+            waterContact.AddComponent<TileContactMud>();
+        }
+        else
+        {
+            waterContact.AddComponent<TileContactWater>();
+        }
+
         return go;
     }
 
