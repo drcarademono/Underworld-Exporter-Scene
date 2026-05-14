@@ -227,7 +227,9 @@ public class UWTextureViewerWindow : EditorWindow
         foreach (var entry in entries)
         {
             if (entry.texture == null) { continue; }
-            byte[] png = entry.texture.EncodeToPNG();
+            Texture2D readable = MakeReadableTexture(entry.texture);
+            if (readable == null) { continue; }
+            byte[] png = readable.EncodeToPNG();
             if (png == null) { continue; }
             string safeLabel = entry.label.Replace("#", "").Trim();
             string fileName = $"{prefix}_{safeLabel}.png";
@@ -236,6 +238,41 @@ public class UWTextureViewerWindow : EditorWindow
         }
 
         EditorUtility.DisplayDialog("Export Complete", $"Exported {exported} textures to {folder}", "OK");
+    }
+
+    private static Texture2D MakeReadableTexture(Texture texture)
+    {
+        if (texture == null) { return null; }
+
+        RenderTexture rt = RenderTexture.GetTemporary(texture.width, texture.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
+        Graphics.Blit(texture, rt);
+
+        RenderTexture prev = RenderTexture.active;
+        RenderTexture.active = rt;
+
+        Texture2D readable = new Texture2D(texture.width, texture.height, TextureFormat.RGBA32, false);
+        readable.ReadPixels(new Rect(0, 0, texture.width, texture.height), 0, 0);
+        readable.Apply();
+
+        Color32[] px = readable.GetPixels32();
+        bool allTransparent = true;
+        for (int i = 0; i < px.Length; i++)
+        {
+            if (px[i].a != 0) { allTransparent = false; break; }
+        }
+        if (allTransparent)
+        {
+            for (int i = 0; i < px.Length; i++)
+            {
+                px[i].a = 255;
+            }
+            readable.SetPixels32(px);
+            readable.Apply();
+        }
+
+        RenderTexture.active = prev;
+        RenderTexture.ReleaseTemporary(rt);
+        return readable;
     }
 
     private static bool ValidateBasePath(string path)
