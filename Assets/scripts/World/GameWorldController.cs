@@ -895,9 +895,9 @@ public class GameWorldController : UWEBase
         const string heightMapPath = "UIX/Britannia_Corv_Heightmap";
         const float tileWorldSize = 1f;
         const int tilesPerPixel = 8;
-        const float heightScale = 140f;
-        const float perlinScale = 0.0045f;
-        const float perlinStrength = 12f;
+        const float heightScale = 42f;
+        const float perlinScale = 0.006f;
+        const float perlinStrength = 3.5f;
 
         Texture2D heightmap = Resources.Load<Texture2D>(heightMapPath);
         if (heightmap == null)
@@ -929,9 +929,10 @@ public class GameWorldController : UWEBase
 
                     int px = Mathf.Clamp(x * tilesPerPixel, 0, heightmap.width - 1);
                     int pz = Mathf.Clamp(z * tilesPerPixel, 0, heightmap.height - 1);
-                    float elevation = heightmap.GetPixel(px, pz).grayscale;
+                    float elevation = SampleSmoothedHeight(heightmap, px, pz);
+                    float shapedElevation = Mathf.Pow(elevation, 1.65f);
                     float noise = Mathf.PerlinNoise((x + 101.231f) * perlinScale, (z + 77.777f) * perlinScale) - 0.5f;
-                    float y = elevation * heightScale + noise * perlinStrength;
+                    float y = shapedElevation * heightScale + noise * perlinStrength;
 
                     vertices[index] = new Vector3(x * tileWorldSize, y, z * tileWorldSize);
                     uvs[index] = new Vector2(u, v);
@@ -983,6 +984,8 @@ public class GameWorldController : UWEBase
                 floorTexture.wrapMode = TextureWrapMode.Repeat;
                 terrainMat.mainTexture = floorTexture;
                 terrainMat.mainTextureScale = new Vector2(sampleWidth / 2.5f, sampleHeight / 2.5f);
+                terrainMat.SetFloat("_Glossiness", 0f);
+                terrainMat.SetFloat("_Metallic", 0f);
             }
             else
             {
@@ -990,7 +993,7 @@ public class GameWorldController : UWEBase
             }
             meshRenderer.material = terrainMat;
 
-            OverworldStartPos = GetOverworldSpawnPosition(heightmap, tileWorldSize, tilesPerPixel, heightScale, perlinScale, perlinStrength, 725, 725);
+            OverworldStartPos = GetOverworldSpawnPosition(heightmap, tileWorldSize, tilesPerPixel, heightScale, perlinScale, perlinStrength, 630, 650);
         }
 
         GameObject sun = new GameObject("OverworldSun");
@@ -1005,6 +1008,23 @@ public class GameWorldController : UWEBase
         UWCharacter.Instance.transform.position = OverworldStartPos;
     }
 
+    private float SampleSmoothedHeight(Texture2D heightmap, int px, int py)
+    {
+        float total = 0f;
+        int samples = 0;
+        for (int oy = -1; oy <= 1; oy++)
+        {
+            for (int ox = -1; ox <= 1; ox++)
+            {
+                int sx = Mathf.Clamp(px + ox, 0, heightmap.width - 1);
+                int sy = Mathf.Clamp(py + oy, 0, heightmap.height - 1);
+                total += heightmap.GetPixel(sx, sy).grayscale;
+                samples++;
+            }
+        }
+        return (samples > 0) ? total / samples : 0f;
+    }
+
     private Vector3 GetOverworldSpawnPosition(Texture2D heightmap, float tileWorldSize, int tilesPerPixel, float heightScale, float perlinScale, float perlinStrength, int tileX, int tileY)
     {
         int sampleX = Mathf.Clamp(tileX / tilesPerPixel, 0, (heightmap.width / tilesPerPixel) - 1);
@@ -1012,9 +1032,10 @@ public class GameWorldController : UWEBase
         int px = Mathf.Clamp(sampleX * tilesPerPixel, 0, heightmap.width - 1);
         int py = Mathf.Clamp(sampleY * tilesPerPixel, 0, heightmap.height - 1);
 
-        float elevation = heightmap.GetPixel(px, py).grayscale;
+        float elevation = SampleSmoothedHeight(heightmap, px, py);
+        float shapedElevation = Mathf.Pow(elevation, 1.65f);
         float noise = Mathf.PerlinNoise((sampleX + 101.231f) * perlinScale, (sampleY + 77.777f) * perlinScale) - 0.5f;
-        float y = elevation * heightScale + noise * perlinStrength;
+        float y = shapedElevation * heightScale + noise * perlinStrength;
 
         return new Vector3(sampleX * tileWorldSize, y + 2.5f, sampleY * tileWorldSize);
     }
