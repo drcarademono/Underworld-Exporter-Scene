@@ -1029,6 +1029,22 @@ public class GameWorldController : UWEBase
 
         overworld.OverworldStartPos = GetOverworldSpawnPosition(heightmap, overworld.TileWorldSize, Mathf.Max(1, overworld.TilesPerPixel), overworld.HeightScale, overworld.PerlinScale, overworld.PerlinStrength, overworld.OverworldStartTile.x, overworld.OverworldStartTile.y);
 
+        int startTotalSeconds = Mathf.Max(0, (overworld.StartHour * 3600) + (overworld.StartMinute * 60) + overworld.StartSecond);
+        int clock1 = startTotalSeconds % 255;
+        int rem = startTotalSeconds / 255;
+        int clock2 = rem % 255;
+        int clock3 = rem / 255;
+        GameClock.Clock0 = 0;
+        GameClock.Clock1 = clock1;
+        GameClock.Clock2 = clock2;
+        GameClock.Clock3 = clock3;
+
+        GameClock gc = FindObjectOfType<GameClock>();
+        if (gc != null)
+        {
+            gc.clockRate = overworld.ClockRateSecondsPerGameSecond;
+        }
+
         UWCharacter.Instance.playerController.enabled = true;
         UWCharacter.Instance.playerMotor.enabled = true;
         UWCharacter.Instance.transform.position = overworld.OverworldStartPos;
