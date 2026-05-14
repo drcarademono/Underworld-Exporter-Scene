@@ -194,6 +194,7 @@ public class GameWorldController : UWEBase
     public static bool NavMeshReady = false;
     public bool[] NavMeshesReady = new bool[4];
     private static string LevelSignature;
+    private float nextAudioListenerCheckTime = 0f;
 
     /// <summary>
     /// What level the player starts on in a quick start
@@ -577,6 +578,11 @@ public class GameWorldController : UWEBase
 
     void Update()
     {
+        if (Time.time >= nextAudioListenerCheckTime)
+        {
+            EnforceSingleAudioListener();
+            nextAudioListenerCheckTime = Time.time + 1f;
+        }
         PositionDetect();
     }
 
@@ -1318,6 +1324,31 @@ public class GameWorldController : UWEBase
         SwitchLevel(newLevelNo);
     }
 
+    private void EnforceSingleAudioListener()
+    {
+        AudioListener[] listeners = FindObjectsOfType<AudioListener>();
+        if ((listeners == null) || (listeners.Length <= 1))
+        {
+            return;
+        }
+
+        if ((UWCharacter.Instance == null) || (UWCharacter.Instance.playerCam == null))
+        {
+            return;
+        }
+
+        AudioListener preferred = UWCharacter.Instance.playerCam.GetComponent<AudioListener>();
+        if (preferred == null)
+        {
+            preferred = listeners[0];
+        }
+
+        for (int i = 0; i < listeners.Length; i++)
+        {
+            listeners[i].enabled = (listeners[i] == preferred);
+        }
+    }
+
     /// <summary>
     /// Detects where the player currently is an updates their swimming state and auto map as needed.
     /// </summary>
@@ -1331,6 +1362,11 @@ public class GameWorldController : UWEBase
         {
             return;
         }
+        if ((CurrentTileMap() == null) || (CurrentAutoMap() == null))
+        {
+            return;
+        }
+
         TileMap.visitTileX = (short)(UWCharacter.Instance.transform.position.x / 1.2f);
         TileMap.visitTileY = (short)(UWCharacter.Instance.transform.position.z / 1.2f);
 
