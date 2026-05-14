@@ -688,7 +688,7 @@ public class MainMenuHud : GuiBase
     {
         GameWorldController.LoadingGame = true;
 
-        if ((GameWorldController.instance._RES == GAME_UW1) && (GameWorldController.instance.StartInOverworld))
+        if ((_RES == GAME_UW1) && (GameWorldController.instance.StartInOverworld))
         {
             GameWorldController.instance.SetupOverworldStart();
         }
