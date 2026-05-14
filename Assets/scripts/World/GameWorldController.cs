@@ -901,17 +901,19 @@ public class GameWorldController : UWEBase
         if (planeRenderer != null)
         {
             int textureIndex = 210;
-            Material sourceMaterial = null;
-            if ((MaterialMasterList != null) && (textureIndex >= 0) && (textureIndex < MaterialMasterList.Length))
+            Texture2D floorTexture = null;
+            if (texLoader != null)
             {
-                sourceMaterial = MaterialMasterList[textureIndex];
+                floorTexture = texLoader.LoadImageAt(textureIndex, 0);
             }
 
-            Material planeMat = (sourceMaterial != null)
-                ? new Material(sourceMaterial)
-                : new Material(Shader.Find("Standard"));
-
-            if (planeMat.mainTexture == null)
+            Material planeMat = new Material(Shader.Find("Standard"));
+            if (floorTexture != null)
+            {
+                floorTexture.wrapMode = TextureWrapMode.Repeat;
+                planeMat.mainTexture = floorTexture;
+            }
+            else
             {
                 planeMat.color = new Color(0.22f, 0.58f, 0.22f);
             }
