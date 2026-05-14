@@ -1003,7 +1003,7 @@ public class GameWorldController : UWEBase
         {
             for (int y = 0; y < overworldTerrainMapHeight; y++)
             {
-                overworldTerrainTypeMap[x, y] = TerrainDatLoader.Unknown;
+                overworldTerrainTypeMap[x, y] = (int)TerrainDatLoader.TerrainTypes.Unknown;
             }
         }
 
@@ -1100,7 +1100,7 @@ public class GameWorldController : UWEBase
         int sampleY = Mathf.Clamp(Mathf.FloorToInt(UWCharacter.Instance.transform.position.z / Mathf.Max(0.01f, overworld.TileWorldSize)), 0, overworldTerrainMapHeight - 1);
 
         int terrainNo = overworldTerrainTypeMap[sampleX, sampleY];
-        if (terrainNo == TerrainDatLoader.Unknown)
+        if (terrainNo == (int)TerrainDatLoader.TerrainTypes.Unknown)
         {
             terrainNo = TerrainDatLoader.Normal;
         }
