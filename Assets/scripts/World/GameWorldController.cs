@@ -1068,7 +1068,7 @@ public class GameWorldController : UWEBase
         Light sunLight = sun.AddComponent<Light>();
         sunLight.type = LightType.Directional;
         sunLight.color = new Color(1f, 0.97f, 0.9f);
-        sunLight.intensity = 1.2f;
+        sunLight.intensity = 1.0f;
         sun.transform.rotation = Quaternion.Euler(45f, -30f, 0f);
 
         Material daySky = Resources.Load<Material>("DynamicSkies/Materials/BLBSkyboxMaterial");

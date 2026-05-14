@@ -204,8 +204,15 @@ public class OverworldSkyController : MonoBehaviour
         if (diffuse != null) runtimeSky.SetTexture(prefix + "Diffuse", diffuse);
         if (normal != null) runtimeSky.SetTexture(prefix + "Normal", normal);
 
-        runtimeSky.SetColor(prefix + "Color", ParseHexColor(c.DayColor, Color.white));
-        runtimeSky.SetColor(prefix + "NightColor", ParseHexColor(c.NightColor, Color.gray));
+        runtimeSky.SetTextureScale(prefix + "Diffuse", new Vector2(c.TilingX <= 0f ? 1f : c.TilingX, c.TilingY <= 0f ? 1f : c.TilingY));
+        runtimeSky.SetTextureOffset(prefix + "Diffuse", new Vector2(c.OffsetX, c.OffsetY));
+
+        Color dayColor = ParseHexColor(c.DayColor, Color.white);
+        Color nightColor = ParseHexColor(c.NightColor, Color.gray);
+        dayColor.a = Mathf.Clamp01(c.Opacity);
+        nightColor.a = Mathf.Clamp01(c.Opacity);
+        runtimeSky.SetColor(prefix + "Color", dayColor);
+        runtimeSky.SetColor(prefix + "NightColor", nightColor);
         runtimeSky.SetFloat(prefix + "AlphaCutoff", c.AlphaTreshold);
         runtimeSky.SetFloat(prefix + "AlphaMax", c.AlphaMax);
         runtimeSky.SetFloat(prefix + "ColorBoost", c.ColorBoost);
