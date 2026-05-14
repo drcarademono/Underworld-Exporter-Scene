@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -22,10 +23,16 @@ public class UWTextureViewerWindow : EditorWindow
         window.minSize = new Vector2(760f, 420f);
     }
 
+
+    private void OnEnable()
+    {
+        TryLoadPathsFromConfig();
+    }
+
     private void OnGUI()
     {
         EditorGUILayout.LabelField("Underworld Ground/Floor/Water Texture Viewer", EditorStyles.boldLabel);
-        EditorGUILayout.HelpBox("Loads UW1 and UW2 textures directly from DATA files. UW1 shows floor range (210-313). UW2 shows full texture set (0-255).", MessageType.Info);
+        EditorGUILayout.HelpBox("Loads UW1 and UW2 textures directly from DATA files and auto-fills paths from config.json when available. UW1 uses detected floor range from F32.TR. UW2 uses detected range from T64.TR.", MessageType.Info);
 
         uw1Path = EditorGUILayout.TextField("UW1 Base Path", uw1Path);
         uw2Path = EditorGUILayout.TextField("UW2 Base Path", uw2Path);
@@ -100,7 +107,10 @@ public class UWTextureViewerWindow : EditorWindow
             PaletteLoader paletteLoader = new PaletteLoader(Path.Combine(Loader.BasePath, "DATA", "PALS.DAT"), -1);
             TextureLoader textureLoader = new TextureLoader();
 
-            for (int i = 210; i <= 313; i++)
+            int uw1FloorCount = DetectTextureCount(Path.Combine(Loader.BasePath, "DATA", "F32.TR"));
+            if (uw1FloorCount <= 0) { uw1FloorCount = 104; }
+
+            for (int i = 210; i < 210 + uw1FloorCount; i++)
             {
                 if (!TryLoadTexture(textureLoader, paletteLoader, i, out Texture2D tex)) { continue; }
                 uw1Entries.Add(new TextureEntry { texture = tex, label = $"#{i}", likelyWater = IsLikelyWater(tex) });
@@ -128,7 +138,10 @@ public class UWTextureViewerWindow : EditorWindow
             PaletteLoader paletteLoader = new PaletteLoader(Path.Combine(Loader.BasePath, "DATA", "PALS.DAT"), -1);
             TextureLoader textureLoader = new TextureLoader();
 
-            for (int i = 0; i <= 255; i++)
+            int uw2Count = DetectTextureCount(Path.Combine(Loader.BasePath, "DATA", "T64.TR"));
+            if (uw2Count <= 0) { uw2Count = 256; }
+
+            for (int i = 0; i < uw2Count; i++)
             {
                 if (!TryLoadTexture(textureLoader, paletteLoader, i, out Texture2D tex)) { continue; }
                 uw2Entries.Add(new TextureEntry { texture = tex, label = $"#{i}", likelyWater = IsLikelyWater(tex) });
@@ -139,6 +152,39 @@ public class UWTextureViewerWindow : EditorWindow
             UWClass._RES = prevRes;
             Loader.BasePath = prevBase;
         }
+    }
+
+    private void TryLoadPathsFromConfig()
+    {
+        try
+        {
+            string configPath = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
+            if (!File.Exists(configPath)) { return; }
+
+            ConfigRoot config = JsonUtility.FromJson<ConfigRoot>(File.ReadAllText(configPath));
+            if (config == null || config.paths == null) { return; }
+
+            if (string.IsNullOrWhiteSpace(uw1Path)) { uw1Path = config.paths.PATH_UW1; }
+            if (string.IsNullOrWhiteSpace(uw2Path)) { uw2Path = config.paths.PATH_UW2; }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning("UWTextureViewer: Unable to load config.json paths: " + ex.Message);
+        }
+    }
+
+    private static int DetectTextureCount(string textureFilePath)
+    {
+        if (!File.Exists(textureFilePath)) { return 0; }
+
+        byte[] file = File.ReadAllBytes(textureFilePath);
+        if (file.Length < 8) { return 0; }
+
+        uint firstOffset = Loader.ConvertInt32(file[4], file[5], file[6], file[7]);
+        if (firstOffset <= 4 || firstOffset > file.Length) { return 0; }
+
+        int count = (int)((firstOffset - 4) / 4);
+        return Mathf.Max(0, count);
     }
 
     private static bool TryLoadTexture(TextureLoader textureLoader, PaletteLoader paletteLoader, int index, out Texture2D texture)
@@ -183,6 +229,19 @@ public class UWTextureViewerWindow : EditorWindow
 
         float ratio = blueDominant / pixels.Length;
         return ratio > 0.28f;
+    }
+
+    [Serializable]
+    private class ConfigRoot
+    {
+        public ConfigPaths paths;
+    }
+
+    [Serializable]
+    private class ConfigPaths
+    {
+        public string PATH_UW1;
+        public string PATH_UW2;
     }
 
     private class TextureEntry
