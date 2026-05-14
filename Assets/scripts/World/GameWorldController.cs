@@ -199,6 +199,7 @@ public class GameWorldController : UWEBase
     private int lastOverworldMapPixelX = int.MinValue;
     private int lastOverworldMapPixelY = int.MinValue;
     private bool rebuildingOverworld = false;
+    private bool overworldStreamingInitialized = false;
 
     /// <summary>
     /// What level the player starts on in a quick start
@@ -605,6 +606,8 @@ public class GameWorldController : UWEBase
         OverworldTerrainController overworld = GetOverworldController();
         if (!overworld.StartInOverworld) { return; }
         if (UWCharacter.Instance == null) { return; }
+        if (!overworldStreamingInitialized) { return; }
+        if (GameObject.Find("OverworldTerrain") == null) { return; }
 
         float mapPixelWorldSize = Mathf.Max(0.01f, overworld.TileWorldSize);
         int currentMapPixelX = Mathf.FloorToInt(UWCharacter.Instance.transform.position.x / mapPixelWorldSize);
@@ -854,7 +857,8 @@ public class GameWorldController : UWEBase
         {
             case GAME_TNOVA:
                 AtMainMenu = false;
-                TileMapRenderer.EnableCollision = false;
+                overworldStreamingInitialized = false;
+        TileMapRenderer.EnableCollision = false;
                 bGenNavMeshes = false;
                 UWHUD.instance.gameObject.SetActive(false);
                 UWHUD.instance.window.SetFullScreen();
@@ -865,7 +869,8 @@ public class GameWorldController : UWEBase
                 SwitchTNovaMap("");
                 return;
             case GAME_SHOCK:
-                TileMapRenderer.EnableCollision = false;
+                overworldStreamingInitialized = false;
+        TileMapRenderer.EnableCollision = false;
                 bGenNavMeshes = false;
                 AtMainMenu = false;
                 UWCharacter.Instance.isFlying = true;
@@ -951,6 +956,7 @@ public class GameWorldController : UWEBase
 
     public void SetupOverworldStart()
     {
+        overworldStreamingInitialized = false;
         TileMapRenderer.EnableCollision = false;
 
         GameObject existingTerrain = GameObject.Find("OverworldTerrain");
@@ -1137,6 +1143,11 @@ public class GameWorldController : UWEBase
         UWCharacter.Instance.playerController.enabled = true;
         UWCharacter.Instance.playerMotor.enabled = true;
         UWCharacter.Instance.transform.position = GetOverworldController().OverworldStartPos;
+
+        float mapPixelWorldSize = Mathf.Max(0.01f, GetOverworldController().TileWorldSize);
+        lastOverworldMapPixelX = Mathf.FloorToInt(UWCharacter.Instance.transform.position.x / mapPixelWorldSize);
+        lastOverworldMapPixelY = Mathf.FloorToInt(UWCharacter.Instance.transform.position.z / mapPixelWorldSize);
+        overworldStreamingInitialized = true;
     }
 
     private Texture2D LoadUW2TerrainTexture(int textureIndex)
