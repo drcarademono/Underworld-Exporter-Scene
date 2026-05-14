@@ -204,6 +204,10 @@ public class GameWorldController : UWEBase
     /// </summary>
     public Vector3 StartPos = new Vector3(38f, 4f, 2.7f);
 
+    [Header("Overworld Start")]
+    public bool StartInOverworld = true;
+    public Vector3 OverworldStartPos = new Vector3(0f, 2f, 0f);
+
     /// <summary>
     /// Create object reports
     /// </summary>
@@ -854,9 +858,52 @@ public class GameWorldController : UWEBase
             UWHUD.instance.CutsceneFullPanel.SetActive(false);
             UWHUD.instance.mainmenu.gameObject.SetActive(false);
             UWHUD.instance.RefreshPanels(UWHUD.HUD_MODE_INVENTORY);
-            SwitchLevel(startLevel);
+
+            if ((_RES == GAME_UW1) && (StartInOverworld))
+            {
+                SetupOverworldStart();
+            }
+            else
+            {
+                SwitchLevel(startLevel);
+            }
         }
         return;
+    }
+
+    private void SetupOverworldStart()
+    {
+        TileMapRenderer.EnableCollision = false;
+
+        if (LevelModel != null) { LevelModel.SetActive(false); }
+        if (SceneryModel != null) { SceneryModel.SetActive(false); }
+
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+        RenderSettings.ambientLight = new Color(0.55f, 0.68f, 0.55f);
+
+        GameObject overworldPlane = GameObject.CreatePrimitive(PrimitiveType.Plane);
+        overworldPlane.name = "OverworldPlane";
+        overworldPlane.transform.position = Vector3.zero;
+        overworldPlane.transform.localScale = new Vector3(50f, 1f, 50f);
+
+        Renderer planeRenderer = overworldPlane.GetComponent<Renderer>();
+        if (planeRenderer != null)
+        {
+            Material planeMat = new Material(Shader.Find("Standard"));
+            planeMat.color = new Color(0.22f, 0.58f, 0.22f);
+            planeRenderer.material = planeMat;
+        }
+
+        GameObject sun = new GameObject("OverworldSun");
+        Light sunLight = sun.AddComponent<Light>();
+        sunLight.type = LightType.Directional;
+        sunLight.color = new Color(1f, 0.97f, 0.9f);
+        sunLight.intensity = 1.2f;
+        sun.transform.rotation = Quaternion.Euler(45f, -30f, 0f);
+
+        UWCharacter.Instance.playerController.enabled = true;
+        UWCharacter.Instance.playerMotor.enabled = true;
+        UWCharacter.Instance.transform.position = OverworldStartPos;
     }
 
     /// <summary>
