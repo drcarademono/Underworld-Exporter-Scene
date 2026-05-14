@@ -3,6 +3,7 @@ using UnityEngine;
 #if UNITY_EDITOR
 #endif
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using UnityEngine.AI;
 
@@ -898,6 +899,9 @@ public class GameWorldController : UWEBase
         const float heightScale = 42f;
         const float perlinScale = 0.006f;
         const float perlinStrength = 3.5f;
+        const float seaLevel = 0f;
+        const float seaLevelOffset = 6f;
+        const float steepSlopeNormalThreshold = 0.78f;
 
         Texture2D heightmap = Resources.Load<Texture2D>(heightMapPath);
         if (heightmap == null)
@@ -932,7 +936,11 @@ public class GameWorldController : UWEBase
                     float elevation = SampleSmoothedHeight(heightmap, px, pz);
                     float shapedElevation = Mathf.Pow(elevation, 1.65f);
                     float noise = Mathf.PerlinNoise((x + 101.231f) * perlinScale, (z + 77.777f) * perlinScale) - 0.5f;
-                    float y = shapedElevation * heightScale + noise * perlinStrength;
+                    float y = shapedElevation * heightScale + noise * perlinStrength - seaLevelOffset;
+                    if (y < seaLevel)
+                    {
+                        y = seaLevel;
+                    }
 
                     vertices[index] = new Vector3(x * tileWorldSize, y, z * tileWorldSize);
                     uvs[index] = new Vector2(u, v);
@@ -963,6 +971,43 @@ public class GameWorldController : UWEBase
             terrainMesh.uv = uvs;
             terrainMesh.RecalculateNormals();
             terrainMesh.RecalculateBounds();
+            List<int> waterTriangles = new List<int>();
+            List<int> grassTriangles = new List<int>();
+            List<int> stoneTriangles = new List<int>();
+
+            for (int i = 0; i < triangles.Length; i += 3)
+            {
+                int i0 = triangles[i];
+                int i1 = triangles[i + 1];
+                int i2 = triangles[i + 2];
+
+                Vector3 v0 = vertices[i0];
+                Vector3 v1 = vertices[i1];
+                Vector3 v2 = vertices[i2];
+
+                bool isWater = (Mathf.Approximately(v0.y, seaLevel) && Mathf.Approximately(v1.y, seaLevel) && Mathf.Approximately(v2.y, seaLevel));
+                if (isWater)
+                {
+                    waterTriangles.Add(i0); waterTriangles.Add(i1); waterTriangles.Add(i2);
+                    continue;
+                }
+
+                Vector3 triNormal = Vector3.Cross(v1 - v0, v2 - v0).normalized;
+                if (triNormal.y < steepSlopeNormalThreshold)
+                {
+                    stoneTriangles.Add(i0); stoneTriangles.Add(i1); stoneTriangles.Add(i2);
+                }
+                else
+                {
+                    grassTriangles.Add(i0); grassTriangles.Add(i1); grassTriangles.Add(i2);
+                }
+            }
+
+            terrainMesh.subMeshCount = 3;
+            terrainMesh.SetTriangles(waterTriangles, 0);
+            terrainMesh.SetTriangles(grassTriangles, 1);
+            terrainMesh.SetTriangles(stoneTriangles, 2);
+
 
             GameObject terrainObject = new GameObject("OverworldTerrain");
             MeshFilter meshFilter = terrainObject.AddComponent<MeshFilter>();
@@ -972,26 +1017,25 @@ public class GameWorldController : UWEBase
             meshFilter.sharedMesh = terrainMesh;
             meshCollider.sharedMesh = terrainMesh;
 
-            Material terrainMat = new Material(Shader.Find("Standard"));
-            int textureIndex = 210;
-            Texture2D floorTexture = null;
+            Material waterMat = new Material(Shader.Find("Standard"));
+            Material grassMat = new Material(Shader.Find("Standard"));
+            Material stoneMat = new Material(Shader.Find("Standard"));
+
+            Texture2D waterTexture = null;
+            Texture2D grassTexture = null;
+            Texture2D stoneTexture = null;
             if (texLoader != null)
             {
-                floorTexture = texLoader.LoadImageAt(textureIndex, 0);
+                waterTexture = texLoader.LoadImageAt(184, 0);
+                grassTexture = texLoader.LoadImageAt(181, 0);
+                stoneTexture = texLoader.LoadImageAt(253, 0);
             }
-            if (floorTexture != null)
-            {
-                floorTexture.wrapMode = TextureWrapMode.Repeat;
-                terrainMat.mainTexture = floorTexture;
-                terrainMat.mainTextureScale = new Vector2(sampleWidth / 2.5f, sampleHeight / 2.5f);
-                terrainMat.SetFloat("_Glossiness", 0f);
-                terrainMat.SetFloat("_Metallic", 0f);
-            }
-            else
-            {
-                terrainMat.color = new Color(0.22f, 0.58f, 0.22f);
-            }
-            meshRenderer.material = terrainMat;
+
+            ConfigureTerrainMaterial(waterMat, waterTexture, new Color(0.15f, 0.28f, 0.35f), sampleWidth, sampleHeight);
+            ConfigureTerrainMaterial(grassMat, grassTexture, new Color(0.22f, 0.58f, 0.22f), sampleWidth, sampleHeight);
+            ConfigureTerrainMaterial(stoneMat, stoneTexture, new Color(0.45f, 0.45f, 0.45f), sampleWidth, sampleHeight);
+
+            meshRenderer.materials = new Material[] { waterMat, grassMat, stoneMat };
 
             OverworldStartPos = GetOverworldSpawnPosition(heightmap, tileWorldSize, tilesPerPixel, heightScale, perlinScale, perlinStrength, 630, 650);
         }
@@ -1006,6 +1050,22 @@ public class GameWorldController : UWEBase
         UWCharacter.Instance.playerController.enabled = true;
         UWCharacter.Instance.playerMotor.enabled = true;
         UWCharacter.Instance.transform.position = OverworldStartPos;
+    }
+
+    private void ConfigureTerrainMaterial(Material mat, Texture2D texture, Color fallbackColor, int sampleWidth, int sampleHeight)
+    {
+        if (texture != null)
+        {
+            texture.wrapMode = TextureWrapMode.Repeat;
+            mat.mainTexture = texture;
+            mat.mainTextureScale = new Vector2(sampleWidth / 3f, sampleHeight / 3f);
+        }
+        else
+        {
+            mat.color = fallbackColor;
+        }
+        mat.SetFloat("_Glossiness", 0f);
+        mat.SetFloat("_Metallic", 0f);
     }
 
     private float SampleSmoothedHeight(Texture2D heightmap, int px, int py)
@@ -1035,7 +1095,11 @@ public class GameWorldController : UWEBase
         float elevation = SampleSmoothedHeight(heightmap, px, py);
         float shapedElevation = Mathf.Pow(elevation, 1.65f);
         float noise = Mathf.PerlinNoise((sampleX + 101.231f) * perlinScale, (sampleY + 77.777f) * perlinScale) - 0.5f;
-        float y = shapedElevation * heightScale + noise * perlinStrength;
+        float y = shapedElevation * heightScale + noise * perlinStrength - 6f;
+        if (y < 0f)
+        {
+            y = 0f;
+        }
 
         return new Vector3(sampleX * tileWorldSize, y + 2.5f, sampleY * tileWorldSize);
     }
