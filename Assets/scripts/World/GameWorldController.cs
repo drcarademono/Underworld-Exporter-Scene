@@ -210,6 +210,10 @@ public class GameWorldController : UWEBase
     public bool StartInOverworld = true;
     public Vector3 OverworldStartPos = new Vector3(0f, 2f, 0f);
 
+    [Header("Overworld Terrain Tuning")]
+    [Range(0f, 30f)]
+    public float OverworldSeaLevelOffset = 6f;
+
     /// <summary>
     /// Create object reports
     /// </summary>
@@ -900,7 +904,7 @@ public class GameWorldController : UWEBase
         const float perlinScale = 0.006f;
         const float perlinStrength = 3.5f;
         const float seaLevel = 0f;
-        const float seaLevelOffset = 6f;
+        float seaLevelOffset = OverworldSeaLevelOffset;
         const float steepSlopeNormalThreshold = 0.78f;
 
         Texture2D heightmap = Resources.Load<Texture2D>(heightMapPath);
@@ -1095,7 +1099,7 @@ public class GameWorldController : UWEBase
         float elevation = SampleSmoothedHeight(heightmap, px, py);
         float shapedElevation = Mathf.Pow(elevation, 1.65f);
         float noise = Mathf.PerlinNoise((sampleX + 101.231f) * perlinScale, (sampleY + 77.777f) * perlinScale) - 0.5f;
-        float y = shapedElevation * heightScale + noise * perlinStrength - 6f;
+        float y = shapedElevation * heightScale + noise * perlinStrength - OverworldSeaLevelOffset;
         if (y < 0f)
         {
             y = 0f;
