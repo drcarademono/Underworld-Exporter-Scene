@@ -206,13 +206,8 @@ public class GameWorldController : UWEBase
     /// </summary>
     public Vector3 StartPos = new Vector3(38f, 4f, 2.7f);
 
-    [Header("Overworld Start")]
-    public bool StartInOverworld = true;
-    public Vector3 OverworldStartPos = new Vector3(0f, 2f, 0f);
-
-    [Header("Overworld Terrain Tuning")]
-    [Range(0f, 30f)]
-    public float OverworldSeaLevelOffset = 6f;
+    [Header("Overworld Controller")]
+    public OverworldTerrainController OverworldController;
 
     /// <summary>
     /// Create object reports
@@ -870,7 +865,7 @@ public class GameWorldController : UWEBase
             UWHUD.instance.mainmenu.gameObject.SetActive(false);
             UWHUD.instance.RefreshPanels(UWHUD.HUD_MODE_INVENTORY);
 
-            if ((_RES == GAME_UW2) && (StartInOverworld))
+            if ((_RES == GAME_UWDEMO) && (GetOverworldController().StartInOverworld))
             {
                 SetupOverworldStart();
             }
@@ -880,6 +875,20 @@ public class GameWorldController : UWEBase
             }
         }
         return;
+    }
+
+    private OverworldTerrainController GetOverworldController()
+    {
+        if (OverworldController == null)
+        {
+            OverworldController = FindObjectOfType<OverworldTerrainController>();
+        }
+        if (OverworldController == null)
+        {
+            GameObject controllerObj = new GameObject("_OverworldController");
+            OverworldController = controllerObj.AddComponent<OverworldTerrainController>();
+        }
+        return OverworldController;
     }
 
     public void SetupOverworldStart()
@@ -897,15 +906,17 @@ public class GameWorldController : UWEBase
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
         RenderSettings.ambientLight = new Color(0.55f, 0.68f, 0.55f);
 
-        const string heightMapPath = "UIX/Britannia_Corv_Heightmap";
-        const float tileWorldSize = 8f;
-        const int tilesPerPixel = 8;
-        const float heightScale = 42f;
-        const float perlinScale = 0.006f;
-        const float perlinStrength = 3.5f;
+        OverworldTerrainController overworld = GetOverworldController();
+
+        string heightMapPath = overworld.HeightmapResourcePath;
+        float tileWorldSize = overworld.TileWorldSize;
+        int tilesPerPixel = Mathf.Max(1, overworld.TilesPerPixel);
+        float heightScale = overworld.HeightScale;
+        float perlinScale = overworld.PerlinScale;
+        float perlinStrength = overworld.PerlinStrength;
         const float seaLevel = 0f;
-        float seaLevelOffset = OverworldSeaLevelOffset;
-        const float steepSlopeNormalThreshold = 0.78f;
+        float seaLevelOffset = overworld.SeaLevelOffset;
+        float steepSlopeNormalThreshold = overworld.SteepSlopeNormalThreshold;
 
         Texture2D heightmap = Resources.Load<Texture2D>(heightMapPath);
         if (heightmap == null)
@@ -1030,9 +1041,9 @@ public class GameWorldController : UWEBase
             Texture2D stoneTexture = null;
             if (texLoader != null)
             {
-                waterTexture = texLoader.LoadImageAt(184, 0);
-                grassTexture = texLoader.LoadImageAt(181, 0);
-                stoneTexture = texLoader.LoadImageAt(253, 0);
+                waterTexture = LoadUW2TerrainTexture(overworld.WaterTextureIndex);
+                grassTexture = LoadUW2TerrainTexture(overworld.GrassTextureIndex);
+                stoneTexture = LoadUW2TerrainTexture(overworld.StoneTextureIndex);
             }
 
             ConfigureTerrainMaterial(waterMat, waterTexture, new Color(0.15f, 0.28f, 0.35f), sampleWidth, sampleHeight);
@@ -1041,7 +1052,7 @@ public class GameWorldController : UWEBase
 
             meshRenderer.materials = new Material[] { waterMat, grassMat, stoneMat };
 
-            OverworldStartPos = GetOverworldSpawnPosition(heightmap, tileWorldSize, tilesPerPixel, heightScale, perlinScale, perlinStrength, 1418, 1398);
+            overworld.OverworldStartPos = GetOverworldSpawnPosition(heightmap, tileWorldSize, tilesPerPixel, heightScale, perlinScale, perlinStrength, overworld.OverworldStartTile.x, overworld.OverworldStartTile.y);
         }
 
         GameObject sun = new GameObject("OverworldSun");
@@ -1053,7 +1064,34 @@ public class GameWorldController : UWEBase
 
         UWCharacter.Instance.playerController.enabled = true;
         UWCharacter.Instance.playerMotor.enabled = true;
-        UWCharacter.Instance.transform.position = OverworldStartPos;
+        UWCharacter.Instance.transform.position = GetOverworldController().OverworldStartPos;
+    }
+
+    private Texture2D LoadUW2TerrainTexture(int textureIndex)
+    {
+        string prevRes = UWClass._RES;
+        string prevBase = Loader.BasePath;
+        PaletteLoader prevPal = palLoader;
+
+        try
+        {
+            UWClass._RES = GAME_UW2;
+            Loader.BasePath = UWClass.CleanPath(Path_uw2);
+            PaletteLoader uw2Palette = new PaletteLoader(Path.Combine(Loader.BasePath, "DATA", "PALS.DAT"), -1);
+            TextureLoader uw2TexLoader = new TextureLoader();
+            return uw2TexLoader.LoadImageAt(textureIndex, uw2Palette.Palettes[0]);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning("Failed to load UW2 terrain texture index " + textureIndex + ": " + ex.Message);
+            return null;
+        }
+        finally
+        {
+            UWClass._RES = prevRes;
+            Loader.BasePath = prevBase;
+            palLoader = prevPal;
+        }
     }
 
     private void ConfigureTerrainMaterial(Material mat, Texture2D texture, Color fallbackColor, int sampleWidth, int sampleHeight)
@@ -1099,7 +1137,7 @@ public class GameWorldController : UWEBase
         float elevation = SampleSmoothedHeight(heightmap, px, py);
         float shapedElevation = Mathf.Pow(elevation, 1.65f);
         float noise = Mathf.PerlinNoise((sampleX + 101.231f) * perlinScale, (sampleY + 77.777f) * perlinScale) - 0.5f;
-        float y = shapedElevation * heightScale + noise * perlinStrength - OverworldSeaLevelOffset;
+        float y = shapedElevation * heightScale + noise * perlinStrength - GetOverworldController().SeaLevelOffset;
         if (y < 0f)
         {
             y = 0f;
