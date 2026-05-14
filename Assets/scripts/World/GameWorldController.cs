@@ -898,7 +898,7 @@ public class GameWorldController : UWEBase
         RenderSettings.ambientLight = new Color(0.55f, 0.68f, 0.55f);
 
         const string heightMapPath = "UIX/Britannia_Corv_Heightmap";
-        const float tileWorldSize = 1f;
+        const float tileWorldSize = 8f;
         const int tilesPerPixel = 8;
         const float heightScale = 42f;
         const float perlinScale = 0.006f;
@@ -1041,7 +1041,7 @@ public class GameWorldController : UWEBase
 
             meshRenderer.materials = new Material[] { waterMat, grassMat, stoneMat };
 
-            OverworldStartPos = GetOverworldSpawnPosition(heightmap, tileWorldSize, tilesPerPixel, heightScale, perlinScale, perlinStrength, 630, 650);
+            OverworldStartPos = GetOverworldSpawnPosition(heightmap, tileWorldSize, tilesPerPixel, heightScale, perlinScale, perlinStrength, 1418, 1398);
         }
 
         GameObject sun = new GameObject("OverworldSun");
