@@ -102,8 +102,7 @@ public class UWTextureViewerWindow : EditorWindow
 
             for (int i = 210; i <= 313; i++)
             {
-                Texture2D tex = textureLoader.LoadImageAt(i, paletteLoader.Palettes[0]);
-                if (tex == null) { continue; }
+                if (!TryLoadTexture(textureLoader, paletteLoader, i, out Texture2D tex)) { continue; }
                 uw1Entries.Add(new TextureEntry { texture = tex, label = $"#{i}", likelyWater = IsLikelyWater(tex) });
             }
         }
@@ -131,8 +130,7 @@ public class UWTextureViewerWindow : EditorWindow
 
             for (int i = 0; i <= 255; i++)
             {
-                Texture2D tex = textureLoader.LoadImageAt(i, paletteLoader.Palettes[0]);
-                if (tex == null) { continue; }
+                if (!TryLoadTexture(textureLoader, paletteLoader, i, out Texture2D tex)) { continue; }
                 uw2Entries.Add(new TextureEntry { texture = tex, label = $"#{i}", likelyWater = IsLikelyWater(tex) });
             }
         }
@@ -140,6 +138,21 @@ public class UWTextureViewerWindow : EditorWindow
         {
             UWClass._RES = prevRes;
             Loader.BasePath = prevBase;
+        }
+    }
+
+    private static bool TryLoadTexture(TextureLoader textureLoader, PaletteLoader paletteLoader, int index, out Texture2D texture)
+    {
+        texture = null;
+        try
+        {
+            texture = textureLoader.LoadImageAt(index, paletteLoader.Palettes[0]);
+            return texture != null;
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning($"UWTextureViewer: Skipping texture #{index} due to load failure: {ex.Message}");
+            return false;
         }
     }
 
