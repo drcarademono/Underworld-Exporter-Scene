@@ -196,6 +196,9 @@ public class GameWorldController : UWEBase
     public bool[] NavMeshesReady = new bool[4];
     private static string LevelSignature;
     private float nextAudioListenerCheckTime = 0f;
+    private int lastOverworldMapPixelX = int.MinValue;
+    private int lastOverworldMapPixelY = int.MinValue;
+    private bool rebuildingOverworld = false;
 
     /// <summary>
     /// What level the player starts on in a quick start
@@ -591,8 +594,47 @@ public class GameWorldController : UWEBase
             nextAudioListenerCheckTime = Time.time + 1f;
         }
         PositionDetect();
+        UpdateOverworldStreaming();
     }
 
+
+    private void UpdateOverworldStreaming()
+    {
+        if (rebuildingOverworld) { return; }
+        if (_RES != GAME_UW2) { return; }
+        OverworldTerrainController overworld = GetOverworldController();
+        if (!overworld.StartInOverworld) { return; }
+        if (UWCharacter.Instance == null) { return; }
+
+        float mapPixelWorldSize = Mathf.Max(0.01f, overworld.TileWorldSize);
+        int currentMapPixelX = Mathf.FloorToInt(UWCharacter.Instance.transform.position.x / mapPixelWorldSize);
+        int currentMapPixelY = Mathf.FloorToInt(UWCharacter.Instance.transform.position.z / mapPixelWorldSize);
+
+        if ((currentMapPixelX == lastOverworldMapPixelX) && (currentMapPixelY == lastOverworldMapPixelY))
+        {
+            return;
+        }
+
+        lastOverworldMapPixelX = currentMapPixelX;
+        lastOverworldMapPixelY = currentMapPixelY;
+
+        overworld.OverworldStartTile = new Vector2Int(
+            Mathf.RoundToInt(currentMapPixelX * overworld.TilesPerPixel),
+            Mathf.RoundToInt(currentMapPixelY * overworld.TilesPerPixel));
+
+        StartCoroutine(RebuildOverworldAtCurrentTile());
+    }
+
+    private IEnumerator RebuildOverworldAtCurrentTile()
+    {
+        rebuildingOverworld = true;
+        bool prev = GetOverworldController().StartInOverworld;
+        GetOverworldController().StartInOverworld = true;
+        SetupOverworldStart();
+        GetOverworldController().StartInOverworld = prev;
+        yield return null;
+        rebuildingOverworld = false;
+    }
 
     /// <summary>
     /// Generate NAV meshes for the map.
