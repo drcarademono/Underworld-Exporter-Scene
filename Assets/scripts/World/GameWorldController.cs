@@ -209,6 +209,13 @@ public class GameWorldController : UWEBase
     [Header("Overworld Controller")]
     public OverworldTerrainController OverworldController;
 
+    public bool StartInOverworld
+    {
+        get { return GetOverworldController().StartInOverworld; }
+        set { GetOverworldController().StartInOverworld = value; }
+    }
+
+
     /// <summary>
     /// Create object reports
     /// </summary>
