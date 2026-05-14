@@ -694,16 +694,25 @@ public class GameWorldController : UWEBase
         //Save config file as paths may have been changed.
         Configuration.Save(config);
         UWHUD.instance.gameSelectUi.SetActive(false);
-        LoadPath(res);
-        _RES = res;//game;
-        UWClass._RES = res;//game;
+
+        string requestedRes = res;
+        string effectiveRes = res;
+        if (requestedRes == GAME_UWDEMO)
+        {
+            effectiveRes = GAME_UW2;
+            GetOverworldController().StartInOverworld = true;
+        }
+
+        LoadPath(effectiveRes);
+        _RES = effectiveRes;//game;
+        UWClass._RES = effectiveRes;//game;
         SaveGame.InitEmptySaveGame();
 
         //Set some layers for the AI to use to detect walls and doors.
         MapMeshLayerMask = 1 << LevelModel.layer;
         DoorLayerMask = 1 << LayerMask.NameToLayer("Doors");
 
-        switch (res)
+        switch (effectiveRes)
         {
             case GAME_TNOVA:
                 UWCharacter.Instance.XAxis.enabled = true;
@@ -799,7 +808,7 @@ public class GameWorldController : UWEBase
                 }
         }
 
-        switch (res)
+        switch (effectiveRes)
         {
             case GAME_TNOVA:
                 AtMainMenu = false;
@@ -872,7 +881,7 @@ public class GameWorldController : UWEBase
             UWHUD.instance.mainmenu.gameObject.SetActive(false);
             UWHUD.instance.RefreshPanels(UWHUD.HUD_MODE_INVENTORY);
 
-            if ((_RES == GAME_UWDEMO) && (GetOverworldController().StartInOverworld))
+            if ((_RES == GAME_UW2) && (GetOverworldController().StartInOverworld))
             {
                 SetupOverworldStart();
             }
