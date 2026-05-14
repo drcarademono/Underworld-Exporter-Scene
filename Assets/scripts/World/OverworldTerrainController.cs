@@ -17,6 +17,9 @@ public class OverworldTerrainController : MonoBehaviour
     [Range(1,6)] public int ActiveChunkRadius = 2;
     public bool LoadWholeMapAtStartup = false;
 
+    [Header("View Distance")]
+    [Range(100f, 20000f)] public float OverworldFarClip = 6000f;
+
     [Header("Terrain Shape")]
     [Range(1f, 120f)] public float HeightScale = 42f;
     [Range(0f, 10f)] public float PerlinStrength = 3.5f;

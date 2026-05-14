@@ -979,6 +979,10 @@ public class GameWorldController : UWEBase
         UWCharacter.Instance.playerController.enabled = true;
         UWCharacter.Instance.playerMotor.enabled = true;
         UWCharacter.Instance.transform.position = overworld.OverworldStartPos;
+        if (UWCharacter.Instance.playerCam != null)
+        {
+            UWCharacter.Instance.playerCam.farClipPlane = overworld.OverworldFarClip;
+        }
 
         lastPlayerChunk = GetPlayerChunkCoord(overworld, UWCharacter.Instance.transform.position);
         if (overworld.LoadWholeMapAtStartup)
