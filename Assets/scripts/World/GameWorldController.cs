@@ -209,6 +209,9 @@ public class GameWorldController : UWEBase
     private Texture2D[] overworldWaterFrames = null;
     private int overworldWaterFrameIndex = 0;
     private float overworldWaterAnimTimer = 0f;
+    private int[,] overworldTerrainTypeMap = null;
+    private int overworldTerrainMapWidth = 0;
+    private int overworldTerrainMapHeight = 0;
 
     /// <summary>
     /// What level the player starts on in a quick start
@@ -992,6 +995,18 @@ public class GameWorldController : UWEBase
         OverworldTerrainRoot = new GameObject("OverworldTerrainRoot");
         loadedOverworldChunks.Clear();
 
+        int tpp = Mathf.Max(1, overworld.TilesPerPixel);
+        overworldTerrainMapWidth = Mathf.Max(2, heightmap.width / tpp);
+        overworldTerrainMapHeight = Mathf.Max(2, heightmap.height / tpp);
+        overworldTerrainTypeMap = new int[overworldTerrainMapWidth, overworldTerrainMapHeight];
+        for (int x = 0; x < overworldTerrainMapWidth; x++)
+        {
+            for (int y = 0; y < overworldTerrainMapHeight; y++)
+            {
+                overworldTerrainTypeMap[x, y] = TerrainDatLoader.Unknown;
+            }
+        }
+
         overworldWaterMat = new Material(Shader.Find("Standard"));
         overworldGrassMat = new Material(Shader.Find("Standard"));
         overworldStoneMat = new Material(Shader.Find("Standard"));
@@ -1079,20 +1094,19 @@ public class GameWorldController : UWEBase
     private void UpdateOverworldTerrainType(OverworldTerrainController overworld)
     {
         if (UWCharacter.Instance == null) { return; }
-        float sampleX = UWCharacter.Instance.transform.position.x / Mathf.Max(0.01f, overworld.TileWorldSize);
-        float sampleY = UWCharacter.Instance.transform.position.z / Mathf.Max(0.01f, overworld.TileWorldSize);
+        if (overworldTerrainTypeMap == null) { return; }
 
-        //Semantic water classification for overworld: sea-level classified as Water.
-        if (UWCharacter.Instance.transform.position.y <= GetOverworldController().WaterSurfaceEpsilon)
+        int sampleX = Mathf.Clamp(Mathf.FloorToInt(UWCharacter.Instance.transform.position.x / Mathf.Max(0.01f, overworld.TileWorldSize)), 0, overworldTerrainMapWidth - 1);
+        int sampleY = Mathf.Clamp(Mathf.FloorToInt(UWCharacter.Instance.transform.position.z / Mathf.Max(0.01f, overworld.TileWorldSize)), 0, overworldTerrainMapHeight - 1);
+
+        int terrainNo = overworldTerrainTypeMap[sampleX, sampleY];
+        if (terrainNo == TerrainDatLoader.Unknown)
         {
-            UWCharacter.Instance.terrainType = TerrainDatLoader.TerrainTypes.Water;
-            UWCharacter.Instance.CurrentTerrain = TerrainDatLoader.Water;
+            terrainNo = TerrainDatLoader.Normal;
         }
-        else
-        {
-            UWCharacter.Instance.terrainType = TerrainDatLoader.TerrainTypes.Normal;
-            UWCharacter.Instance.CurrentTerrain = TerrainDatLoader.Normal;
-        }
+
+        UWCharacter.Instance.CurrentTerrain = terrainNo;
+        UWCharacter.Instance.terrainType = TerrainDatLoader.getTerrain(terrainNo);
     }
 
     private void EnsureChunksAround(Vector2Int centerChunk, Texture2D heightmap, OverworldTerrainController overworld)
@@ -1159,6 +1173,38 @@ public class GameWorldController : UWEBase
                 float noise = Mathf.PerlinNoise((globalX + 101.231f) * overworld.PerlinScale, (globalZ + 77.777f) * overworld.PerlinScale) - 0.5f;
                 float y = shapedElevation * overworld.HeightScale + noise * overworld.PerlinStrength - overworld.SeaLevelOffset;
                 if (y < 0f) { y = 0f; }
+
+                if ((globalX >= 0) && (globalX < overworldTerrainMapWidth) && (globalZ >= 0) && (globalZ < overworldTerrainMapHeight))
+                {
+                    if (y <= overworld.WaterSurfaceEpsilon)
+                    {
+                        int terrainType = TerrainDatLoader.Water;
+                        float hE = SampleSmoothedHeight(heightmap, Mathf.Clamp(px + tilesPerPixel, 0, heightmap.width - 1), pz);
+                        float hW = SampleSmoothedHeight(heightmap, Mathf.Clamp(px - tilesPerPixel, 0, heightmap.width - 1), pz);
+                        float hN = SampleSmoothedHeight(heightmap, px, Mathf.Clamp(pz + tilesPerPixel, 0, heightmap.height - 1));
+                        float hS = SampleSmoothedHeight(heightmap, px, Mathf.Clamp(pz - tilesPerPixel, 0, heightmap.height - 1));
+                        float dx = hE - hW;
+                        float dz = hN - hS;
+
+                        if (Mathf.Abs(dx) > 0.015f || Mathf.Abs(dz) > 0.015f)
+                        {
+                            if (Mathf.Abs(dx) > Mathf.Abs(dz))
+                            {
+                                terrainType = (dx > 0f) ? TerrainDatLoader.WaterFlowWest : TerrainDatLoader.WaterFlowEast;
+                            }
+                            else
+                            {
+                                terrainType = (dz > 0f) ? TerrainDatLoader.WaterFlowSouth : TerrainDatLoader.WaterFlowNorth;
+                            }
+                        }
+
+                        overworldTerrainTypeMap[globalX, globalZ] = terrainType;
+                    }
+                    else
+                    {
+                        overworldTerrainTypeMap[globalX, globalZ] = TerrainDatLoader.Normal;
+                    }
+                }
 
                 vertices[index] = new Vector3(globalX * overworld.TileWorldSize, y, globalZ * overworld.TileWorldSize);
                 uvs[index] = new Vector2(x / (float)(sampleWidth - 1), z / (float)(sampleHeight - 1));
