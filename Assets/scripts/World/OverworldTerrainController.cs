@@ -29,6 +29,12 @@ public class OverworldTerrainController : MonoBehaviour
 
     [Header("UW2 Terrain Texture Indices")]
     public int WaterTextureIndex = 184;
+    public int WaterTextureAnimEndIndex = 188;
+    public bool AnimateWater = true;
+    [Range(0.05f, 1f)] public float WaterAnimFrameTime = 0.2f;
+
+    [Header("Water Classification")]
+    [Range(0f, 0.2f)] public float WaterSurfaceEpsilon = 0.02f;
     public int GrassTextureIndex = 181;
     public int StoneTextureIndex = 253;
 }

@@ -206,6 +206,9 @@ public class GameWorldController : UWEBase
     private Material overworldGrassMat;
     private Material overworldStoneMat;
     private Dictionary<Vector2Int, GameObject> loadedOverworldChunks = new Dictionary<Vector2Int, GameObject>();
+    private Texture2D[] overworldWaterFrames = null;
+    private int overworldWaterFrameIndex = 0;
+    private float overworldWaterAnimTimer = 0f;
 
     /// <summary>
     /// What level the player starts on in a quick start
@@ -602,8 +605,28 @@ public class GameWorldController : UWEBase
         }
         PositionDetect();
         UpdateOverworldStreaming();
+        UpdateOverworldWaterAnimation();
     }
 
+
+    private void UpdateOverworldWaterAnimation()
+    {
+        if (overworldWaterFrames == null || overworldWaterFrames.Length <= 1 || overworldWaterMat == null) { return; }
+        OverworldTerrainController overworld = GetOverworldController();
+        if (!overworld.AnimateWater) { return; }
+
+        overworldWaterAnimTimer += Time.deltaTime;
+        if (overworldWaterAnimTimer < overworld.WaterAnimFrameTime) { return; }
+
+        overworldWaterAnimTimer = 0f;
+        overworldWaterFrameIndex = (overworldWaterFrameIndex + 1) % overworldWaterFrames.Length;
+        Texture2D frame = overworldWaterFrames[overworldWaterFrameIndex];
+        if (frame != null)
+        {
+            frame.wrapMode = TextureWrapMode.Repeat;
+            overworldWaterMat.mainTexture = frame;
+        }
+    }
 
     private void UpdateOverworldStreaming()
     {
@@ -975,6 +998,21 @@ public class GameWorldController : UWEBase
         ConfigureTerrainMaterial(overworldWaterMat, LoadUW2TerrainTexture(overworld.WaterTextureIndex), new Color(0.15f, 0.28f, 0.35f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
         ConfigureTerrainMaterial(overworldGrassMat, LoadUW2TerrainTexture(overworld.GrassTextureIndex), new Color(0.22f, 0.58f, 0.22f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
         ConfigureTerrainMaterial(overworldStoneMat, LoadUW2TerrainTexture(overworld.StoneTextureIndex), new Color(0.45f, 0.45f, 0.45f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
+        if (overworld.AnimateWater)
+        {
+            int frameCount = Mathf.Max(1, (overworld.WaterTextureAnimEndIndex - overworld.WaterTextureIndex) + 1);
+            overworldWaterFrames = new Texture2D[frameCount];
+            for (int i = 0; i < frameCount; i++)
+            {
+                overworldWaterFrames[i] = LoadUW2TerrainTexture(overworld.WaterTextureIndex + i);
+            }
+            overworldWaterFrameIndex = 0;
+            overworldWaterAnimTimer = 0f;
+        }
+        else
+        {
+            overworldWaterFrames = null;
+        }
 
         overworld.OverworldStartPos = GetOverworldSpawnPosition(heightmap, overworld.TileWorldSize, Mathf.Max(1, overworld.TilesPerPixel), overworld.HeightScale, overworld.PerlinScale, overworld.PerlinStrength, overworld.OverworldStartTile.x, overworld.OverworldStartTile.y);
 
@@ -1045,7 +1083,7 @@ public class GameWorldController : UWEBase
         float sampleY = UWCharacter.Instance.transform.position.z / Mathf.Max(0.01f, overworld.TileWorldSize);
 
         //Semantic water classification for overworld: sea-level classified as Water.
-        if (UWCharacter.Instance.transform.position.y <= 0.35f)
+        if (UWCharacter.Instance.transform.position.y <= GetOverworldController().WaterSurfaceEpsilon)
         {
             UWCharacter.Instance.terrainType = TerrainDatLoader.TerrainTypes.Water;
             UWCharacter.Instance.CurrentTerrain = TerrainDatLoader.Water;
