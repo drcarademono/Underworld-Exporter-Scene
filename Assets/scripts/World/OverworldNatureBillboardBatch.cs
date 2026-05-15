@@ -20,18 +20,19 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     private Vector2[] meshUvs;
     private int[] quadOrder;
     private List<int>[] submeshTriangles;
+    private Material[] runtimeMaterials;
 
     public void Initialize(Vector3[] vertices, int[] grassTriangles, OverworldNatureFlatsController flats, float waterSurfaceEpsilon, Vector2Int chunkCoord)
     {
         if (vertices == null || grassTriangles == null || flats == null) { return; }
         if (!flats.EnableNatureFlats) { return; }
 
-        Material[] allMaterials = BuildMaterialList(flats);
-        if (allMaterials.Length == 0) { return; }
+        runtimeMaterials = BuildMaterialList(flats);
+        if (runtimeMaterials.Length == 0) { return; }
 
         meshFilter = gameObject.AddComponent<MeshFilter>();
         meshRenderer = gameObject.AddComponent<MeshRenderer>();
-        meshRenderer.sharedMaterials = allMaterials;
+        meshRenderer.sharedMaterials = runtimeMaterials;
 
         List<int> candidates = new List<int>(grassTriangles.Length / 3);
         for (int i = 0; i < grassTriangles.Length; i += 3)
@@ -104,13 +105,13 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             meshUvs[vi + 3] = new Vector2(1f, 1f);
         }
 
-        submeshTriangles = new List<int>[allMaterials.Length];
-        for (int i = 0; i < submeshTriangles.Length; i++) { submeshTriangles[i] = new List<int>(quadCount * TrisPerQuad / allMaterials.Length + 6); }
+        submeshTriangles = new List<int>[runtimeMaterials.Length];
+        for (int i = 0; i < submeshTriangles.Length; i++) { submeshTriangles[i] = new List<int>(quadCount * TrisPerQuad / runtimeMaterials.Length + 6); }
 
         batchMesh = new Mesh();
         batchMesh.name = $"NatureBillboards_{chunkCoord.x}_{chunkCoord.y}";
         batchMesh.indexFormat = (meshVerts.Length > 65535) ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
-        batchMesh.subMeshCount = allMaterials.Length;
+        batchMesh.subMeshCount = runtimeMaterials.Length;
 
         RebuildBillboardVerts();
         RebuildTriangleOrder();
@@ -175,13 +176,28 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     private static Material[] BuildMaterialList(OverworldNatureFlatsController flats)
     {
         List<Material> mats = new List<Material>();
+        int targetQueue = 3000;
         if (flats.TreeMaterials != null)
         {
-            for (int i = 0; i < flats.TreeMaterials.Length; i++) if (flats.TreeMaterials[i] != null) { mats.Add(flats.TreeMaterials[i]); }
+            for (int i = 0; i < flats.TreeMaterials.Length; i++)
+            {
+                Material src = flats.TreeMaterials[i];
+                if (src == null) { continue; }
+                Material inst = new Material(src);
+                inst.renderQueue = targetQueue;
+                mats.Add(inst);
+            }
         }
         if (flats.TerrainSpriteMaterials != null)
         {
-            for (int i = 0; i < flats.TerrainSpriteMaterials.Length; i++) if (flats.TerrainSpriteMaterials[i] != null) { mats.Add(flats.TerrainSpriteMaterials[i]); }
+            for (int i = 0; i < flats.TerrainSpriteMaterials.Length; i++)
+            {
+                Material src = flats.TerrainSpriteMaterials[i];
+                if (src == null) { continue; }
+                Material inst = new Material(src);
+                inst.renderQueue = targetQueue;
+                mats.Add(inst);
+            }
         }
         return mats.ToArray();
     }
