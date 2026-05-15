@@ -104,19 +104,43 @@ public class OverworldNatureFlatsController : MonoBehaviour
         if (BiomeProfiles != null && BiomeProfiles.Length > 0) { return; }
         BiomeProfiles = new OverworldNatureBiomeProfile[]
         {
-            NewProfile("Desert",224,0.2f,0.5f,0.2f,0.5f,0.15f,2),
-            NewProfile("Desert2",225,0.15f,0.35f,0.2f,0.5f,0.15f,2),
-            NewProfile("Mountain",226,0.2f,0.45f,0.01f,0.65f,0.3f,2),
-            NewProfile("Rainforest",227,0.3f,0.65f,0.04f,0.95f,0.35f,3),
-            NewProfile("Swamp",228,0.25f,0.55f,0.01f,0.9f,0.35f,3),
-            NewProfile("Subtropical",229,0.25f,0.5f,0.015f,0.9f,0.35f,2),
-            NewProfile("WoodlandHills",230,0.2f,0.45f,0.02f,0.95f,0.4f,3),
-            NewProfile("Temperate",231,0.25f,0.55f,0.01f,0.9f,0.4f,3),
-            NewProfile("HauntedWoodland",232,0.2f,0.45f,0.07f,0.9f,0.35f,3),
+            // Temperate Woodland (WO 231/223 style)
+            NewProfile("Temperate", 231, 0.25f, 0.55f, 0.01f, 0.9f, 0.4f, 3, 0.4f, 0.7f,
+                0.65f, 0.25f, 0.08f, 0.02f,
+                0.20f, 0.50f, 0.25f, 0.05f,
+                0.03f, 0.24f, 0.68f, 0.05f,
+                0.006f, 0.62f, 0.75f),
+
+            // Mountain (WO 226)
+            NewProfile("Mountain", 226, 0.20f, 0.45f, 0.015f, 0.65f, 0.3f, 2, 0.2f, 0.38f,
+                0.55f, 0.20f, 0.05f, 0.20f,
+                0.12f, 0.28f, 0.40f, 0.20f,
+                0.02f, 0.13f, 0.70f, 0.15f,
+                0.008f, 0.58f, 0.65f),
+
+            // Rainforest (WO 227)
+            NewProfile("Rainforest", 227, 0.30f, 0.65f, 0.04f, 0.95f, 0.35f, 3, 0.2f, 0.5f,
+                0.55f, 0.35f, 0.08f, 0.02f,
+                0.18f, 0.52f, 0.26f, 0.04f,
+                0.02f, 0.30f, 0.64f, 0.04f,
+                0.005f, 0.60f, 0.70f),
+
+            // Desert (WO 224)
+            NewProfile("Desert", 224, 0.12f, 0.30f, 0.15f, 0.5f, 0.15f, 2, 0.2f, 0.5f,
+                0.15f, 0.35f, 0.00f, 0.50f,
+                0.05f, 0.35f, 0.05f, 0.55f,
+                0.00f, 0.20f, 0.20f, 0.60f,
+                0.01f, 0.52f, 0.85f),
         };
     }
 
-    private OverworldNatureBiomeProfile NewProfile(string name, int climate, float baseDensity, float clusterDensity, float freq, float amp, float persistence, int octaves)
+    private OverworldNatureBiomeProfile NewProfile(
+        string name, int climate, float baseDensity, float clusterDensity, float freq, float amp, float persistence, int octaves,
+        float flowerLimit, float forestLimit,
+        float flowerHabitatFlowerWeight, float flowerHabitatBushWeight, float flowerHabitatTreeWeight, float flowerHabitatRockWeight,
+        float grassHabitatFlowerWeight, float grassHabitatBushWeight, float grassHabitatTreeWeight, float grassHabitatRockWeight,
+        float forestHabitatFlowerWeight, float forestHabitatBushWeight, float forestHabitatTreeWeight, float forestHabitatRockWeight,
+        float clearingNoiseFrequency, float clearingThreshold, float clearingStrength)
     {
         return new OverworldNatureBiomeProfile
         {
@@ -128,25 +152,35 @@ public class OverworldNatureFlatsController : MonoBehaviour
             MacroNoiseAmplitude = amp,
             MacroNoisePersistence = persistence,
             MacroNoiseOctaves = octaves,
-            FlowerLimit = climate == 226 || climate == 227 || climate == 224 ? 0.2f : 0.4f,
-            ForestLimit = climate == 226 ? 0.38f : 0.7f
+            FlowerLimit = flowerLimit,
+            ForestLimit = forestLimit,
+            FlowerHabitatFlowerWeight = flowerHabitatFlowerWeight,
+            FlowerHabitatBushWeight = flowerHabitatBushWeight,
+            FlowerHabitatTreeWeight = flowerHabitatTreeWeight,
+            FlowerHabitatRockWeight = flowerHabitatRockWeight,
+            GrassHabitatFlowerWeight = grassHabitatFlowerWeight,
+            GrassHabitatBushWeight = grassHabitatBushWeight,
+            GrassHabitatTreeWeight = grassHabitatTreeWeight,
+            GrassHabitatRockWeight = grassHabitatRockWeight,
+            ForestHabitatFlowerWeight = forestHabitatFlowerWeight,
+            ForestHabitatBushWeight = forestHabitatBushWeight,
+            ForestHabitatTreeWeight = forestHabitatTreeWeight,
+            ForestHabitatRockWeight = forestHabitatRockWeight,
+            ClearingNoiseFrequency = clearingNoiseFrequency,
+            ClearingThreshold = clearingThreshold,
+            ClearingStrength = clearingStrength,
         };
     }
 
     public int EstimateClimateIdForChunk(Vector2Int chunkCoord)
     {
-        int band = Mathf.Abs(chunkCoord.y % 9);
+        int band = Mathf.Abs(chunkCoord.y % 4);
         switch (band)
         {
             case 0: return 224; // desert
-            case 1: return 225; // desert2
-            case 2: return 226; // mountain
-            case 3: return 227; // rainforest
-            case 4: return 228; // swamp
-            case 5: return 229; // subtropical
-            case 6: return 230; // woodland hills
-            case 7: return 231; // temperate
-            default: return 232; // haunted woodland
+            case 1: return 226; // mountain
+            case 2: return 227; // rainforest
+            default: return 231; // temperate
         }
     }
 }
