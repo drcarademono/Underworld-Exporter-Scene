@@ -1428,7 +1428,8 @@ public class GameWorldController : UWEBase
         {
             Texture overrideTexture = overrideMaterial.mainTexture;
             overrideTexture.wrapMode = TextureWrapMode.Repeat;
-            result.mainTexture = MaybeEnableOverworldMipmaps(overrideTexture, overworld);
+            Texture2D overrideTexture2D = overrideTexture as Texture2D;
+            result.mainTexture = (overrideTexture2D != null) ? MaybeEnableOverworldMipmaps(overrideTexture2D, overworld) : overrideTexture;
 
             if ((baseMat != null) && (baseMat.mainTextureScale != Vector2.zero))
             {
@@ -1449,30 +1450,27 @@ public class GameWorldController : UWEBase
         return result;
     }
 
-    private Texture MaybeEnableOverworldMipmaps(Texture input, OverworldTerrainController overworld)
+    private Texture2D MaybeEnableOverworldMipmaps(Texture2D input, OverworldTerrainController overworld)
     {
         if (input == null) { return null; }
         if ((overworld == null) || !overworld.EnableOverworldTerrainMipmaps) { return input; }
-
-        Texture2D tex2D = input as Texture2D;
-        if (tex2D == null) { return input; }
-        if (tex2D.mipmapCount > 1) { return tex2D; }
+        if (input.mipmapCount > 1) { return input; }
 
         try
         {
-            Texture2D mipTex = new Texture2D(tex2D.width, tex2D.height, TextureFormat.RGBA32, true);
-            mipTex.SetPixels32(tex2D.GetPixels32());
+            Texture2D mipTex = new Texture2D(input.width, input.height, TextureFormat.RGBA32, true);
+            mipTex.SetPixels32(input.GetPixels32());
             mipTex.Apply(true, false);
-            mipTex.wrapMode = tex2D.wrapMode;
-            mipTex.filterMode = tex2D.filterMode;
-            mipTex.anisoLevel = Mathf.Max(1, tex2D.anisoLevel);
-            mipTex.name = tex2D.name + "_Mip";
+            mipTex.wrapMode = input.wrapMode;
+            mipTex.filterMode = input.filterMode;
+            mipTex.anisoLevel = Mathf.Max(1, input.anisoLevel);
+            mipTex.name = input.name + "_Mip";
             return mipTex;
         }
         catch (Exception ex)
         {
-            Debug.LogWarning("Failed to generate mipmaps for overworld texture " + tex2D.name + ": " + ex.Message);
-            return tex2D;
+            Debug.LogWarning("Failed to generate mipmaps for overworld texture " + input.name + ": " + ex.Message);
+            return input;
         }
     }
 
