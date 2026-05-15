@@ -1187,6 +1187,8 @@ public class GameWorldController : UWEBase
         int maxChunkX = Mathf.CeilToInt(totalSampleWidth / (float)chunkSize) - 1;
         int maxChunkY = Mathf.CeilToInt(totalSampleHeight / (float)chunkSize) - 1;
         int activeRadius = Mathf.Max(0, overworld.ActiveChunkRadius);
+        int transitionRadius = activeRadius + 1;
+        int distantStep = Mathf.Max(2, overworld.DistantChunkStep);
 
         for (int cy = 0; cy <= maxChunkY; cy++)
         {
@@ -1194,10 +1196,27 @@ public class GameWorldController : UWEBase
             {
                 if (Mathf.Abs(cx - centerChunk.x) <= activeRadius && Mathf.Abs(cy - centerChunk.y) <= activeRadius) { continue; }
                 Vector2Int cc = new Vector2Int(cx, cy);
+                bool inTransitionBand = (Mathf.Abs(cx - centerChunk.x) <= transitionRadius) && (Mathf.Abs(cy - centerChunk.y) <= transitionRadius);
+                int sampleStep = inTransitionBand ? 1 : distantStep;
+
                 if (!loadedOverworldChunks.ContainsKey(cc))
                 {
-                    GameObject chunk = BuildChunk(cc, heightmap, overworld, Mathf.Max(2, overworld.DistantChunkStep), false);
-                    if (chunk != null) { loadedOverworldChunks[cc] = chunk; lowDetailOverworldChunks.Add(cc); }
+                    GameObject chunk = BuildChunk(cc, heightmap, overworld, sampleStep, false);
+                    if (chunk != null)
+                    {
+                        loadedOverworldChunks[cc] = chunk;
+                        if (sampleStep > 1) { lowDetailOverworldChunks.Add(cc); } else { lowDetailOverworldChunks.Remove(cc); }
+                    }
+                }
+                else if (lowDetailOverworldChunks.Contains(cc) && (sampleStep == 1))
+                {
+                    if (loadedOverworldChunks[cc] != null) { Destroy(loadedOverworldChunks[cc]); }
+                    GameObject chunk = BuildChunk(cc, heightmap, overworld, 1, false);
+                    if (chunk != null)
+                    {
+                        loadedOverworldChunks[cc] = chunk;
+                        lowDetailOverworldChunks.Remove(cc);
+                    }
                 }
             }
         }
