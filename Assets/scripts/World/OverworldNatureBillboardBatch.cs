@@ -101,22 +101,14 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
                 }
             }
 
-            if (flats.UseTextureNativeSize && atlasNativeSizes != null && spriteIndex >= 0 && spriteIndex < atlasNativeSizes.Length)
+            if (atlasNativeSizes != null && spriteIndex >= 0 && spriteIndex < atlasNativeSizes.Length)
             {
                 Vector2 native = atlasNativeSizes[spriteIndex];
-                if (flats.MatchTerrainTextureScale)
-                {
-                    float tileWorldSize = ResolveTerrainTileWorldSize(flats);
-                    float worldUnitsPerPixel = tileWorldSize / Mathf.Max(1, flats.TerrainTexturePixelsPerTile);
-                    baseWidth = native.x * worldUnitsPerPixel;
-                    baseHeight = native.y * worldUnitsPerPixel;
-                }
-                else
-                {
-                    float ppu = Mathf.Max(1f, flats.TexturePixelsPerUnit);
-                    baseWidth = native.x / ppu;
-                    baseHeight = native.y / ppu;
-                }
+                float tileWorldSize = ResolveTerrainTileWorldSize();
+                const float terrainTileTexels = 64f;
+                float worldUnitsPerPixel = tileWorldSize / terrainTileTexels;
+                baseWidth = native.x * worldUnitsPerPixel;
+                baseHeight = native.y * worldUnitsPerPixel;
             }
             else if (category == NatureCategory.Tree)
             {
@@ -228,9 +220,8 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     }
 
 
-    private static float ResolveTerrainTileWorldSize(OverworldNatureFlatsController flats)
+    private static float ResolveTerrainTileWorldSize()
     {
-        if (flats.TerrainTileWorldSizeOverride > 0f) { return flats.TerrainTileWorldSizeOverride; }
         OverworldTerrainController overworld = Object.FindObjectOfType<OverworldTerrainController>();
         if (overworld != null)
         {

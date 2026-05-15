@@ -86,15 +86,6 @@ public class OverworldNatureFlatsController : MonoBehaviour
     
 
     
-    [Header("Sprite Native Sizing")]
-    public bool UseTextureNativeSize = true;
-    [Range(1f, 512f)] public float TexturePixelsPerUnit = 32f;
-
-        [Header("Terrain Texture Scale Matching")]
-    public bool MatchTerrainTextureScale = true;
-    [Range(8, 256)] public int TerrainTexturePixelsPerTile = 64;
-    [Range(0.125f, 64f)] public float TerrainTileWorldSizeOverride = 0f; // 0 = auto from OverworldTerrainController
-
     [Header("Nature Control Maps (2048x2048)")]
     public string NatureDensityMapResourcePath = "UIX/nature_density_map";
     public string NatureClimateMapResourcePath = "UIX/nature_climate_map";
