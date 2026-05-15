@@ -81,8 +81,6 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         meshUvs = new Vector2[quadCount * VertsPerQuad];
         meshTris = new int[quadCount * TrisPerQuad];
 
-        int atlasCount = atlasRects != null ? atlasRects.Length : 0;
-
         for (int q = 0; q < quadCount; q++)
         {
             int triStart = selected[q];
@@ -96,8 +94,10 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             float baseHeight;
             if (!TryPickSpriteIndex(category, center, flats.NatureSeed, out spriteIndex))
             {
-                spriteIndex = Mathf.Clamp(Mathf.FloorToInt(Deterministic01(center + new Vector3(3.14f, 0f, -2.71f), flats.NatureSeed) * Mathf.Max(1, atlasCount)), 0, Mathf.Max(0, atlasCount - 1));
-                category = NatureCategory.Bush;
+                if (!TryPickAnySpriteInPriorityOrder(center, flats.NatureSeed, out spriteIndex, category))
+                {
+                    continue;
+                }
             }
 
             if (category == NatureCategory.Tree)
@@ -189,6 +189,24 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         int choice = Mathf.FloorToInt(Deterministic01(center + new Vector3(19.2f, 0f, 5.6f), seed) * list.Count);
         spriteIndex = list[Mathf.Clamp(choice, 0, list.Count - 1)];
         return true;
+    }
+
+
+    private bool TryPickAnySpriteInPriorityOrder(Vector3 center, int seed, out int spriteIndex, NatureCategory requested)
+    {
+        if (requested == NatureCategory.Tree)
+        {
+            if (TryPickSpriteIndex(NatureCategory.Tree, center, seed, out spriteIndex)) { return true; }
+            if (TryPickSpriteIndex(NatureCategory.Bush, center, seed, out spriteIndex)) { return true; }
+            if (TryPickSpriteIndex(NatureCategory.Flower, center, seed, out spriteIndex)) { return true; }
+            return TryPickSpriteIndex(NatureCategory.Rock, center, seed, out spriteIndex);
+        }
+
+        if (TryPickSpriteIndex(requested, center, seed, out spriteIndex)) { return true; }
+        if (TryPickSpriteIndex(NatureCategory.Bush, center, seed, out spriteIndex)) { return true; }
+        if (TryPickSpriteIndex(NatureCategory.Flower, center, seed, out spriteIndex)) { return true; }
+        if (TryPickSpriteIndex(NatureCategory.Rock, center, seed, out spriteIndex)) { return true; }
+        return TryPickSpriteIndex(NatureCategory.Tree, center, seed, out spriteIndex);
     }
 
     private static HabitatType GetHabitat(float macroNoise, OverworldNatureBiomeProfile profile)
