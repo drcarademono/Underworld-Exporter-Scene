@@ -206,6 +206,7 @@ public class GameWorldController : UWEBase
     private Material overworldGrassMat;
     private Material overworldStoneMat;
     private Dictionary<Vector2Int, GameObject> loadedOverworldChunks = new Dictionary<Vector2Int, GameObject>();
+    private HashSet<Vector2Int> lowDetailOverworldChunks = new HashSet<Vector2Int>();
     private Texture2D[] overworldWaterFrames = null;
     private int overworldWaterFrameIndex = 0;
     private float overworldWaterAnimTimer = 0f;
@@ -651,7 +652,12 @@ public class GameWorldController : UWEBase
         }
 
         lastPlayerChunk = currentChunk;
-        EnsureChunksAround(currentChunk, Resources.Load<Texture2D>(overworld.HeightmapResourcePath), overworld);
+        Texture2D map = Resources.Load<Texture2D>(overworld.HeightmapResourcePath);
+        EnsureChunksAround(currentChunk, map, overworld);
+        if (overworld.LoadDistantChunks)
+        {
+            EnsureDistantChunks(currentChunk, map, overworld);
+        }
     }
 
     /// <summary>
@@ -995,6 +1001,7 @@ public class GameWorldController : UWEBase
 
         OverworldTerrainRoot = new GameObject("OverworldTerrainRoot");
         loadedOverworldChunks.Clear();
+        lowDetailOverworldChunks.Clear();
 
         int tpp = Mathf.Max(1, overworld.TilesPerPixel);
         overworldTerrainMapWidth = Mathf.Max(2, heightmap.width / tpp);
@@ -1061,6 +1068,10 @@ public class GameWorldController : UWEBase
         else
         {
             EnsureChunksAround(lastPlayerChunk, heightmap, overworld);
+            if (overworld.LoadDistantChunks)
+            {
+                EnsureDistantChunks(lastPlayerChunk, heightmap, overworld);
+            }
         }
         overworldStreamingInitialized = true;
 
@@ -1144,7 +1155,13 @@ public class GameWorldController : UWEBase
                 if (!loadedOverworldChunks.ContainsKey(cc))
                 {
                     GameObject chunk = BuildChunk(cc, heightmap, overworld);
-                    if (chunk != null) { loadedOverworldChunks[cc] = chunk; }
+                    if (chunk != null) { loadedOverworldChunks[cc] = chunk; lowDetailOverworldChunks.Remove(cc); }
+                }
+                else if (lowDetailOverworldChunks.Contains(cc))
+                {
+                    if (loadedOverworldChunks[cc] != null) { Destroy(loadedOverworldChunks[cc]); }
+                    GameObject chunk = BuildChunk(cc, heightmap, overworld);
+                    if (chunk != null) { loadedOverworldChunks[cc] = chunk; lowDetailOverworldChunks.Remove(cc); }
                 }
             }
         }
@@ -1152,7 +1169,7 @@ public class GameWorldController : UWEBase
         List<Vector2Int> toRemove = new List<Vector2Int>();
         foreach (var kvp in loadedOverworldChunks)
         {
-            if (!wanted.Contains(kvp.Key))
+            if (!wanted.Contains(kvp.Key) && !lowDetailOverworldChunks.Contains(kvp.Key))
             {
                 if (kvp.Value != null) { Destroy(kvp.Value); }
                 toRemove.Add(kvp.Key);
@@ -1161,7 +1178,51 @@ public class GameWorldController : UWEBase
         foreach (var k in toRemove) { loadedOverworldChunks.Remove(k); }
     }
 
-    private GameObject BuildChunk(Vector2Int chunkCoord, Texture2D heightmap, OverworldTerrainController overworld)
+    private void EnsureDistantChunks(Vector2Int centerChunk, Texture2D heightmap, OverworldTerrainController overworld)
+    {
+        int tilesPerPixel = Mathf.Max(1, overworld.TilesPerPixel);
+        int chunkSize = Mathf.Max(2, overworld.ChunkSizeSamples);
+        int totalSampleWidth = Mathf.Max(2, heightmap.width / tilesPerPixel);
+        int totalSampleHeight = Mathf.Max(2, heightmap.height / tilesPerPixel);
+        int maxChunkX = Mathf.CeilToInt(totalSampleWidth / (float)chunkSize) - 1;
+        int maxChunkY = Mathf.CeilToInt(totalSampleHeight / (float)chunkSize) - 1;
+        int activeRadius = Mathf.Max(0, overworld.ActiveChunkRadius);
+        int transitionRadius = activeRadius + 1;
+        int distantStep = Mathf.Max(2, overworld.DistantChunkStep);
+
+        for (int cy = 0; cy <= maxChunkY; cy++)
+        {
+            for (int cx = 0; cx <= maxChunkX; cx++)
+            {
+                if (Mathf.Abs(cx - centerChunk.x) <= activeRadius && Mathf.Abs(cy - centerChunk.y) <= activeRadius) { continue; }
+                Vector2Int cc = new Vector2Int(cx, cy);
+                bool inTransitionBand = (Mathf.Abs(cx - centerChunk.x) <= transitionRadius) && (Mathf.Abs(cy - centerChunk.y) <= transitionRadius);
+                int sampleStep = inTransitionBand ? 1 : distantStep;
+
+                if (!loadedOverworldChunks.ContainsKey(cc))
+                {
+                    GameObject chunk = BuildChunk(cc, heightmap, overworld, sampleStep, false);
+                    if (chunk != null)
+                    {
+                        loadedOverworldChunks[cc] = chunk;
+                        if (sampleStep > 1) { lowDetailOverworldChunks.Add(cc); } else { lowDetailOverworldChunks.Remove(cc); }
+                    }
+                }
+                else if (lowDetailOverworldChunks.Contains(cc) && (sampleStep == 1))
+                {
+                    if (loadedOverworldChunks[cc] != null) { Destroy(loadedOverworldChunks[cc]); }
+                    GameObject chunk = BuildChunk(cc, heightmap, overworld, 1, false);
+                    if (chunk != null)
+                    {
+                        loadedOverworldChunks[cc] = chunk;
+                        lowDetailOverworldChunks.Remove(cc);
+                    }
+                }
+            }
+        }
+    }
+
+    private GameObject BuildChunk(Vector2Int chunkCoord, Texture2D heightmap, OverworldTerrainController overworld, int sampleStep = 1, bool withCollision = true)
     {
         int tilesPerPixel = Mathf.Max(1, overworld.TilesPerPixel);
         int chunkSize = Mathf.Max(2, overworld.ChunkSizeSamples);
@@ -1174,8 +1235,9 @@ public class GameWorldController : UWEBase
         int endY = Mathf.Min(totalSampleHeight - 1, startY + chunkSize);
         if ((endX - startX) < 1 || (endY - startY) < 1) { return null; }
 
-        int sampleWidth = (endX - startX) + 1;
-        int sampleHeight = (endY - startY) + 1;
+        sampleStep = Mathf.Max(1, sampleStep);
+        int sampleWidth = ((endX - startX) / sampleStep) + 1;
+        int sampleHeight = ((endY - startY) / sampleStep) + 1;
 
         Vector3[] vertices = new Vector3[sampleWidth * sampleHeight];
         Vector2[] uvs = new Vector2[sampleWidth * sampleHeight];
@@ -1187,8 +1249,8 @@ public class GameWorldController : UWEBase
             for (int x = 0; x < sampleWidth; x++)
             {
                 int index = z * sampleWidth + x;
-                int globalX = startX + x;
-                int globalZ = startY + z;
+                int globalX = Mathf.Min(endX, startX + (x * sampleStep));
+                int globalZ = Mathf.Min(endY, startY + (z * sampleStep));
                 int px = Mathf.Clamp(globalX * tilesPerPixel, 0, heightmap.width - 1);
                 int pz = Mathf.Clamp(globalZ * tilesPerPixel, 0, heightmap.height - 1);
                 float elevation = SampleSmoothedHeight(heightmap, px, pz);
@@ -1271,38 +1333,89 @@ public class GameWorldController : UWEBase
         go.transform.SetParent(OverworldTerrainRoot.transform, true);
         MeshFilter mf = go.AddComponent<MeshFilter>();
         MeshRenderer mr = go.AddComponent<MeshRenderer>();
-        MeshCollider mc = go.AddComponent<MeshCollider>();
         mf.sharedMesh = mesh;
-        mc.sharedMesh = mesh;
-        mr.materials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
-        GameObject waterContact = new GameObject("WaterContact");
-        waterContact.transform.SetParent(go.transform, false);
-        float chunkWorldWidth = (sampleWidth - 1) * overworld.TileWorldSize;
-        float chunkWorldHeight = (sampleHeight - 1) * overworld.TileWorldSize;
-        waterContact.transform.position = new Vector3(
-            startX * overworld.TileWorldSize + (chunkWorldWidth * 0.5f),
-            0f,
-            startY * overworld.TileWorldSize + (chunkWorldHeight * 0.5f));
-
-        BoxCollider waterCol = waterContact.AddComponent<BoxCollider>();
-        waterCol.size = new Vector3(chunkWorldWidth, 0.5f, chunkWorldHeight);
-        waterCol.center = Vector3.zero;
-
-        waterContact.layer = LayerMask.NameToLayer("Water");
-        if ((_RES == GAME_UW2) && (overworld.WaterTextureIndex == 193))
+        if (withCollision)
         {
-            waterContact.AddComponent<TileContactMud>();
+            MeshCollider mc = go.AddComponent<MeshCollider>();
+            mc.sharedMesh = mesh;
         }
-        else
+        mr.materials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
+        if (!withCollision && (sampleStep > 1))
         {
-            waterContact.AddComponent<TileContactWater>();
+            AddDistantChunkSkirt(go.transform, vertices, sampleWidth, sampleHeight, Mathf.Max(2f, sampleStep * overworld.TileWorldSize * 0.35f));
+        }
+        if (withCollision)
+        {
+            GameObject waterContact = new GameObject("WaterContact");
+            waterContact.transform.SetParent(go.transform, false);
+            float chunkWorldWidth = (sampleWidth - 1) * overworld.TileWorldSize * sampleStep;
+            float chunkWorldHeight = (sampleHeight - 1) * overworld.TileWorldSize * sampleStep;
+            waterContact.transform.position = new Vector3(
+                startX * overworld.TileWorldSize + (chunkWorldWidth * 0.5f),
+                0f,
+                startY * overworld.TileWorldSize + (chunkWorldHeight * 0.5f));
+
+            BoxCollider waterCol = waterContact.AddComponent<BoxCollider>();
+            waterCol.size = new Vector3(chunkWorldWidth, 0.5f, chunkWorldHeight);
+            waterCol.center = Vector3.zero;
+
+            waterContact.layer = LayerMask.NameToLayer("Water");
+            if ((_RES == GAME_UW2) && (overworld.WaterTextureIndex == 193))
+            {
+                waterContact.AddComponent<TileContactMud>();
+            }
+            else
+            {
+                waterContact.AddComponent<TileContactWater>();
+            }
         }
 
         return go;
     }
 
+    private void AddDistantChunkSkirt(Transform parent, Vector3[] vertices, int sampleWidth, int sampleHeight, float skirtDepth)
+    {
+        if (vertices == null || vertices.Length == 0) { return; }
+        List<Vector3> skirtVerts = new List<Vector3>();
+        List<int> skirtTris = new List<int>();
+
+        void AddEdge(int a, int b)
+        {
+            int baseIndex = skirtVerts.Count;
+            Vector3 va = vertices[a];
+            Vector3 vb = vertices[b];
+            skirtVerts.Add(va);
+            skirtVerts.Add(vb);
+            skirtVerts.Add(new Vector3(va.x, va.y - skirtDepth, va.z));
+            skirtVerts.Add(new Vector3(vb.x, vb.y - skirtDepth, vb.z));
+            skirtTris.Add(baseIndex + 0); skirtTris.Add(baseIndex + 2); skirtTris.Add(baseIndex + 1);
+            skirtTris.Add(baseIndex + 1); skirtTris.Add(baseIndex + 2); skirtTris.Add(baseIndex + 3);
+        }
+
+        for (int x = 0; x < sampleWidth - 1; x++) { AddEdge(x, x + 1); }
+        for (int x = 0; x < sampleWidth - 1; x++) { int z = sampleHeight - 1; AddEdge(z * sampleWidth + x + 1, z * sampleWidth + x); }
+        for (int z = 0; z < sampleHeight - 1; z++) { AddEdge((z + 1) * sampleWidth, z * sampleWidth); }
+        for (int z = 0; z < sampleHeight - 1; z++) { int x = sampleWidth - 1; AddEdge(z * sampleWidth + x, (z + 1) * sampleWidth + x); }
+
+        if (skirtVerts.Count == 0) { return; }
+        Mesh skirtMesh = new Mesh();
+        skirtMesh.indexFormat = (skirtVerts.Count > 65535) ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
+        skirtMesh.SetVertices(skirtVerts);
+        skirtMesh.SetTriangles(skirtTris, 0);
+        skirtMesh.RecalculateNormals();
+        skirtMesh.RecalculateBounds();
+
+        GameObject skirt = new GameObject("ChunkSkirt");
+        skirt.transform.SetParent(parent, false);
+        MeshFilter mf = skirt.AddComponent<MeshFilter>();
+        MeshRenderer mr = skirt.AddComponent<MeshRenderer>();
+        mf.sharedMesh = skirtMesh;
+        mr.sharedMaterial = overworldStoneMat;
+    }
+
     private Material BuildOverworldSurfaceMaterial(int textureIndex, Material overrideMaterial, Color fallbackColor, int sampleWidth, int sampleHeight)
     {
+        OverworldTerrainController overworld = GetOverworldController();
         Material baseMat = null;
         if ((MaterialMasterList != null) && (textureIndex >= 0) && (textureIndex < MaterialMasterList.Length))
         {
@@ -1315,7 +1428,8 @@ public class GameWorldController : UWEBase
         {
             Texture overrideTexture = overrideMaterial.mainTexture;
             overrideTexture.wrapMode = TextureWrapMode.Repeat;
-            result.mainTexture = overrideTexture;
+            Texture2D overrideTexture2D = overrideTexture as Texture2D;
+            result.mainTexture = (overrideTexture2D != null) ? MaybeEnableOverworldMipmaps(overrideTexture2D, overworld) : overrideTexture;
 
             if ((baseMat != null) && (baseMat.mainTextureScale != Vector2.zero))
             {
@@ -1328,12 +1442,36 @@ public class GameWorldController : UWEBase
         }
         else
         {
-            ConfigureTerrainMaterial(result, LoadUW2TerrainTexture(textureIndex), fallbackColor, sampleWidth, sampleHeight);
+            ConfigureTerrainMaterial(result, MaybeEnableOverworldMipmaps(LoadUW2TerrainTexture(textureIndex), overworld), fallbackColor, sampleWidth, sampleHeight);
         }
 
         result.SetFloat("_Glossiness", 0f);
         result.SetFloat("_Metallic", 0f);
         return result;
+    }
+
+    private Texture2D MaybeEnableOverworldMipmaps(Texture2D input, OverworldTerrainController overworld)
+    {
+        if (input == null) { return null; }
+        if ((overworld == null) || !overworld.EnableOverworldTerrainMipmaps) { return input; }
+        if (input.mipmapCount > 1) { return input; }
+
+        try
+        {
+            Texture2D mipTex = new Texture2D(input.width, input.height, TextureFormat.RGBA32, true);
+            mipTex.SetPixels32(input.GetPixels32());
+            mipTex.Apply(true, false);
+            mipTex.wrapMode = input.wrapMode;
+            mipTex.filterMode = input.filterMode;
+            mipTex.anisoLevel = Mathf.Max(1, input.anisoLevel);
+            mipTex.name = input.name + "_Mip";
+            return mipTex;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning("Failed to generate mipmaps for overworld texture " + input.name + ": " + ex.Message);
+            return input;
+        }
     }
 
     private Texture2D LoadUW2TerrainTexture(int textureIndex)
