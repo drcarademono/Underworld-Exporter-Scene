@@ -1321,6 +1321,10 @@ public class GameWorldController : UWEBase
             mc.sharedMesh = mesh;
         }
         mr.materials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
+        if (!withCollision && (sampleStep > 1))
+        {
+            AddDistantChunkSkirt(go.transform, vertices, sampleWidth, sampleHeight, Mathf.Max(2f, sampleStep * overworld.TileWorldSize * 0.35f));
+        }
         if (withCollision)
         {
             GameObject waterContact = new GameObject("WaterContact");
@@ -1348,6 +1352,46 @@ public class GameWorldController : UWEBase
         }
 
         return go;
+    }
+
+    private void AddDistantChunkSkirt(Transform parent, Vector3[] vertices, int sampleWidth, int sampleHeight, float skirtDepth)
+    {
+        if (vertices == null || vertices.Length == 0) { return; }
+        List<Vector3> skirtVerts = new List<Vector3>();
+        List<int> skirtTris = new List<int>();
+
+        void AddEdge(int a, int b)
+        {
+            int baseIndex = skirtVerts.Count;
+            Vector3 va = vertices[a];
+            Vector3 vb = vertices[b];
+            skirtVerts.Add(va);
+            skirtVerts.Add(vb);
+            skirtVerts.Add(new Vector3(va.x, va.y - skirtDepth, va.z));
+            skirtVerts.Add(new Vector3(vb.x, vb.y - skirtDepth, vb.z));
+            skirtTris.Add(baseIndex + 0); skirtTris.Add(baseIndex + 2); skirtTris.Add(baseIndex + 1);
+            skirtTris.Add(baseIndex + 1); skirtTris.Add(baseIndex + 2); skirtTris.Add(baseIndex + 3);
+        }
+
+        for (int x = 0; x < sampleWidth - 1; x++) { AddEdge(x, x + 1); }
+        for (int x = 0; x < sampleWidth - 1; x++) { int z = sampleHeight - 1; AddEdge(z * sampleWidth + x + 1, z * sampleWidth + x); }
+        for (int z = 0; z < sampleHeight - 1; z++) { AddEdge((z + 1) * sampleWidth, z * sampleWidth); }
+        for (int z = 0; z < sampleHeight - 1; z++) { int x = sampleWidth - 1; AddEdge(z * sampleWidth + x, (z + 1) * sampleWidth + x); }
+
+        if (skirtVerts.Count == 0) { return; }
+        Mesh skirtMesh = new Mesh();
+        skirtMesh.indexFormat = (skirtVerts.Count > 65535) ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
+        skirtMesh.SetVertices(skirtVerts);
+        skirtMesh.SetTriangles(skirtTris, 0);
+        skirtMesh.RecalculateNormals();
+        skirtMesh.RecalculateBounds();
+
+        GameObject skirt = new GameObject("ChunkSkirt");
+        skirt.transform.SetParent(parent, false);
+        MeshFilter mf = skirt.AddComponent<MeshFilter>();
+        MeshRenderer mr = skirt.AddComponent<MeshRenderer>();
+        mf.sharedMesh = skirtMesh;
+        mr.sharedMaterial = overworldStoneMat;
     }
 
     private Material BuildOverworldSurfaceMaterial(int textureIndex, Material overrideMaterial, Color fallbackColor, int sampleWidth, int sampleHeight)
