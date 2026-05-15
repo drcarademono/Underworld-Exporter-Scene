@@ -17,6 +17,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     private Vector3[] meshVerts;
     private Vector2[] meshUvs;
     private int[] meshTris;
+    private int[] quadOrder;
 
     public void Initialize(Vector3[] vertices, int[] grassTriangles, OverworldTerrainController settings, Vector2Int chunkCoord)
     {
@@ -66,6 +67,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         meshVerts = new Vector3[quadCount * VertsPerQuad];
         meshUvs = new Vector2[quadCount * VertsPerQuad];
         meshTris = new int[quadCount * TrisPerQuad];
+        quadOrder = new int[quadCount];
 
         for (int q = 0; q < quadCount; q++)
         {
@@ -78,20 +80,17 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             quadWidths[q] = settings.NatureBillboardWidth * widthJitter;
             quadHeights[q] = settings.NatureBillboardHeight * heightJitter;
 
+            quadOrder[q] = q;
+
             int vi = q * VertsPerQuad;
             meshUvs[vi + 0] = new Vector2(0f, 0f);
             meshUvs[vi + 1] = new Vector2(1f, 0f);
             meshUvs[vi + 2] = new Vector2(0f, 1f);
             meshUvs[vi + 3] = new Vector2(1f, 1f);
 
-            int ti = q * TrisPerQuad;
-            meshTris[ti + 0] = vi + 0;
-            meshTris[ti + 1] = vi + 2;
-            meshTris[ti + 2] = vi + 1;
-            meshTris[ti + 3] = vi + 1;
-            meshTris[ti + 4] = vi + 2;
-            meshTris[ti + 5] = vi + 3;
         }
+
+        RebuildTriangleOrder();
 
         batchMesh = new Mesh();
         batchMesh.name = $"NatureBillboards_{chunkCoord.x}_{chunkCoord.y}";
@@ -110,7 +109,9 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     {
         if (batchMesh == null || UWCharacter.Instance == null) { return; }
         RebuildBillboardVerts();
+        RebuildTriangleOrder();
         batchMesh.vertices = meshVerts;
+        batchMesh.triangles = meshTris;
         batchMesh.RecalculateBounds();
     }
 
@@ -125,6 +126,8 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
 
         for (int q = 0; q < quadCenters.Length; q++)
         {
+            quadOrder[q] = q;
+
             int vi = q * VertsPerQuad;
             Vector3 center = quadCenters[q];
             float halfWidth = quadWidths[q] * 0.5f;
@@ -135,6 +138,33 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             meshVerts[vi + 1] = center + side;
             meshVerts[vi + 2] = center - side + (Vector3.up * height);
             meshVerts[vi + 3] = center + side + (Vector3.up * height);
+        }
+    }
+
+
+    private void RebuildTriangleOrder()
+    {
+        if (quadCenters == null || meshTris == null || quadOrder == null) { return; }
+
+        Vector3 camPos = (Camera.main != null) ? Camera.main.transform.position : (UWCharacter.Instance != null ? UWCharacter.Instance.CameraPos : Vector3.zero);
+        System.Array.Sort(quadOrder, (a, b) =>
+        {
+            float da = (quadCenters[a] - camPos).sqrMagnitude;
+            float db = (quadCenters[b] - camPos).sqrMagnitude;
+            return db.CompareTo(da);
+        });
+
+        for (int sorted = 0; sorted < quadOrder.Length; sorted++)
+        {
+            int q = quadOrder[sorted];
+            int vi = q * VertsPerQuad;
+            int ti = sorted * TrisPerQuad;
+            meshTris[ti + 0] = vi + 0;
+            meshTris[ti + 1] = vi + 2;
+            meshTris[ti + 2] = vi + 1;
+            meshTris[ti + 3] = vi + 1;
+            meshTris[ti + 4] = vi + 2;
+            meshTris[ti + 5] = vi + 3;
         }
     }
 
