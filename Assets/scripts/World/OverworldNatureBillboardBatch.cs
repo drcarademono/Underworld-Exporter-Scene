@@ -46,6 +46,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             float clusterDensity = profile != null ? profile.ClusterDensity : flats.ClusterDensity;
             float threshold = Mathf.Lerp(baseDensity, clusterDensity, cluster);
             threshold *= ComputeContextDensity(center, vertices[grassTriangles[i]], vertices[grassTriangles[i+1]], vertices[grassTriangles[i+2]], profile);
+            threshold *= ComputeClearingFactor(center, flats, profile, macro);
             threshold = Mathf.Clamp01(threshold);
             if (Deterministic01(center, flats.NatureSeed) <= threshold) { candidates.Add(i); }
         }
@@ -103,11 +104,9 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
                 baseHeight = flats.TerrainSpriteHeight;
             }
 
-            float hJ = Mathf.Lerp(0.9f, 1.1f, Deterministic01(center + new Vector3(13.1f, 0f, -6.3f), flats.NatureSeed));
-            float wJ = Mathf.Lerp(0.8f, 1.2f, Deterministic01(center + new Vector3(-2.3f, 0f, 4.7f), flats.NatureSeed));
             quadCenters[q] = center + (Vector3.up * flats.GroundOffset);
-            quadWidths[q] = baseWidth * wJ;
-            quadHeights[q] = baseHeight * hJ;
+            quadWidths[q] = baseWidth;
+            quadHeights[q] = baseHeight;
             quadSpriteIndex[q] = spriteIndex;
             quadOrder[q] = q;
         }
@@ -220,6 +219,16 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         float elevation01 = Mathf.Clamp01(center.y / 80f);
         float elevFactor = Mathf.Lerp(1f, elevation01, Mathf.Clamp01(profile.ElevationDensityMultiplier * 0.5f));
         return Mathf.Clamp01(slopeFactor * elevFactor);
+    }
+
+    private static float ComputeClearingFactor(Vector3 worldPos, OverworldNatureFlatsController flats, OverworldNatureBiomeProfile profile, float macroNoise)
+    {
+        if (profile == null) { return 1f; }
+        float clearNoise = Mathf.PerlinNoise((worldPos.x + flats.NatureSeed * 0.11f) * profile.ClearingNoiseFrequency, (worldPos.z + flats.NatureSeed * 0.73f) * profile.ClearingNoiseFrequency);
+        float clearingMask = Mathf.SmoothStep(profile.ClearingThreshold - 0.08f, profile.ClearingThreshold + 0.08f, clearNoise);
+        float forestBias = Mathf.Clamp01((macroNoise - profile.ForestLimit) * 4f);
+        float reduction = Mathf.Clamp01(profile.ClearingStrength * (0.5f + 0.5f * forestBias) * clearingMask);
+        return Mathf.Clamp(1f - reduction, 0.05f, 1f);
     }
 
     private Material BuildAtlasMaterial(OverworldNatureFlatsController flats, OverworldNatureBiomeProfile profile, out Rect[] rects)

@@ -27,6 +27,12 @@ public class OverworldNatureBiomeProfile
     [Range(0f, 1f)] public float FlowerLimit = 0.4f;
     [Range(0f, 1f)] public float ForestLimit = 0.7f;
 
+
+    [Header("Clearings")]
+    [Range(0.0001f, 0.2f)] public float ClearingNoiseFrequency = 0.006f;
+    [Range(0f, 1f)] public float ClearingThreshold = 0.62f;
+    [Range(0f, 1f)] public float ClearingStrength = 0.75f;
+
     [Header("Category Weights (Flower Habitat)")]
     [Range(0f, 1f)] public float FlowerHabitatFlowerWeight = 0.65f;
     [Range(0f, 1f)] public float FlowerHabitatBushWeight = 0.25f;
