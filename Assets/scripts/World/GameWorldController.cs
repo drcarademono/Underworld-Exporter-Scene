@@ -1178,6 +1178,12 @@ public class GameWorldController : UWEBase
         foreach (var k in toRemove) { loadedOverworldChunks.Remove(k); }
     }
 
+
+    private OverworldNatureFlatsController GetOverworldNatureFlatsController()
+    {
+        return UnityEngine.Object.FindObjectOfType<OverworldNatureFlatsController>();
+    }
+
     private void EnsureDistantChunks(Vector2Int centerChunk, Texture2D heightmap, OverworldTerrainController overworld)
     {
         int tilesPerPixel = Mathf.Max(1, overworld.TilesPerPixel);
@@ -1340,6 +1346,16 @@ public class GameWorldController : UWEBase
             mc.sharedMesh = mesh;
         }
         mr.materials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
+
+        OverworldNatureFlatsController natureFlats = GetOverworldNatureFlatsController();
+        if (withCollision && (sampleStep == 1) && (natureFlats != null) && natureFlats.EnableNatureFlats)
+        {
+            GameObject natureBillboards = new GameObject("NatureBillboards");
+            natureBillboards.transform.SetParent(go.transform, false);
+            OverworldNatureBillboardBatch batch = natureBillboards.AddComponent<OverworldNatureBillboardBatch>();
+            batch.Initialize(vertices, grass.ToArray(), natureFlats, overworld.WaterSurfaceEpsilon, chunkCoord);
+        }
+
         if (!withCollision && (sampleStep > 1))
         {
             AddDistantChunkSkirt(go.transform, vertices, sampleWidth, sampleHeight, Mathf.Max(2f, sampleStep * overworld.TileWorldSize * 0.35f));
