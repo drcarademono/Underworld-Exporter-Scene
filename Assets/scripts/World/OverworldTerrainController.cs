@@ -61,7 +61,7 @@ public class OverworldTerrainController : MonoBehaviour
     [Range(0.0001f, 0.02f)] public float NatureBillboardPerlinScale = 0.0025f;
     [Range(0.5f, 16f)] public float NatureBillboardWidth = 4.5f;
     [Range(1f, 30f)] public float NatureBillboardHeight = 9f;
-    [Range(-2f, 2f)] public float NatureBillboardGroundOffset = 0f;
+    [Range(-2f, 2f)] public float NatureBillboardGroundOffset = 0.2f;
     [Range(0, 4000)] public int MaxNatureBillboardsPerChunk = 1000;
 
     [Header("Texture Filtering")]
