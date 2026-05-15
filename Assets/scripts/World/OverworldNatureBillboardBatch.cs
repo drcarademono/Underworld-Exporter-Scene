@@ -96,11 +96,11 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         batchMesh = new Mesh();
         batchMesh.name = $"NatureBillboards_{chunkCoord.x}_{chunkCoord.y}";
         batchMesh.indexFormat = (meshVerts.Length > 65535) ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
-        batchMesh.uv = meshUvs;
-        batchMesh.triangles = meshTris;
 
         RebuildBillboardVerts();
         batchMesh.vertices = meshVerts;
+        batchMesh.uv = meshUvs;
+        batchMesh.triangles = meshTris;
         batchMesh.RecalculateNormals();
         batchMesh.RecalculateBounds();
         meshFilter.sharedMesh = batchMesh;
