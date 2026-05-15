@@ -30156,6 +30156,8 @@ GameObject:
   m_Component:
   - component: {fileID: 853464905}
   - component: {fileID: 853464904}
+  - component: {fileID: 853464907}
+  - component: {fileID: 853464906}
   m_Layer: 0
   m_Name: _OverworldController
   m_TagString: Untagged
@@ -30194,7 +30196,7 @@ MonoBehaviour:
   HeightScale: 80
   PerlinStrength: 5
   PerlinScale: 0.02
-  SeaLevelOffset: 2
+  SeaLevelOffset: 2.5
   SteepSlopeNormalThreshold: 0.78
   WaterTextureIndex: 184
   WaterTextureAnimEndIndex: 188
@@ -30222,6 +30224,49 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &853464906
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 853464903}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: abfcbe3916ca522fb831ae25abf49791, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OverworldSkyController
+  SunLight: {fileID: 0}
+  MinWeatherDurationSeconds: 120
+  MaxWeatherDurationSeconds: 300
+--- !u!114 &853464907
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 853464903}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51f056bc481c9f851b73d7a095436b00, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OverworldNatureFlatsController
+  EnableNatureFlats: 1
+  TreeMaterials:
+  - {fileID: 2100000, guid: 19ab25b9ebcee063a98377fc21d70494, type: 2}
+  - {fileID: 2100000, guid: 71267cf979135fb93b62b828a2a7d37f, type: 2}
+  TerrainSpriteMaterials: []
+  NatureSeed: 2048
+  BaseDensity: 0.05
+  ClusterDensity: 0.45
+  PerlinScale: 0.0025
+  TerrainSpriteChance: 0.22
+  TreeWidth: 4.5
+  TreeHeight: 9
+  TerrainSpriteWidth: 3.5
+  TerrainSpriteHeight: 3.5
+  GroundOffset: 0.2
+  MaxBillboardsPerChunk: 1000
 --- !u!1 &855120957
 GameObject:
   m_ObjectHideFlags: 0
