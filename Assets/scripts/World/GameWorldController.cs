@@ -1340,6 +1340,15 @@ public class GameWorldController : UWEBase
             mc.sharedMesh = mesh;
         }
         mr.materials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
+
+        if (withCollision && (sampleStep == 1) && overworld.EnableNatureBillboards)
+        {
+            GameObject natureBillboards = new GameObject("NatureBillboards");
+            natureBillboards.transform.SetParent(go.transform, false);
+            OverworldNatureBillboardBatch batch = natureBillboards.AddComponent<OverworldNatureBillboardBatch>();
+            batch.Initialize(vertices, grass.ToArray(), overworld, chunkCoord);
+        }
+
         if (!withCollision && (sampleStep > 1))
         {
             AddDistantChunkSkirt(go.transform, vertices, sampleWidth, sampleHeight, Mathf.Max(2f, sampleStep * overworld.TileWorldSize * 0.35f));
