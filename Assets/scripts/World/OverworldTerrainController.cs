@@ -52,18 +52,6 @@ public class OverworldTerrainController : MonoBehaviour
     public Material StoneMaterialOverride;
 
 
-    [Header("Nature Billboards")]
-    public bool EnableNatureBillboards = true;
-    public Material NatureBillboardMaterial;
-    [Range(0, 2048)] public int NatureBillboardSeed = 7341;
-    [Range(0f, 1f)] public float NatureBillboardBaseDensity = 0.05f;
-    [Range(0f, 1f)] public float NatureBillboardClusterDensity = 0.45f;
-    [Range(0.0001f, 0.02f)] public float NatureBillboardPerlinScale = 0.0025f;
-    [Range(0.5f, 16f)] public float NatureBillboardWidth = 4.5f;
-    [Range(1f, 30f)] public float NatureBillboardHeight = 9f;
-    [Range(-2f, 2f)] public float NatureBillboardGroundOffset = 0.2f;
-    [Range(0, 4000)] public int MaxNatureBillboardsPerChunk = 1000;
-
     [Header("Texture Filtering")]
     public bool EnableOverworldTerrainMipmaps = false;
 }

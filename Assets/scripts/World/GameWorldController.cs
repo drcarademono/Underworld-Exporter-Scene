@@ -1178,6 +1178,12 @@ public class GameWorldController : UWEBase
         foreach (var k in toRemove) { loadedOverworldChunks.Remove(k); }
     }
 
+
+    private OverworldNatureFlatsController GetOverworldNatureFlatsController()
+    {
+        return Object.FindObjectOfType<OverworldNatureFlatsController>();
+    }
+
     private void EnsureDistantChunks(Vector2Int centerChunk, Texture2D heightmap, OverworldTerrainController overworld)
     {
         int tilesPerPixel = Mathf.Max(1, overworld.TilesPerPixel);
@@ -1341,12 +1347,13 @@ public class GameWorldController : UWEBase
         }
         mr.materials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
 
-        if (withCollision && (sampleStep == 1) && overworld.EnableNatureBillboards)
+        OverworldNatureFlatsController natureFlats = GetOverworldNatureFlatsController();
+        if (withCollision && (sampleStep == 1) && (natureFlats != null) && natureFlats.EnableNatureFlats)
         {
             GameObject natureBillboards = new GameObject("NatureBillboards");
             natureBillboards.transform.SetParent(go.transform, false);
             OverworldNatureBillboardBatch batch = natureBillboards.AddComponent<OverworldNatureBillboardBatch>();
-            batch.Initialize(vertices, grass.ToArray(), overworld, chunkCoord);
+            batch.Initialize(vertices, grass.ToArray(), natureFlats, overworld.WaterSurfaceEpsilon, chunkCoord);
         }
 
         if (!withCollision && (sampleStep > 1))

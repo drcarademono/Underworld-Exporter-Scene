@@ -14,92 +14,109 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     private Vector3[] quadCenters;
     private float[] quadWidths;
     private float[] quadHeights;
+    private int[] quadMatIndex;
+
     private Vector3[] meshVerts;
     private Vector2[] meshUvs;
-    private int[] meshTris;
     private int[] quadOrder;
+    private List<int>[] submeshTriangles;
 
-    public void Initialize(Vector3[] vertices, int[] grassTriangles, OverworldTerrainController settings, Vector2Int chunkCoord)
+    public void Initialize(Vector3[] vertices, int[] grassTriangles, OverworldNatureFlatsController flats, float waterSurfaceEpsilon, Vector2Int chunkCoord)
     {
-        if (vertices == null || grassTriangles == null || settings == null) { return; }
-        if (settings.NatureBillboardMaterial == null || !settings.EnableNatureBillboards) { return; }
+        if (vertices == null || grassTriangles == null || flats == null) { return; }
+        if (!flats.EnableNatureFlats) { return; }
+
+        Material[] allMaterials = BuildMaterialList(flats);
+        if (allMaterials.Length == 0) { return; }
 
         meshFilter = gameObject.AddComponent<MeshFilter>();
         meshRenderer = gameObject.AddComponent<MeshRenderer>();
-        meshRenderer.sharedMaterial = settings.NatureBillboardMaterial;
+        meshRenderer.sharedMaterials = allMaterials;
 
         List<int> candidates = new List<int>(grassTriangles.Length / 3);
         for (int i = 0; i < grassTriangles.Length; i += 3)
         {
             Vector3 center = (vertices[grassTriangles[i]] + vertices[grassTriangles[i + 1]] + vertices[grassTriangles[i + 2]]) / 3f;
-            if (center.y <= settings.WaterSurfaceEpsilon) { continue; }
+            if (center.y <= waterSurfaceEpsilon) { continue; }
 
-            float clusterNoise = SampleClusterNoise(center, settings);
-            float threshold = Mathf.Lerp(settings.NatureBillboardBaseDensity, settings.NatureBillboardClusterDensity, clusterNoise);
-            if (Deterministic01(center, settings.NatureBillboardSeed) <= threshold)
-            {
-                candidates.Add(i);
-            }
+            float clusterNoise = SampleClusterNoise(center, flats);
+            float threshold = Mathf.Lerp(flats.BaseDensity, flats.ClusterDensity, clusterNoise);
+            if (Deterministic01(center, flats.NatureSeed) <= threshold) { candidates.Add(i); }
         }
-
         if (candidates.Count == 0) { return; }
 
-        int maxCount = Mathf.Max(0, settings.MaxNatureBillboardsPerChunk);
+        int maxCount = Mathf.Max(0, flats.MaxBillboardsPerChunk);
         float keepProb = (maxCount <= 0 || candidates.Count <= maxCount) ? 1f : (maxCount / (float)candidates.Count);
 
-        List<int> selected = new List<int>(Mathf.Min(candidates.Count, Mathf.Max(1, maxCount)));
+        List<int> selected = new List<int>(candidates.Count);
         for (int c = 0; c < candidates.Count; c++)
         {
             int triStart = candidates[c];
             Vector3 center = (vertices[grassTriangles[triStart]] + vertices[grassTriangles[triStart + 1]] + vertices[grassTriangles[triStart + 2]]) / 3f;
-            if (keepProb >= 1f || Deterministic01(center + new Vector3(37.17f, 0f, -91.73f), settings.NatureBillboardSeed) <= keepProb)
-            {
-                selected.Add(triStart);
-            }
+            if (keepProb >= 1f || Deterministic01(center + new Vector3(37.17f, 0f, -91.73f), flats.NatureSeed) <= keepProb) { selected.Add(triStart); }
         }
-
         if (selected.Count == 0) { return; }
 
         int quadCount = selected.Count;
         quadCenters = new Vector3[quadCount];
         quadWidths = new float[quadCount];
         quadHeights = new float[quadCount];
+        quadMatIndex = new int[quadCount];
         meshVerts = new Vector3[quadCount * VertsPerQuad];
         meshUvs = new Vector2[quadCount * VertsPerQuad];
-        meshTris = new int[quadCount * TrisPerQuad];
         quadOrder = new int[quadCount];
+
+        int treeCount = flats.TreeMaterials != null ? flats.TreeMaterials.Length : 0;
+        int terrainCount = flats.TerrainSpriteMaterials != null ? flats.TerrainSpriteMaterials.Length : 0;
 
         for (int q = 0; q < quadCount; q++)
         {
             int triStart = selected[q];
             Vector3 center = (vertices[grassTriangles[triStart]] + vertices[grassTriangles[triStart + 1]] + vertices[grassTriangles[triStart + 2]]) / 3f;
-            float heightJitter = Mathf.Lerp(0.9f, 1.1f, Deterministic01(center + new Vector3(13.1f, 0f, -6.3f), settings.NatureBillboardSeed));
-            float widthJitter = Mathf.Lerp(0.8f, 1.2f, Deterministic01(center + new Vector3(-2.3f, 0f, 4.7f), settings.NatureBillboardSeed));
+            float selector = Deterministic01(center + new Vector3(8.1f, 0f, 11.2f), flats.NatureSeed);
+            bool useTerrainSprite = (terrainCount > 0) && (selector < flats.TerrainSpriteChance || treeCount == 0);
 
-            quadCenters[q] = center + (Vector3.up * settings.NatureBillboardGroundOffset);
-            quadWidths[q] = settings.NatureBillboardWidth * widthJitter;
-            quadHeights[q] = settings.NatureBillboardHeight * heightJitter;
+            float widthBase = useTerrainSprite ? flats.TerrainSpriteWidth : flats.TreeWidth;
+            float heightBase = useTerrainSprite ? flats.TerrainSpriteHeight : flats.TreeHeight;
+            float heightJitter = Mathf.Lerp(0.9f, 1.1f, Deterministic01(center + new Vector3(13.1f, 0f, -6.3f), flats.NatureSeed));
+            float widthJitter = Mathf.Lerp(0.8f, 1.2f, Deterministic01(center + new Vector3(-2.3f, 0f, 4.7f), flats.NatureSeed));
 
+            quadCenters[q] = center + (Vector3.up * flats.GroundOffset);
+            quadWidths[q] = widthBase * widthJitter;
+            quadHeights[q] = heightBase * heightJitter;
             quadOrder[q] = q;
+
+            if (useTerrainSprite)
+            {
+                int matChoice = Mathf.FloorToInt(Deterministic01(center + new Vector3(19.2f, 0f, 5.6f), flats.NatureSeed) * terrainCount);
+                quadMatIndex[q] = treeCount + Mathf.Clamp(matChoice, 0, Mathf.Max(0, terrainCount - 1));
+            }
+            else
+            {
+                int matChoice = Mathf.FloorToInt(Deterministic01(center + new Vector3(-9.2f, 0f, -15.6f), flats.NatureSeed) * treeCount);
+                quadMatIndex[q] = Mathf.Clamp(matChoice, 0, Mathf.Max(0, treeCount - 1));
+            }
 
             int vi = q * VertsPerQuad;
             meshUvs[vi + 0] = new Vector2(0f, 0f);
             meshUvs[vi + 1] = new Vector2(1f, 0f);
             meshUvs[vi + 2] = new Vector2(0f, 1f);
             meshUvs[vi + 3] = new Vector2(1f, 1f);
-
         }
 
-        RebuildTriangleOrder();
+        submeshTriangles = new List<int>[allMaterials.Length];
+        for (int i = 0; i < submeshTriangles.Length; i++) { submeshTriangles[i] = new List<int>(quadCount * TrisPerQuad / allMaterials.Length + 6); }
 
         batchMesh = new Mesh();
         batchMesh.name = $"NatureBillboards_{chunkCoord.x}_{chunkCoord.y}";
         batchMesh.indexFormat = (meshVerts.Length > 65535) ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
+        batchMesh.subMeshCount = allMaterials.Length;
 
         RebuildBillboardVerts();
+        RebuildTriangleOrder();
         batchMesh.vertices = meshVerts;
         batchMesh.uv = meshUvs;
-        batchMesh.triangles = meshTris;
+        for (int sm = 0; sm < submeshTriangles.Length; sm++) { batchMesh.SetTriangles(submeshTriangles[sm], sm); }
         batchMesh.RecalculateNormals();
         batchMesh.RecalculateBounds();
         meshFilter.sharedMesh = batchMesh;
@@ -111,14 +128,13 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         RebuildBillboardVerts();
         RebuildTriangleOrder();
         batchMesh.vertices = meshVerts;
-        batchMesh.triangles = meshTris;
+        for (int sm = 0; sm < submeshTriangles.Length; sm++) { batchMesh.SetTriangles(submeshTriangles[sm], sm); }
         batchMesh.RecalculateBounds();
     }
 
     private void RebuildBillboardVerts()
     {
         if (quadCenters == null || quadCenters.Length == 0) { return; }
-
         Vector3 camForward = UWCharacter.Instance != null ? UWCharacter.Instance.dirForNPC : Vector3.forward;
         if (camForward.sqrMagnitude < 0.0001f) { camForward = Vector3.forward; }
         Vector3 right = Vector3.Cross(Vector3.up, camForward).normalized;
@@ -127,13 +143,10 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         for (int q = 0; q < quadCenters.Length; q++)
         {
             quadOrder[q] = q;
-
             int vi = q * VertsPerQuad;
             Vector3 center = quadCenters[q];
-            float halfWidth = quadWidths[q] * 0.5f;
+            Vector3 side = right * (quadWidths[q] * 0.5f);
             float height = quadHeights[q];
-            Vector3 side = right * halfWidth;
-
             meshVerts[vi + 0] = center - side;
             meshVerts[vi + 1] = center + side;
             meshVerts[vi + 2] = center - side + (Vector3.up * height);
@@ -141,37 +154,42 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         }
     }
 
-
     private void RebuildTriangleOrder()
     {
-        if (quadCenters == null || meshTris == null || quadOrder == null) { return; }
+        if (quadCenters == null || submeshTriangles == null || quadOrder == null) { return; }
+        for (int i = 0; i < submeshTriangles.Length; i++) { submeshTriangles[i].Clear(); }
 
         Vector3 camPos = (Camera.main != null) ? Camera.main.transform.position : (UWCharacter.Instance != null ? UWCharacter.Instance.CameraPos : Vector3.zero);
-        System.Array.Sort(quadOrder, (a, b) =>
-        {
-            float da = (quadCenters[a] - camPos).sqrMagnitude;
-            float db = (quadCenters[b] - camPos).sqrMagnitude;
-            return db.CompareTo(da);
-        });
+        System.Array.Sort(quadOrder, (a, b) => (quadCenters[b] - camPos).sqrMagnitude.CompareTo((quadCenters[a] - camPos).sqrMagnitude));
 
         for (int sorted = 0; sorted < quadOrder.Length; sorted++)
         {
             int q = quadOrder[sorted];
             int vi = q * VertsPerQuad;
-            int ti = sorted * TrisPerQuad;
-            meshTris[ti + 0] = vi + 0;
-            meshTris[ti + 1] = vi + 2;
-            meshTris[ti + 2] = vi + 1;
-            meshTris[ti + 3] = vi + 1;
-            meshTris[ti + 4] = vi + 2;
-            meshTris[ti + 5] = vi + 3;
+            List<int> tris = submeshTriangles[Mathf.Clamp(quadMatIndex[q], 0, submeshTriangles.Length - 1)];
+            tris.Add(vi + 0); tris.Add(vi + 2); tris.Add(vi + 1);
+            tris.Add(vi + 1); tris.Add(vi + 2); tris.Add(vi + 3);
         }
     }
 
-    private static float SampleClusterNoise(Vector3 worldPos, OverworldTerrainController settings)
+    private static Material[] BuildMaterialList(OverworldNatureFlatsController flats)
     {
-        float sampleX = (worldPos.x + settings.NatureBillboardSeed) * settings.NatureBillboardPerlinScale;
-        float sampleY = (worldPos.z + settings.NatureBillboardSeed * 0.37f) * settings.NatureBillboardPerlinScale;
+        List<Material> mats = new List<Material>();
+        if (flats.TreeMaterials != null)
+        {
+            for (int i = 0; i < flats.TreeMaterials.Length; i++) if (flats.TreeMaterials[i] != null) { mats.Add(flats.TreeMaterials[i]); }
+        }
+        if (flats.TerrainSpriteMaterials != null)
+        {
+            for (int i = 0; i < flats.TerrainSpriteMaterials.Length; i++) if (flats.TerrainSpriteMaterials[i] != null) { mats.Add(flats.TerrainSpriteMaterials[i]); }
+        }
+        return mats.ToArray();
+    }
+
+    private static float SampleClusterNoise(Vector3 worldPos, OverworldNatureFlatsController flats)
+    {
+        float sampleX = (worldPos.x + flats.NatureSeed) * flats.PerlinScale;
+        float sampleY = (worldPos.z + flats.NatureSeed * 0.37f) * flats.PerlinScale;
         return Mathf.SmoothStep(0f, 1f, Mathf.PerlinNoise(sampleX, sampleY));
     }
 
@@ -182,9 +200,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             int hx = Mathf.FloorToInt(worldPos.x * 1000f);
             int hz = Mathf.FloorToInt(worldPos.z * 1000f);
             uint h = ((uint)hx * 374761393u) + ((uint)hz * 668265263u) + ((uint)seed * 2246822519u);
-            h ^= h >> 13;
-            h *= 1274126177u;
-            h ^= h >> 16;
+            h ^= h >> 13; h *= 1274126177u; h ^= h >> 16;
             return (h & 0x00FFFFFF) / 16777215f;
         }
     }
