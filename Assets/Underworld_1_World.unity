@@ -30177,21 +30177,36 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::OverworldTerrainController
   StartInOverworld: 1
   OverworldStartPos: {x: 0, y: 5, z: 0}
-  OverworldStartTile: {x: 630, y: 1398}
+  OverworldStartTile: {x: 730, y: 1258}
   HeightmapResourcePath: UIX/Britannia_Corv_Heightmap
   TilesPerPixel: 1
   TileWorldSize: 1
   ChunkSizeSamples: 64
   ActiveChunkRadius: 2
   LoadWholeMapAtStartup: 0
+  LoadDistantChunks: 1
+  DistantChunkStep: 4
+  StartHour: 12
+  StartMinute: 0
+  StartSecond: 0
+  ClockRateSecondsPerGameSecond: 20
+  OverworldFarClip: 16000
   HeightScale: 80
   PerlinStrength: 5
   PerlinScale: 0.02
   SeaLevelOffset: 2
   SteepSlopeNormalThreshold: 0.78
   WaterTextureIndex: 184
+  WaterTextureAnimEndIndex: 188
+  AnimateWater: 1
+  WaterAnimFrameTime: 0.2
+  WaterSurfaceEpsilon: 0.02
   GrassTextureIndex: 181
   StoneTextureIndex: 253
+  GrassMaterialOverride: {fileID: 2100000, guid: d52084be472840527917e9998092ea8a,
+    type: 2}
+  StoneMaterialOverride: {fileID: 0}
+  EnableOverworldTerrainMipmaps: 0
 --- !u!4 &853464905
 Transform:
   m_ObjectHideFlags: 0
