@@ -21,8 +21,6 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     private int[] meshTris;
     private int[] quadOrder;
     private Rect[] atlasRects;
-    private Material runtimeAtlasMaterial;
-    private Light cachedSunLight;
 
     public void Initialize(Vector3[] vertices, int[] grassTriangles, OverworldNatureFlatsController flats, float waterSurfaceEpsilon, Vector2Int chunkCoord)
     {
@@ -30,13 +28,10 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
 
         Material atlasMaterial = BuildAtlasMaterial(flats, out atlasRects);
         if (atlasMaterial == null || atlasRects == null || atlasRects.Length == 0) { return; }
-        runtimeAtlasMaterial = atlasMaterial;
-        cachedSunLight = ResolveSunLight();
 
         meshFilter = gameObject.AddComponent<MeshFilter>();
         meshRenderer = gameObject.AddComponent<MeshRenderer>();
         meshRenderer.sharedMaterial = atlasMaterial;
-        ApplyLightingToMaterial();
 
         List<int> candidates = new List<int>(grassTriangles.Length / 3);
         for (int i = 0; i < grassTriangles.Length; i += 3)
@@ -113,7 +108,6 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         batchMesh.indexFormat = (meshVerts.Length > 65535) ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
 
         RebuildGeometry();
-        ApplyLightingToMaterial();
         batchMesh.vertices = meshVerts;
         batchMesh.uv = meshUvs;
         batchMesh.triangles = meshTris;
@@ -125,7 +119,6 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     {
         if (batchMesh == null || UWCharacter.Instance == null) { return; }
         RebuildGeometry();
-        ApplyLightingToMaterial();
         batchMesh.vertices = meshVerts;
         batchMesh.uv = meshUvs;
         batchMesh.triangles = meshTris;
@@ -169,34 +162,6 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     }
 
 
-    private Light ResolveSunLight()
-    {
-        OverworldSkyController sky = UnityEngine.Object.FindObjectOfType<OverworldSkyController>();
-        if (sky != null && sky.SunLight != null) { return sky.SunLight; }
-        return UnityEngine.Object.FindObjectOfType<Light>();
-    }
-
-    private void ApplyLightingToMaterial()
-    {
-        if (runtimeAtlasMaterial == null) { return; }
-
-        if (cachedSunLight == null) { cachedSunLight = ResolveSunLight(); }
-
-        Color ambient = RenderSettings.ambientLight;
-        float ambientLuma = ambient.grayscale;
-        float sunFactor = 0f;
-        if (cachedSunLight != null)
-        {
-            sunFactor = Mathf.Clamp01(cachedSunLight.intensity * Mathf.Max(0f, cachedSunLight.transform.forward.y * -1f));
-        }
-
-        float brightness = Mathf.Clamp01(ambientLuma + sunFactor * 0.65f);
-        Color lit = new Color(brightness, brightness, brightness, 1f);
-
-        if (runtimeAtlasMaterial.HasProperty("_Color")) { runtimeAtlasMaterial.SetColor("_Color", lit); }
-        if (runtimeAtlasMaterial.HasProperty("_TintColor")) { runtimeAtlasMaterial.SetColor("_TintColor", lit); }
-    }
-
     private static Material BuildAtlasMaterial(OverworldNatureFlatsController flats, out Rect[] rects)
     {
         rects = null;
@@ -226,8 +191,20 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         atlas.wrapMode = TextureWrapMode.Clamp;
         atlas.filterMode = FilterMode.Point;
 
-        Material m = new Material(baseMat);
+        Shader lit = Shader.Find("Standard");
+        Material m = (lit != null) ? new Material(lit) : new Material(baseMat);
         m.mainTexture = atlas;
+        if (m.HasProperty("_Glossiness")) { m.SetFloat("_Glossiness", 0f); }
+        if (m.HasProperty("_Metallic")) { m.SetFloat("_Metallic", 0f); }
+        if (m.HasProperty("_Mode")) { m.SetFloat("_Mode", 1f); }
+        if (m.HasProperty("_Cutoff")) { m.SetFloat("_Cutoff", 0.33f); }
+        m.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
+        m.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
+        m.SetInt("_ZWrite", 1);
+        m.DisableKeyword("_ALPHABLEND_ON");
+        m.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+        m.EnableKeyword("_ALPHATEST_ON");
+        m.renderQueue = 2450;
         return m;
     }
 
