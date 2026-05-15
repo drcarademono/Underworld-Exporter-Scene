@@ -103,10 +103,20 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
 
             if (flats.UseTextureNativeSize && atlasNativeSizes != null && spriteIndex >= 0 && spriteIndex < atlasNativeSizes.Length)
             {
-                float ppu = Mathf.Max(1f, flats.TexturePixelsPerUnit);
                 Vector2 native = atlasNativeSizes[spriteIndex];
-                baseWidth = native.x / ppu;
-                baseHeight = native.y / ppu;
+                if (flats.MatchTerrainTextureScale)
+                {
+                    float tileWorldSize = ResolveTerrainTileWorldSize(flats);
+                    float worldUnitsPerPixel = tileWorldSize / Mathf.Max(1, flats.TerrainTexturePixelsPerTile);
+                    baseWidth = native.x * worldUnitsPerPixel;
+                    baseHeight = native.y * worldUnitsPerPixel;
+                }
+                else
+                {
+                    float ppu = Mathf.Max(1f, flats.TexturePixelsPerUnit);
+                    baseWidth = native.x / ppu;
+                    baseHeight = native.y / ppu;
+                }
             }
             else if (category == NatureCategory.Tree)
             {
@@ -215,6 +225,18 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         if (TryPickSpriteIndex(NatureCategory.Flower, center, seed, out spriteIndex)) { return true; }
         if (TryPickSpriteIndex(NatureCategory.Rock, center, seed, out spriteIndex)) { return true; }
         return TryPickSpriteIndex(NatureCategory.Tree, center, seed, out spriteIndex);
+    }
+
+
+    private static float ResolveTerrainTileWorldSize(OverworldNatureFlatsController flats)
+    {
+        if (flats.TerrainTileWorldSizeOverride > 0f) { return flats.TerrainTileWorldSizeOverride; }
+        OverworldTerrainController overworld = Object.FindObjectOfType<OverworldTerrainController>();
+        if (overworld != null)
+        {
+            return Mathf.Max(0.125f, overworld.TileWorldSize);
+        }
+        return 8f;
     }
 
     private static HabitatType GetHabitat(float macroNoise, OverworldNatureBiomeProfile profile)
