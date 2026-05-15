@@ -238,17 +238,36 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         return Mathf.Clamp(1f - reduction, 0.05f, 1f);
     }
 
+    private static string NormalizeResourcesPath(string input)
+    {
+        if (string.IsNullOrEmpty(input)) { return input; }
+        string path = input.Replace('\\', '/').Trim();
+        const string resourcesMarker = "Assets/Resources/";
+        int idx = path.IndexOf(resourcesMarker, System.StringComparison.OrdinalIgnoreCase);
+        if (idx >= 0)
+        {
+            path = path.Substring(idx + resourcesMarker.Length);
+        }
+        if (path.EndsWith(".png", System.StringComparison.OrdinalIgnoreCase))
+        {
+            path = path.Substring(0, path.Length - 4);
+        }
+        return path;
+    }
+
     private static void TryLoadControlMaps(OverworldNatureFlatsController flats)
     {
         if (cachedDensityMap == null || cachedDensityPath != flats.NatureDensityMapResourcePath)
         {
             cachedDensityPath = flats.NatureDensityMapResourcePath;
-            cachedDensityMap = string.IsNullOrEmpty(cachedDensityPath) ? null : Resources.Load<Texture2D>(cachedDensityPath);
+            string densityPath = NormalizeResourcesPath(cachedDensityPath);
+            cachedDensityMap = string.IsNullOrEmpty(densityPath) ? null : Resources.Load<Texture2D>(densityPath);
         }
         if (cachedClimateMap == null || cachedClimatePath != flats.NatureClimateMapResourcePath)
         {
             cachedClimatePath = flats.NatureClimateMapResourcePath;
-            cachedClimateMap = string.IsNullOrEmpty(cachedClimatePath) ? null : Resources.Load<Texture2D>(cachedClimatePath);
+            string climatePath = NormalizeResourcesPath(cachedClimatePath);
+            cachedClimateMap = string.IsNullOrEmpty(climatePath) ? null : Resources.Load<Texture2D>(climatePath);
         }
     }
 
