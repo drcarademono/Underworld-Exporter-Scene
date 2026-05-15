@@ -26,7 +26,9 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     {
         if (vertices == null || grassTriangles == null || flats == null || !flats.EnableNatureFlats) { return; }
 
-        Material atlasMaterial = BuildAtlasMaterial(flats, out atlasRects);
+        int climateId = flats.EstimateClimateIdForChunk(chunkCoord);
+        OverworldNatureBiomeProfile profile = flats.GetBiomeProfileForClimate(climateId);
+        Material atlasMaterial = BuildAtlasMaterial(flats, profile, out atlasRects);
         if (atlasMaterial == null || atlasRects == null || atlasRects.Length == 0) { return; }
 
         meshFilter = gameObject.AddComponent<MeshFilter>();
@@ -38,8 +40,13 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         {
             Vector3 center = (vertices[grassTriangles[i]] + vertices[grassTriangles[i + 1]] + vertices[grassTriangles[i + 2]]) / 3f;
             if (center.y <= waterSurfaceEpsilon) { continue; }
+            float macro = SampleMacroNoise(center, flats, profile);
             float cluster = SampleClusterNoise(center, flats);
-            float threshold = Mathf.Lerp(flats.BaseDensity, flats.ClusterDensity, cluster);
+            float baseDensity = profile != null ? profile.BaseDensity : flats.BaseDensity;
+            float clusterDensity = profile != null ? profile.ClusterDensity : flats.ClusterDensity;
+            float threshold = Mathf.Lerp(baseDensity, clusterDensity, cluster);
+            threshold *= ComputeContextDensity(center, vertices[grassTriangles[i]], vertices[grassTriangles[i+1]], vertices[grassTriangles[i+2]], profile);
+            threshold = Mathf.Clamp01(threshold);
             if (Deterministic01(center, flats.NatureSeed) <= threshold) { candidates.Add(i); }
         }
         if (candidates.Count == 0) { return; }
@@ -66,32 +73,34 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         meshUvs = new Vector2[quadCount * VertsPerQuad];
         meshTris = new int[quadCount * TrisPerQuad];
 
-        int treeCount = flats.TreeMaterials != null ? flats.TreeMaterials.Length : 0;
-        int terrainCount = flats.TerrainSpriteMaterials != null ? flats.TerrainSpriteMaterials.Length : 0;
+        int atlasCount = atlasRects != null ? atlasRects.Length : 0;
 
         for (int q = 0; q < quadCount; q++)
         {
             int triStart = selected[q];
             Vector3 center = (vertices[grassTriangles[triStart]] + vertices[grassTriangles[triStart + 1]] + vertices[grassTriangles[triStart + 2]]) / 3f;
-            float selector = Deterministic01(center + new Vector3(8.1f, 0f, 11.2f), flats.NatureSeed);
-            bool useTerrain = (terrainCount > 0) && (selector < flats.TerrainSpriteChance || treeCount == 0);
+            float macro = SampleMacroNoise(center, flats, profile);
+            HabitatType habitat = GetHabitat(macro, profile);
 
             int spriteIndex;
+            NatureCategory category = ChooseCategory(center, flats.NatureSeed, profile, habitat);
             float baseWidth;
             float baseHeight;
-            if (useTerrain)
+            if (!TryPickSpriteIndex(category, center, flats.NatureSeed, out spriteIndex))
             {
-                int choice = Mathf.FloorToInt(Deterministic01(center + new Vector3(19.2f, 0f, 5.6f), flats.NatureSeed) * terrainCount);
-                spriteIndex = Mathf.Clamp(treeCount + choice, 0, atlasRects.Length - 1);
-                baseWidth = flats.TerrainSpriteWidth;
-                baseHeight = flats.TerrainSpriteHeight;
+                spriteIndex = Mathf.Clamp(Mathf.FloorToInt(Deterministic01(center + new Vector3(3.14f, 0f, -2.71f), flats.NatureSeed) * Mathf.Max(1, atlasCount)), 0, Mathf.Max(0, atlasCount - 1));
+                category = NatureCategory.Bush;
+            }
+
+            if (category == NatureCategory.Tree)
+            {
+                baseWidth = flats.TreeWidth;
+                baseHeight = flats.TreeHeight;
             }
             else
             {
-                int choice = Mathf.FloorToInt(Deterministic01(center + new Vector3(-9.2f, 0f, -15.6f), flats.NatureSeed) * treeCount);
-                spriteIndex = Mathf.Clamp(choice, 0, atlasRects.Length - 1);
-                baseWidth = flats.TreeWidth;
-                baseHeight = flats.TreeHeight;
+                baseWidth = flats.TerrainSpriteWidth;
+                baseHeight = flats.TerrainSpriteHeight;
             }
 
             float hJ = Mathf.Lerp(0.9f, 1.1f, Deterministic01(center + new Vector3(13.1f, 0f, -6.3f), flats.NatureSeed));
@@ -162,27 +171,91 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     }
 
 
-    private static Material BuildAtlasMaterial(OverworldNatureFlatsController flats, out Rect[] rects)
+    private Dictionary<NatureCategory, List<int>> categoryAtlasIndices = new Dictionary<NatureCategory, List<int>>();
+
+    private enum HabitatType { Flower, Grass, Forest }
+    private enum NatureCategory { Tree, Bush, Flower, Rock }
+
+    private bool TryPickSpriteIndex(NatureCategory category, Vector3 center, int seed, out int spriteIndex)
+    {
+        spriteIndex = 0;
+        if (!categoryAtlasIndices.TryGetValue(category, out var list) || list == null || list.Count == 0) { return false; }
+        int choice = Mathf.FloorToInt(Deterministic01(center + new Vector3(19.2f, 0f, 5.6f), seed) * list.Count);
+        spriteIndex = list[Mathf.Clamp(choice, 0, list.Count - 1)];
+        return true;
+    }
+
+    private static HabitatType GetHabitat(float macroNoise, OverworldNatureBiomeProfile profile)
+    {
+        float flowerLimit = profile != null ? profile.FlowerLimit : 0.4f;
+        float forestLimit = profile != null ? profile.ForestLimit : 0.7f;
+        if (macroNoise < flowerLimit) { return HabitatType.Flower; }
+        if (macroNoise < forestLimit) { return HabitatType.Grass; }
+        return HabitatType.Forest;
+    }
+
+    private static NatureCategory ChooseCategory(Vector3 center, int seed, OverworldNatureBiomeProfile profile, HabitatType habitat)
+    {
+        float flower=0.2f, bush=0.45f, tree=0.3f, rock=0.05f;
+        if (profile != null)
+        {
+            if (habitat == HabitatType.Flower) { flower = profile.FlowerHabitatFlowerWeight; bush = profile.FlowerHabitatBushWeight; tree = profile.FlowerHabitatTreeWeight; rock = profile.FlowerHabitatRockWeight; }
+            else if (habitat == HabitatType.Grass) { flower = profile.GrassHabitatFlowerWeight; bush = profile.GrassHabitatBushWeight; tree = profile.GrassHabitatTreeWeight; rock = profile.GrassHabitatRockWeight; }
+            else { flower = profile.ForestHabitatFlowerWeight; bush = profile.ForestHabitatBushWeight; tree = profile.ForestHabitatTreeWeight; rock = profile.ForestHabitatRockWeight; }
+        }
+        float total = Mathf.Max(0.0001f, flower + bush + tree + rock);
+        float r = Deterministic01(center + new Vector3(8.1f, 0f, 11.2f), seed) * total;
+        if ((r -= tree) <= 0f) return NatureCategory.Tree;
+        if ((r -= bush) <= 0f) return NatureCategory.Bush;
+        if ((r -= flower) <= 0f) return NatureCategory.Flower;
+        return NatureCategory.Rock;
+    }
+
+    private static float ComputeContextDensity(Vector3 center, Vector3 v0, Vector3 v1, Vector3 v2, OverworldNatureBiomeProfile profile)
+    {
+        if (profile == null) { return 1f; }
+        Vector3 n = Vector3.Cross(v1 - v0, v2 - v0).normalized;
+        float slopePenalty = Mathf.Clamp01(n.y);
+        float slopeFactor = Mathf.Lerp(1f, slopePenalty, Mathf.Clamp01(profile.SlopeDensityMultiplier));
+        float elevation01 = Mathf.Clamp01(center.y / 80f);
+        float elevFactor = Mathf.Lerp(1f, elevation01, Mathf.Clamp01(profile.ElevationDensityMultiplier * 0.5f));
+        return Mathf.Clamp01(slopeFactor * elevFactor);
+    }
+
+    private Material BuildAtlasMaterial(OverworldNatureFlatsController flats, OverworldNatureBiomeProfile profile, out Rect[] rects)
     {
         rects = null;
         List<Texture2D> textures = new List<Texture2D>();
+        categoryAtlasIndices = new Dictionary<NatureCategory, List<int>>();
         Material baseMat = null;
 
-        void AddFrom(Material[] mats)
+        void AddFrom(Material[] mats, NatureCategory category)
         {
             if (mats == null) { return; }
+            if (!categoryAtlasIndices.ContainsKey(category)) { categoryAtlasIndices[category] = new List<int>(); }
             for (int i = 0; i < mats.Length; i++)
             {
                 if (mats[i] == null) { continue; }
                 Texture2D tex = mats[i].mainTexture as Texture2D;
                 if (tex == null) { continue; }
                 if (baseMat == null) { baseMat = mats[i]; }
+                categoryAtlasIndices[category].Add(textures.Count);
                 textures.Add(tex);
             }
         }
 
-        AddFrom(flats.TreeMaterials);
-        AddFrom(flats.TerrainSpriteMaterials);
+        if (profile != null && profile.Categories != null)
+        {
+            AddFrom(profile.Categories.Trees, NatureCategory.Tree);
+            AddFrom(profile.Categories.Bushes, NatureCategory.Bush);
+            AddFrom(profile.Categories.Flowers, NatureCategory.Flower);
+            AddFrom(profile.Categories.Rocks, NatureCategory.Rock);
+        }
+        else
+        {
+            AddFrom(flats.TreeMaterials, NatureCategory.Tree);
+            AddFrom(flats.TerrainSpriteMaterials, NatureCategory.Bush);
+        }
 
         if (baseMat == null || textures.Count == 0) { return null; }
 
@@ -206,6 +279,24 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         m.EnableKeyword("_ALPHATEST_ON");
         m.renderQueue = 2450;
         return m;
+    }
+
+    private static float SampleMacroNoise(Vector3 worldPos, OverworldNatureFlatsController flats, OverworldNatureBiomeProfile profile)
+    {
+        float f = profile != null ? profile.MacroNoiseFrequency : 0.01f;
+        float a = profile != null ? profile.MacroNoiseAmplitude : 0.9f;
+        float p = profile != null ? profile.MacroNoisePersistence : 0.35f;
+        int o = profile != null ? profile.MacroNoiseOctaves : 3;
+        float frequency = f;
+        float amplitude = a;
+        float n = 0f;
+        for (int i = 0; i < o; i++)
+        {
+            n += Mathf.PerlinNoise((worldPos.x + flats.NatureSeed) * frequency, (worldPos.z + flats.NatureSeed * 0.37f) * frequency) * amplitude;
+            frequency *= 2f;
+            amplitude *= p;
+        }
+        return Mathf.Clamp01(n);
     }
 
     private static float SampleClusterNoise(Vector3 worldPos, OverworldNatureFlatsController flats)
