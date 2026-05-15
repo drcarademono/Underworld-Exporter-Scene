@@ -21,6 +21,8 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     private int[] meshTris;
     private int[] quadOrder;
     private Rect[] atlasRects;
+    private Material runtimeAtlasMaterial;
+    private Light cachedSunLight;
 
     public void Initialize(Vector3[] vertices, int[] grassTriangles, OverworldNatureFlatsController flats, float waterSurfaceEpsilon, Vector2Int chunkCoord)
     {
@@ -28,10 +30,13 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
 
         Material atlasMaterial = BuildAtlasMaterial(flats, out atlasRects);
         if (atlasMaterial == null || atlasRects == null || atlasRects.Length == 0) { return; }
+        runtimeAtlasMaterial = atlasMaterial;
+        cachedSunLight = ResolveSunLight();
 
         meshFilter = gameObject.AddComponent<MeshFilter>();
         meshRenderer = gameObject.AddComponent<MeshRenderer>();
         meshRenderer.sharedMaterial = atlasMaterial;
+        ApplyLightingToMaterial();
 
         List<int> candidates = new List<int>(grassTriangles.Length / 3);
         for (int i = 0; i < grassTriangles.Length; i += 3)
@@ -108,6 +113,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         batchMesh.indexFormat = (meshVerts.Length > 65535) ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
 
         RebuildGeometry();
+        ApplyLightingToMaterial();
         batchMesh.vertices = meshVerts;
         batchMesh.uv = meshUvs;
         batchMesh.triangles = meshTris;
@@ -119,6 +125,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     {
         if (batchMesh == null || UWCharacter.Instance == null) { return; }
         RebuildGeometry();
+        ApplyLightingToMaterial();
         batchMesh.vertices = meshVerts;
         batchMesh.uv = meshUvs;
         batchMesh.triangles = meshTris;
@@ -159,6 +166,35 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             meshTris[ti + 0] = vi + 0; meshTris[ti + 1] = vi + 2; meshTris[ti + 2] = vi + 1;
             meshTris[ti + 3] = vi + 1; meshTris[ti + 4] = vi + 2; meshTris[ti + 5] = vi + 3;
         }
+    }
+
+
+    private Light ResolveSunLight()
+    {
+        OverworldSkyController sky = UnityEngine.Object.FindObjectOfType<OverworldSkyController>();
+        if (sky != null && sky.SunLight != null) { return sky.SunLight; }
+        return UnityEngine.Object.FindObjectOfType<Light>();
+    }
+
+    private void ApplyLightingToMaterial()
+    {
+        if (runtimeAtlasMaterial == null) { return; }
+
+        if (cachedSunLight == null) { cachedSunLight = ResolveSunLight(); }
+
+        Color ambient = RenderSettings.ambientLight;
+        float ambientLuma = ambient.grayscale;
+        float sunFactor = 0f;
+        if (cachedSunLight != null)
+        {
+            sunFactor = Mathf.Clamp01(cachedSunLight.intensity * Mathf.Max(0f, cachedSunLight.transform.forward.y * -1f));
+        }
+
+        float brightness = Mathf.Clamp01(ambientLuma + sunFactor * 0.65f);
+        Color lit = new Color(brightness, brightness, brightness, 1f);
+
+        if (runtimeAtlasMaterial.HasProperty("_Color")) { runtimeAtlasMaterial.SetColor("_Color", lit); }
+        if (runtimeAtlasMaterial.HasProperty("_TintColor")) { runtimeAtlasMaterial.SetColor("_TintColor", lit); }
     }
 
     private static Material BuildAtlasMaterial(OverworldNatureFlatsController flats, out Rect[] rects)
