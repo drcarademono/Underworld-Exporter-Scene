@@ -1415,6 +1415,7 @@ public class GameWorldController : UWEBase
 
     private Material BuildOverworldSurfaceMaterial(int textureIndex, Material overrideMaterial, Color fallbackColor, int sampleWidth, int sampleHeight)
     {
+        OverworldTerrainController overworld = GetOverworldController();
         Material baseMat = null;
         if ((MaterialMasterList != null) && (textureIndex >= 0) && (textureIndex < MaterialMasterList.Length))
         {
@@ -1427,7 +1428,7 @@ public class GameWorldController : UWEBase
         {
             Texture overrideTexture = overrideMaterial.mainTexture;
             overrideTexture.wrapMode = TextureWrapMode.Repeat;
-            result.mainTexture = overrideTexture;
+            result.mainTexture = MaybeEnableOverworldMipmaps(overrideTexture, overworld);
 
             if ((baseMat != null) && (baseMat.mainTextureScale != Vector2.zero))
             {
@@ -1440,12 +1441,39 @@ public class GameWorldController : UWEBase
         }
         else
         {
-            ConfigureTerrainMaterial(result, LoadUW2TerrainTexture(textureIndex), fallbackColor, sampleWidth, sampleHeight);
+            ConfigureTerrainMaterial(result, MaybeEnableOverworldMipmaps(LoadUW2TerrainTexture(textureIndex), overworld), fallbackColor, sampleWidth, sampleHeight);
         }
 
         result.SetFloat("_Glossiness", 0f);
         result.SetFloat("_Metallic", 0f);
         return result;
+    }
+
+    private Texture MaybeEnableOverworldMipmaps(Texture input, OverworldTerrainController overworld)
+    {
+        if (input == null) { return null; }
+        if ((overworld == null) || !overworld.EnableOverworldTerrainMipmaps) { return input; }
+
+        Texture2D tex2D = input as Texture2D;
+        if (tex2D == null) { return input; }
+        if (tex2D.mipmapCount > 1) { return tex2D; }
+
+        try
+        {
+            Texture2D mipTex = new Texture2D(tex2D.width, tex2D.height, TextureFormat.RGBA32, true);
+            mipTex.SetPixels32(tex2D.GetPixels32());
+            mipTex.Apply(true, false);
+            mipTex.wrapMode = tex2D.wrapMode;
+            mipTex.filterMode = tex2D.filterMode;
+            mipTex.anisoLevel = Mathf.Max(1, tex2D.anisoLevel);
+            mipTex.name = tex2D.name + "_Mip";
+            return mipTex;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning("Failed to generate mipmaps for overworld texture " + tex2D.name + ": " + ex.Message);
+            return tex2D;
+        }
     }
 
     private Texture2D LoadUW2TerrainTexture(int textureIndex)
