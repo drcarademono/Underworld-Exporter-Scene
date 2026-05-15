@@ -112,15 +112,49 @@ public class UWTextureViewerWindow : EditorWindow
             case AssetCategory.Textures:
                 LoadTextureCategory(game, target, palLoader);
                 break;
-            case AssetCategory.Tiles:
-                LoadGRSet(target, category, "Tiles", new[] { GRLoader.TMFLAT_GR, GRLoader.TMOBJ_GR, GRLoader.DOORS_GR });
+            case AssetCategory.Tiles_Flat:
+                LoadGRSet(target, category, "Tiles", new[] { GRLoader.TMFLAT_GR });
                 break;
-            case AssetCategory.Sprites:
-                LoadGRSet(target, category, "Sprites", new[] { GRLoader.OBJECTS_GR, GRLoader.ANIMO_GR, GRLoader.TMOBJ_GR, GRLoader.WEAPONS_GR, GRLoader.BODIES_GR, GRLoader.ARMOR_F_GR, GRLoader.ARMOR_M_GR, GRLoader.HEADS_GR, GRLoader.CHARHEAD_GR, GRLoader.GENHEAD_GR, GRLoader.GHED_GR, GRLoader.FLASKS_GR, GRLoader.SPELLS_GR });
+            case AssetCategory.Tiles_Objects:
+                LoadGRSet(target, category, "Tiles", new[] { GRLoader.TMOBJ_GR });
+                break;
+            case AssetCategory.Tiles_Doors:
+                LoadGRSet(target, category, "Tiles", new[] { GRLoader.DOORS_GR });
+                break;
+            case AssetCategory.Sprites_Objects:
+                LoadGRSet(target, category, "Sprites", new[] { GRLoader.OBJECTS_GR });
+                break;
+            case AssetCategory.Sprites_Animo:
+                LoadGRSet(target, category, "Sprites", new[] { GRLoader.ANIMO_GR });
+                break;
+            case AssetCategory.Sprites_Weapons:
+                LoadGRSet(target, category, "Sprites", new[] { GRLoader.WEAPONS_GR });
+                break;
+            case AssetCategory.Sprites_Creatures_Critters:
                 LoadCritterSprites(target, category);
                 break;
-            case AssetCategory.UI:
-                LoadGRSet(target, category, "UI", new[] { GRLoader.PANELS_GR, GRLoader.BUTTONS_GR, GRLoader.CURSORS_GR, GRLoader.CHRBTNS_GR, GRLoader.COMPASS_GR, GRLoader.CONVERSE_GR, GRLoader.CHAINS_GR, GRLoader.DRAGONS_GR, GRLoader.EYES_GR, GRLoader.INV_GR, GRLoader.LFTI_GR, GRLoader.OPBTN_GR, GRLoader.OPTB_GR, GRLoader.OPTBTNS_GR, GRLoader.POWER_GR, GRLoader.QUEST_GR, GRLoader.SCRLEDGE_GR, GRLoader.GEMPT_GR });
+            case AssetCategory.Sprites_Portraits_Heads:
+                LoadGRSet(target, category, "Sprites", new[] { GRLoader.HEADS_GR, GRLoader.CHARHEAD_GR, GRLoader.GENHEAD_GR, GRLoader.GHED_GR });
+                break;
+            case AssetCategory.Sprites_Paperdoll_BodiesArmor:
+                LoadGRSet(target, category, "Sprites", new[] { GRLoader.BODIES_GR, GRLoader.ARMOR_F_GR, GRLoader.ARMOR_M_GR, GRLoader.FLASKS_GR });
+                break;
+            case AssetCategory.Sprites_Spells:
+                LoadGRSet(target, category, "Sprites", new[] { GRLoader.SPELLS_GR });
+                break;
+            case AssetCategory.UI_Panels:
+                LoadGRSet(target, category, "UI", new[] { GRLoader.PANELS_GR, GRLoader.INV_GR, GRLoader.CONVERSE_GR });
+                break;
+            case AssetCategory.UI_ButtonsAndControls:
+                LoadGRSet(target, category, "UI", new[] { GRLoader.BUTTONS_GR, GRLoader.CHRBTNS_GR, GRLoader.OPBTN_GR, GRLoader.OPTB_GR, GRLoader.OPTBTNS_GR, GRLoader.LFTI_GR });
+                break;
+            case AssetCategory.UI_CursorsAndIndicators:
+                LoadGRSet(target, category, "UI", new[] { GRLoader.CURSORS_GR, GRLoader.COMPASS_GR, GRLoader.CHAINS_GR, GRLoader.EYES_GR, GRLoader.POWER_GR, GRLoader.QUEST_GR, GRLoader.SCRLEDGE_GR, GRLoader.GEMPT_GR });
+                break;
+            case AssetCategory.UI_Decorative:
+                LoadGRSet(target, category, "UI", new[] { GRLoader.DRAGONS_GR });
+                break;
+            case AssetCategory.UI_BytScreens:
                 LoadBytCategory(target, category, game);
                 break;
         }
@@ -341,7 +375,7 @@ public class UWTextureViewerWindow : EditorWindow
     }
 
     private enum GameChoice { UW1, UW2 }
-    private enum AssetCategory { Textures, Tiles, Sprites, UI }
+    private enum AssetCategory { Textures, Tiles_Flat, Tiles_Objects, Tiles_Doors, Sprites_Objects, Sprites_Animo, Sprites_Weapons, Sprites_Creatures_Critters, Sprites_Portraits_Heads, Sprites_Paperdoll_BodiesArmor, Sprites_Spells, UI_Panels, UI_ButtonsAndControls, UI_CursorsAndIndicators, UI_Decorative, UI_BytScreens }
 
     [Serializable] private class ConfigRoot { public ConfigPaths paths; }
     [Serializable] private class ConfigPaths { public string PATH_UW1; public string PATH_UW2; }
