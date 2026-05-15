@@ -1,5 +1,5 @@
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -13,74 +13,245 @@ public class UWTextureViewerWindow : EditorWindow
     private int columns = 8;
     private bool showOnlyLikelyWater = false;
 
+    private GameChoice selectedGame = GameChoice.UW1;
+    private AssetCategory selectedCategory = AssetCategory.Textures;
+
     private readonly List<TextureEntry> uw1Entries = new List<TextureEntry>();
     private readonly List<TextureEntry> uw2Entries = new List<TextureEntry>();
 
     [MenuItem("Tools/UW/Texture Viewer (Ground-Floor-Water)")]
     private static void OpenWindow()
     {
-        var window = GetWindow<UWTextureViewerWindow>("UW Textures");
-        window.minSize = new Vector2(760f, 420f);
+        var window = GetWindow<UWTextureViewerWindow>("UW Assets");
+        window.minSize = new Vector2(900f, 500f);
     }
 
-
-    private void OnEnable()
-    {
-        TryLoadPathsFromConfig();
-    }
+    private void OnEnable() => TryLoadPathsFromConfig();
 
     private void OnGUI()
     {
-        EditorGUILayout.LabelField("Underworld Ground/Floor/Water Texture Viewer", EditorStyles.boldLabel);
-        EditorGUILayout.HelpBox("Loads UW1 and UW2 textures directly from DATA files and auto-fills paths from config.json when available. UW1 uses detected floor range from F32.TR. UW2 uses detected range from T64.TR.", MessageType.Info);
-
+        EditorGUILayout.LabelField("Underworld Asset Viewer & Exporter", EditorStyles.boldLabel);
         uw1Path = EditorGUILayout.TextField("UW1 Base Path", uw1Path);
         uw2Path = EditorGUILayout.TextField("UW2 Base Path", uw2Path);
+        selectedGame = (GameChoice)EditorGUILayout.EnumPopup("Game", selectedGame);
+        selectedCategory = (AssetCategory)EditorGUILayout.EnumPopup("Category", selectedCategory);
 
         using (new EditorGUILayout.HorizontalScope())
         {
-            if (GUILayout.Button("Load UW1")) { LoadUW1(); }
-            if (GUILayout.Button("Load UW2")) { LoadUW2(); }
-            if (GUILayout.Button("Load Both")) { LoadUW1(); LoadUW2(); }
-            if (GUILayout.Button("Export UW1 PNGs")) { ExportTextures(uw1Entries, "UW1"); }
-            if (GUILayout.Button("Export UW2 PNGs")) { ExportTextures(uw2Entries, "UW2"); }
-            if (GUILayout.Button("Clear")) { uw1Entries.Clear(); uw2Entries.Clear(); }
+            if (GUILayout.Button("Load Selection")) { LoadCategory(selectedGame, selectedCategory, false); }
+            if (GUILayout.Button("Append Selection")) { LoadCategory(selectedGame, selectedCategory, true); }
+            if (GUILayout.Button("Load All Categories")) { LoadAllCategoriesForGame(selectedGame); }
+            if (GUILayout.Button("Export Selected Category")) { ExportTextures(GetFilteredEntries(selectedGame, selectedCategory), selectedGame + "_" + selectedCategory); }
+            if (GUILayout.Button("Clear Game")) { GetEntries(selectedGame).Clear(); }
         }
 
         showOnlyLikelyWater = EditorGUILayout.ToggleLeft("Only show likely water textures", showOnlyLikelyWater);
         thumbSize = EditorGUILayout.Slider("Thumbnail Size", thumbSize, 48f, 160f);
         columns = EditorGUILayout.IntSlider("Columns", columns, 4, 12);
 
+        var filtered = GetFilteredEntries(selectedGame, selectedCategory);
+        EditorGUILayout.LabelField($"Loaded {selectedGame} / {selectedCategory}: {filtered.Count}", EditorStyles.boldLabel);
+
         scroll = EditorGUILayout.BeginScrollView(scroll);
-        DrawSection("UW1 Floor Textures", uw1Entries);
-        EditorGUILayout.Space(12);
-        DrawSection("UW2 Textures", uw2Entries);
+        DrawEntries(filtered);
         EditorGUILayout.EndScrollView();
     }
 
-    private void DrawSection(string title, List<TextureEntry> entries)
+    private void LoadAllCategoriesForGame(GameChoice game)
     {
-        EditorGUILayout.LabelField($"{title} ({entries.Count})", EditorStyles.boldLabel);
-        if (entries.Count == 0)
+        GetEntries(game).Clear();
+        foreach (AssetCategory category in Enum.GetValues(typeof(AssetCategory)))
         {
-            EditorGUILayout.LabelField("No textures loaded.");
-            return;
+            LoadCategory(game, category, true);
+        }
+    }
+
+    private void LoadCategory(GameChoice game, AssetCategory category, bool append)
+    {
+        var target = GetEntries(game);
+        if (!append)
+        {
+            target.RemoveAll(x => x.category == category);
         }
 
+        string basePath = game == GameChoice.UW1 ? uw1Path : uw2Path;
+        if (!ValidateBasePath(basePath)) { return; }
+
+        string prevRes = UWClass._RES;
+        string prevBase = Loader.BasePath;
+        var prevInstance = GameWorldController.instance;
+        GameObject tempObj = null;
+
+        try
+        {
+            UWClass._RES = game == GameChoice.UW1 ? UWClass.GAME_UW1 : UWClass.GAME_UW2;
+            Loader.BasePath = UWClass.CleanPath(basePath);
+            PaletteLoader paletteLoader = new PaletteLoader(Path.Combine(Loader.BasePath, "DATA", "PALS.DAT"), -1);
+
+            tempObj = new GameObject("__UWTextureViewerTempGWC");
+            tempObj.hideFlags = HideFlags.HideAndDontSave;
+            var tempGwc = tempObj.AddComponent<GameWorldController>();
+            tempGwc.palLoader = paletteLoader;
+            GameWorldController.instance = tempGwc;
+
+            LoadCategoryInternal(game, category, target, paletteLoader);
+        }
+        finally
+        {
+            if (tempObj != null) { DestroyImmediate(tempObj); }
+            GameWorldController.instance = prevInstance;
+            UWClass._RES = prevRes;
+            Loader.BasePath = prevBase;
+        }
+    }
+
+    private void LoadCategoryInternal(GameChoice game, AssetCategory category, List<TextureEntry> target, PaletteLoader palLoader)
+    {
+        switch (category)
+        {
+            case AssetCategory.Textures:
+                LoadTextureCategory(game, target, palLoader);
+                break;
+            case AssetCategory.Tiles_Flat:
+                LoadGRSet(target, category, "Tiles", new[] { GRLoader.TMFLAT_GR });
+                break;
+            case AssetCategory.Tiles_Objects:
+                LoadGRSet(target, category, "Tiles", new[] { GRLoader.TMOBJ_GR });
+                break;
+            case AssetCategory.Tiles_Doors:
+                LoadGRSet(target, category, "Tiles", new[] { GRLoader.DOORS_GR });
+                break;
+            case AssetCategory.Sprites_Objects:
+                LoadGRSet(target, category, "Sprites", new[] { GRLoader.OBJECTS_GR });
+                break;
+            case AssetCategory.Sprites_Animo:
+                LoadGRSet(target, category, "Sprites", new[] { GRLoader.ANIMO_GR });
+                break;
+            case AssetCategory.Sprites_Weapons:
+                LoadGRSet(target, category, "Sprites", new[] { GRLoader.WEAPONS_GR });
+                break;
+            case AssetCategory.Sprites_Creatures_Critters:
+                LoadCritterSprites(target, category);
+                break;
+            case AssetCategory.Sprites_Portraits_Heads:
+                LoadGRSet(target, category, "Sprites", new[] { GRLoader.HEADS_GR, GRLoader.CHARHEAD_GR, GRLoader.GENHEAD_GR, GRLoader.GHED_GR });
+                break;
+            case AssetCategory.Sprites_Paperdoll_BodiesArmor:
+                LoadGRSet(target, category, "Sprites", new[] { GRLoader.BODIES_GR, GRLoader.ARMOR_F_GR, GRLoader.ARMOR_M_GR, GRLoader.FLASKS_GR });
+                break;
+            case AssetCategory.Sprites_Spells:
+                LoadGRSet(target, category, "Sprites", new[] { GRLoader.SPELLS_GR });
+                break;
+            case AssetCategory.UI_Panels:
+                LoadGRSet(target, category, "UI", new[] { GRLoader.PANELS_GR, GRLoader.INV_GR, GRLoader.CONVERSE_GR });
+                break;
+            case AssetCategory.UI_ButtonsAndControls:
+                LoadGRSet(target, category, "UI", new[] { GRLoader.BUTTONS_GR, GRLoader.CHRBTNS_GR, GRLoader.OPBTN_GR, GRLoader.OPTB_GR, GRLoader.OPTBTNS_GR, GRLoader.LFTI_GR });
+                break;
+            case AssetCategory.UI_CursorsAndIndicators:
+                LoadGRSet(target, category, "UI", new[] { GRLoader.CURSORS_GR, GRLoader.COMPASS_GR, GRLoader.CHAINS_GR, GRLoader.EYES_GR, GRLoader.POWER_GR, GRLoader.QUEST_GR, GRLoader.SCRLEDGE_GR, GRLoader.GEMPT_GR });
+                break;
+            case AssetCategory.UI_Decorative:
+                LoadGRSet(target, category, "UI", new[] { GRLoader.DRAGONS_GR });
+                break;
+            case AssetCategory.UI_BytScreens:
+                LoadBytCategory(target, category, game);
+                break;
+        }
+    }
+
+    private void LoadTextureCategory(GameChoice game, List<TextureEntry> target, PaletteLoader paletteLoader)
+    {
+        var textureLoader = new TextureLoader();
+        int count = (game == GameChoice.UW1) ? Mathf.Max(1, DetectTextureCount(Path.Combine(Loader.BasePath, "DATA", "W64.TR")) + DetectTextureCount(Path.Combine(Loader.BasePath, "DATA", "F32.TR"))) : Mathf.Max(1, DetectTextureCount(Path.Combine(Loader.BasePath, "DATA", "T64.TR")));
+        if (game == GameChoice.UW1 && count <= 1) { count = 314; }
+        if (game == GameChoice.UW2 && count <= 1) { count = 256; }
+        for (int i = 0; i < count; i++)
+        {
+            if (!TryLoadTexture(textureLoader, paletteLoader, i, out var tex)) { continue; }
+            target.Add(new TextureEntry { texture = tex, label = $"Texture_#{i}", category = AssetCategory.Textures, likelyWater = IsLikelyWater(tex) });
+        }
+    }
+
+    private void LoadGRSet(List<TextureEntry> target, AssetCategory category, string tag, int[] grIndices)
+    {
+        foreach (int gr in grIndices)
+        {
+            var loader = new GRLoader(gr);
+            int count = DetectGRImageCount(Path.Combine(Loader.BasePath, "DATA", GetGRFileName(gr)));
+            for (int i = 0; i < count; i++)
+            {
+                Texture2D tex = loader.LoadImageAt(i);
+                if (tex == null) { continue; }
+                target.Add(new TextureEntry { texture = tex, label = $"{tag}_{GetGRFileName(gr).Replace(".GR", "")}_#{i}", category = category, likelyWater = IsLikelyWater(tex) });
+            }
+        }
+    }
+
+    private void LoadBytCategory(List<TextureEntry> target, AssetCategory category, GameChoice game)
+    {
+        var loader = new BytLoader();
+        int count = game == GameChoice.UW1 ? 10 : 11;
+        for (int i = 0; i < count; i++)
+        {
+            Texture2D tex = loader.LoadImageAt(i);
+            if (tex == null) { continue; }
+            target.Add(new TextureEntry { texture = tex, label = $"UI_BYT_#{i}", category = category, likelyWater = IsLikelyWater(tex) });
+        }
+    }
+
+
+    private void LoadCritterSprites(List<TextureEntry> target, AssetCategory category)
+    {
+        for (int critterId = 0; critterId < 64; critterId++)
+        {
+            CritLoader critLoader;
+            try
+            {
+                critLoader = new CritLoader(critterId);
+            }
+            catch
+            {
+                continue;
+            }
+
+            if (critLoader == null || critLoader.critter == null || critLoader.critter.AnimInfo == null || critLoader.critter.AnimInfo.animSprites == null)
+            {
+                continue;
+            }
+
+            Sprite[] sprites = critLoader.critter.AnimInfo.animSprites;
+            for (int i = 0; i < sprites.Length; i++)
+            {
+                Sprite spr = sprites[i];
+                if (spr == null || spr.texture == null) { continue; }
+                Texture2D tex = spr.texture;
+                target.Add(new TextureEntry
+                {
+                    texture = tex,
+                    label = $"Sprites_CRITTER{critterId:D2}_#{i}",
+                    category = category,
+                    likelyWater = IsLikelyWater(tex)
+                });
+            }
+        }
+    }
+
+    private List<TextureEntry> GetFilteredEntries(GameChoice game, AssetCategory category)
+    {
+        List<TextureEntry> src = GetEntries(game);
+        return src.FindAll(e => e.category == category && (!showOnlyLikelyWater || e.likelyWater));
+    }
+
+    private void DrawEntries(List<TextureEntry> entries)
+    {
+        if (entries.Count == 0) { EditorGUILayout.LabelField("No assets loaded."); return; }
         int col = 0;
         EditorGUILayout.BeginHorizontal();
         foreach (var entry in entries)
         {
-            if (showOnlyLikelyWater && !entry.likelyWater) { continue; }
-
             DrawTextureCard(entry);
-            col++;
-            if (col >= columns)
-            {
-                col = 0;
-                EditorGUILayout.EndHorizontal();
-                EditorGUILayout.BeginHorizontal();
-            }
+            if (++col >= columns) { col = 0; EditorGUILayout.EndHorizontal(); EditorGUILayout.BeginHorizontal(); }
         }
         EditorGUILayout.EndHorizontal();
     }
@@ -90,186 +261,74 @@ public class UWTextureViewerWindow : EditorWindow
         using (new EditorGUILayout.VerticalScope(GUILayout.Width(thumbSize + 8)))
         {
             Rect previewRect = GUILayoutUtility.GetRect(thumbSize, thumbSize, GUILayout.Width(thumbSize), GUILayout.Height(thumbSize));
-            if (entry.texture != null)
-            {
-                EditorGUI.DrawPreviewTexture(previewRect, entry.texture, null, ScaleMode.ScaleToFit);
-            }
-            else
-            {
-                EditorGUI.HelpBox(previewRect, "Missing", MessageType.None);
-            }
+            if (entry.texture != null) { EditorGUI.DrawPreviewTexture(previewRect, entry.texture, null, ScaleMode.ScaleToFit); }
+            else { EditorGUI.HelpBox(previewRect, "Missing", MessageType.None); }
             EditorGUILayout.LabelField(entry.label, EditorStyles.miniLabel, GUILayout.Width(thumbSize + 8));
         }
     }
 
-    private void LoadUW1()
+    private List<TextureEntry> GetEntries(GameChoice game) => game == GameChoice.UW1 ? uw1Entries : uw2Entries;
+
+    private static int DetectGRImageCount(string path)
     {
-        uw1Entries.Clear();
-        if (!ValidateBasePath(uw1Path)) { return; }
-
-        string prevRes = UWClass._RES;
-        string prevBase = Loader.BasePath;
-        try
-        {
-            UWClass._RES = UWClass.GAME_UW1;
-            Loader.BasePath = UWClass.CleanPath(uw1Path);
-
-            PaletteLoader paletteLoader = new PaletteLoader(Path.Combine(Loader.BasePath, "DATA", "PALS.DAT"), -1);
-            TextureLoader textureLoader = new TextureLoader();
-
-            int uw1FloorCount = DetectTextureCount(Path.Combine(Loader.BasePath, "DATA", "F32.TR"));
-            if (uw1FloorCount <= 0) { uw1FloorCount = 104; }
-
-            for (int i = 210; i < 210 + uw1FloorCount; i++)
-            {
-                if (!TryLoadTexture(textureLoader, paletteLoader, i, out Texture2D tex)) { continue; }
-                uw1Entries.Add(new TextureEntry { texture = tex, label = $"#{i}", likelyWater = IsLikelyWater(tex) });
-            }
-        }
-        finally
-        {
-            UWClass._RES = prevRes;
-            Loader.BasePath = prevBase;
-        }
+        if (!File.Exists(path)) { return 0; }
+        byte[] bytes = File.ReadAllBytes(path);
+        if (bytes.Length < 3) { return 0; }
+        return (int)Loader.ConvertInt16(bytes[1], bytes[2]);
     }
 
-    private void LoadUW2()
+    private static string GetGRFileName(int grIndex)
     {
-        uw2Entries.Clear();
-        if (!ValidateBasePath(uw2Path)) { return; }
-
-        string prevRes = UWClass._RES;
-        string prevBase = Loader.BasePath;
-        try
-        {
-            UWClass._RES = UWClass.GAME_UW2;
-            Loader.BasePath = UWClass.CleanPath(uw2Path);
-
-            PaletteLoader paletteLoader = new PaletteLoader(Path.Combine(Loader.BasePath, "DATA", "PALS.DAT"), -1);
-            TextureLoader textureLoader = new TextureLoader();
-
-            int uw2Count = DetectTextureCount(Path.Combine(Loader.BasePath, "DATA", "T64.TR"));
-            if (uw2Count <= 0) { uw2Count = 256; }
-
-            for (int i = 0; i < uw2Count; i++)
-            {
-                if (!TryLoadTexture(textureLoader, paletteLoader, i, out Texture2D tex)) { continue; }
-                uw2Entries.Add(new TextureEntry { texture = tex, label = $"#{i}", likelyWater = IsLikelyWater(tex) });
-            }
-        }
-        finally
-        {
-            UWClass._RES = prevRes;
-            Loader.BasePath = prevBase;
-        }
-    }
-
-    private void TryLoadPathsFromConfig()
-    {
-        try
-        {
-            string configPath = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
-            if (!File.Exists(configPath)) { return; }
-
-            ConfigRoot config = JsonUtility.FromJson<ConfigRoot>(File.ReadAllText(configPath));
-            if (config == null || config.paths == null) { return; }
-
-            if (string.IsNullOrWhiteSpace(uw1Path)) { uw1Path = config.paths.PATH_UW1; }
-            if (string.IsNullOrWhiteSpace(uw2Path)) { uw2Path = config.paths.PATH_UW2; }
-        }
-        catch (Exception ex)
-        {
-            Debug.LogWarning("UWTextureViewer: Unable to load config.json paths: " + ex.Message);
-        }
+        string[] names = { "3DWIN.GR", "ANIMO.GR", "ARMOR_F.GR", "ARMOR_M.GR", "BODIES.GR", "BUTTONS.GR", "CHAINS.GR", "CHARHEAD.GR", "CHRBTNS.GR", "COMPASS.GR", "CONVERSE.GR", "CURSORS.GR", "DOORS.GR", "DRAGONS.GR", "EYES.GR", "FLASKS.GR", "GENHEAD.GR", "HEADS.GR", "INV.GR", "LFTI.GR", "OBJECTS.GR", "OPBTN.GR", "OPTB.GR", "OPTBTNS.GR", "PANELS.GR", "POWER.GR", "QUEST.GR", "SCRLEDGE.GR", "SPELLS.GR", "TMFLAT.GR", "TMOBJ.GR", "WEAPONS.GR", "GEMPT.GR", "GHED.GR" };
+        return names[grIndex];
     }
 
     private static int DetectTextureCount(string textureFilePath)
     {
         if (!File.Exists(textureFilePath)) { return 0; }
-
         byte[] file = File.ReadAllBytes(textureFilePath);
         if (file.Length < 8) { return 0; }
-
         uint firstOffset = Loader.ConvertInt32(file[4], file[5], file[6], file[7]);
         if (firstOffset <= 4 || firstOffset > file.Length) { return 0; }
-
-        int count = (int)((firstOffset - 4) / 4);
-        return Mathf.Max(0, count);
+        return Mathf.Max(0, (int)((firstOffset - 4) / 4));
     }
 
     private static bool TryLoadTexture(TextureLoader textureLoader, PaletteLoader paletteLoader, int index, out Texture2D texture)
     {
         texture = null;
-        try
-        {
-            texture = textureLoader.LoadImageAt(index, paletteLoader.Palettes[0]);
-            return texture != null;
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogWarning($"UWTextureViewer: Skipping texture #{index} due to load failure: {ex.Message}");
-            return false;
-        }
+        try { texture = textureLoader.LoadImageAt(index, paletteLoader.Palettes[0]); return texture != null; }
+        catch { return false; }
     }
 
     private void ExportTextures(List<TextureEntry> entries, string prefix)
     {
-        if (entries == null || entries.Count == 0)
-        {
-            EditorUtility.DisplayDialog("No Textures", "Load textures first.", "OK");
-            return;
-        }
-
-        string folder = EditorUtility.OpenFolderPanel("Export Textures", Application.dataPath, "");
+        if (entries == null || entries.Count == 0) { EditorUtility.DisplayDialog("No Assets", "Load assets first.", "OK"); return; }
+        string folder = EditorUtility.OpenFolderPanel("Export Assets", Application.dataPath, "");
         if (string.IsNullOrEmpty(folder)) { return; }
-
         int exported = 0;
         foreach (var entry in entries)
         {
-            if (entry.texture == null) { continue; }
             Texture2D readable = MakeReadableTexture(entry.texture);
             if (readable == null) { continue; }
             byte[] png = readable.EncodeToPNG();
             if (png == null) { continue; }
-            string safeLabel = entry.label.Replace("#", "").Trim();
-            string fileName = $"{prefix}_{safeLabel}.png";
-            File.WriteAllBytes(Path.Combine(folder, fileName), png);
+            string safeLabel = entry.label.Replace("#", "").Replace(" ", "_").Replace("/", "_");
+            File.WriteAllBytes(Path.Combine(folder, prefix + "_" + safeLabel + ".png"), png);
             exported++;
         }
-
-        EditorUtility.DisplayDialog("Export Complete", $"Exported {exported} textures to {folder}", "OK");
+        EditorUtility.DisplayDialog("Export Complete", $"Exported {exported} assets to {folder}", "OK");
     }
 
     private static Texture2D MakeReadableTexture(Texture texture)
     {
         if (texture == null) { return null; }
-
         RenderTexture rt = RenderTexture.GetTemporary(texture.width, texture.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
         Graphics.Blit(texture, rt);
-
         RenderTexture prev = RenderTexture.active;
         RenderTexture.active = rt;
-
         Texture2D readable = new Texture2D(texture.width, texture.height, TextureFormat.RGBA32, false);
         readable.ReadPixels(new Rect(0, 0, texture.width, texture.height), 0, 0);
         readable.Apply();
-
-        Color32[] px = readable.GetPixels32();
-        bool allTransparent = true;
-        for (int i = 0; i < px.Length; i++)
-        {
-            if (px[i].a != 0) { allTransparent = false; break; }
-        }
-        if (allTransparent)
-        {
-            for (int i = 0; i < px.Length; i++)
-            {
-                px[i].a = 255;
-            }
-            readable.SetPixels32(px);
-            readable.Apply();
-        }
-
         RenderTexture.active = prev;
         RenderTexture.ReleaseTemporary(rt);
         return readable;
@@ -289,38 +348,43 @@ public class UWTextureViewerWindow : EditorWindow
     {
         Color[] pixels = texture.GetPixels();
         if (pixels == null || pixels.Length == 0) { return false; }
-
         float blueDominant = 0f;
         for (int i = 0; i < pixels.Length; i++)
         {
             Color c = pixels[i];
-            if ((c.b > c.r * 1.15f) && (c.b > c.g * 1.05f) && (c.b > 0.18f))
-            {
-                blueDominant += 1f;
-            }
+            if ((c.b > c.r * 1.15f) && (c.b > c.g * 1.05f) && (c.b > 0.18f)) { blueDominant += 1f; }
         }
-
-        float ratio = blueDominant / pixels.Length;
-        return ratio > 0.28f;
+        return (blueDominant / pixels.Length) > 0.28f;
     }
 
-    [Serializable]
-    private class ConfigRoot
+    private void TryLoadPathsFromConfig()
     {
-        public ConfigPaths paths;
+        try
+        {
+            string configPath = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
+            if (!File.Exists(configPath)) { return; }
+            ConfigRoot config = JsonUtility.FromJson<ConfigRoot>(File.ReadAllText(configPath));
+            if (config == null || config.paths == null) { return; }
+            if (string.IsNullOrWhiteSpace(uw1Path)) { uw1Path = config.paths.PATH_UW1; }
+            if (string.IsNullOrWhiteSpace(uw2Path)) { uw2Path = config.paths.PATH_UW2; }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning("UWTextureViewer: Unable to load config.json paths: " + ex.Message);
+        }
     }
 
-    [Serializable]
-    private class ConfigPaths
-    {
-        public string PATH_UW1;
-        public string PATH_UW2;
-    }
+    private enum GameChoice { UW1, UW2 }
+    private enum AssetCategory { Textures, Tiles_Flat, Tiles_Objects, Tiles_Doors, Sprites_Objects, Sprites_Animo, Sprites_Weapons, Sprites_Creatures_Critters, Sprites_Portraits_Heads, Sprites_Paperdoll_BodiesArmor, Sprites_Spells, UI_Panels, UI_ButtonsAndControls, UI_CursorsAndIndicators, UI_Decorative, UI_BytScreens }
+
+    [Serializable] private class ConfigRoot { public ConfigPaths paths; }
+    [Serializable] private class ConfigPaths { public string PATH_UW1; public string PATH_UW2; }
 
     private class TextureEntry
     {
         public Texture2D texture;
         public string label;
+        public AssetCategory category;
         public bool likelyWater;
     }
 }
