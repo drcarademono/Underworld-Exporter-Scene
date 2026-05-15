@@ -176,7 +176,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     private static Material[] BuildMaterialList(OverworldNatureFlatsController flats)
     {
         List<Material> mats = new List<Material>();
-        int targetQueue = 3000;
+        int targetQueue = 2450;
         if (flats.TreeMaterials != null)
         {
             for (int i = 0; i < flats.TreeMaterials.Length; i++)
@@ -184,7 +184,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
                 Material src = flats.TreeMaterials[i];
                 if (src == null) { continue; }
                 Material inst = new Material(src);
-                inst.renderQueue = targetQueue;
+                ConfigureCutoutDepthMaterial(inst, targetQueue);
                 mats.Add(inst);
             }
         }
@@ -195,11 +195,36 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
                 Material src = flats.TerrainSpriteMaterials[i];
                 if (src == null) { continue; }
                 Material inst = new Material(src);
-                inst.renderQueue = targetQueue;
+                ConfigureCutoutDepthMaterial(inst, targetQueue);
                 mats.Add(inst);
             }
         }
         return mats.ToArray();
+    }
+
+
+    private static void ConfigureCutoutDepthMaterial(Material mat, int targetQueue)
+    {
+        if (mat == null) { return; }
+
+        if (mat.HasProperty("_Mode"))
+        {
+            // Standard shader cutout mode to enable depth writes while keeping alpha clip.
+            mat.SetFloat("_Mode", 1f);
+            mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
+            mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
+            mat.SetInt("_ZWrite", 1);
+            mat.DisableKeyword("_ALPHABLEND_ON");
+            mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            mat.EnableKeyword("_ALPHATEST_ON");
+        }
+
+        if (mat.HasProperty("_Cutoff") && mat.GetFloat("_Cutoff") <= 0f)
+        {
+            mat.SetFloat("_Cutoff", 0.33f);
+        }
+
+        mat.renderQueue = targetQueue;
     }
 
     private static float SampleClusterNoise(Vector3 worldPos, OverworldNatureFlatsController flats)
