@@ -21,7 +21,6 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     private int[] meshTris;
     private int[] quadOrder;
     private Rect[] atlasRects;
-    private float[] atlasAspects;
 
     private static Texture2D cachedDensityMap;
     private static string cachedDensityPath;
@@ -35,7 +34,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         TryLoadControlMaps(flats);
         int climateId = EstimateClimateId(chunkCoord, flats, vertices);
         OverworldNatureBiomeProfile profile = flats.GetBiomeProfileForClimate(climateId);
-        Material atlasMaterial = BuildAtlasMaterial(flats, profile, out atlasRects, out atlasAspects);
+        Material atlasMaterial = BuildAtlasMaterial(flats, profile, out atlasRects);
         if (atlasMaterial == null || atlasRects == null || atlasRects.Length == 0) { return; }
 
         meshFilter = gameObject.AddComponent<MeshFilter>();
@@ -112,20 +111,8 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
                 baseWidth = flats.TerrainSpriteWidth;
             }
 
-            float spriteAspect = 1f;
-            if (atlasAspects != null && spriteIndex >= 0 && spriteIndex < atlasAspects.Length)
-            {
-                spriteAspect = Mathf.Max(0.1f, atlasAspects[spriteIndex]);
-            }
-
-            float resolvedWidth = baseHeight * spriteAspect;
-            if (category != NatureCategory.Tree)
-            {
-                resolvedWidth = Mathf.Min(resolvedWidth, baseWidth);
-            }
-
             quadCenters[q] = center + (Vector3.up * flats.GroundOffset);
-            quadWidths[q] = resolvedWidth;
+            quadWidths[q] = baseWidth;
             quadHeights[q] = baseHeight;
             quadSpriteIndex[q] = spriteIndex;
             quadOrder[q] = q;
@@ -330,12 +317,10 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         return (dr * dr + dg * dg + db * db) <= (20 * 20);
     }
 
-    private Material BuildAtlasMaterial(OverworldNatureFlatsController flats, OverworldNatureBiomeProfile profile, out Rect[] rects, out float[] aspects)
+    private Material BuildAtlasMaterial(OverworldNatureFlatsController flats, OverworldNatureBiomeProfile profile, out Rect[] rects)
     {
         rects = null;
-        aspects = null;
         List<Texture2D> textures = new List<Texture2D>();
-        List<float> textureAspects = new List<float>();
         categoryAtlasIndices = new Dictionary<NatureCategory, List<int>>();
         Material baseMat = null;
 
@@ -351,8 +336,6 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
                 if (baseMat == null) { baseMat = mats[i]; }
                 categoryAtlasIndices[category].Add(textures.Count);
                 textures.Add(tex);
-                float h = Mathf.Max(1f, tex.height);
-                textureAspects.Add(Mathf.Max(0.1f, tex.width / h));
             }
         }
 
@@ -373,7 +356,6 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
 
         Texture2D atlas = new Texture2D(2048, 2048, TextureFormat.RGBA32, false);
         rects = atlas.PackTextures(textures.ToArray(), 2, 2048, false);
-        aspects = textureAspects.ToArray();
         atlas.wrapMode = TextureWrapMode.Clamp;
         atlas.filterMode = FilterMode.Point;
 
