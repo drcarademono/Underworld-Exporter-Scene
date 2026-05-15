@@ -51,6 +51,7 @@ public class OverworldTerrainController : MonoBehaviour
     public Material GrassMaterialOverride;
     public Material StoneMaterialOverride;
 
+
     [Header("Texture Filtering")]
     public bool EnableOverworldTerrainMipmaps = false;
 }
