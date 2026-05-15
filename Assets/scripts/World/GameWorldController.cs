@@ -1181,7 +1181,7 @@ public class GameWorldController : UWEBase
 
     private OverworldNatureFlatsController GetOverworldNatureFlatsController()
     {
-        return Object.FindObjectOfType<OverworldNatureFlatsController>();
+        return UnityEngine.Object.FindObjectOfType<OverworldNatureFlatsController>();
     }
 
     private void EnsureDistantChunks(Vector2Int centerChunk, Texture2D heightmap, OverworldTerrainController overworld)
