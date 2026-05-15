@@ -1186,18 +1186,17 @@ public class GameWorldController : UWEBase
         int totalSampleHeight = Mathf.Max(2, heightmap.height / tilesPerPixel);
         int maxChunkX = Mathf.CeilToInt(totalSampleWidth / (float)chunkSize) - 1;
         int maxChunkY = Mathf.CeilToInt(totalSampleHeight / (float)chunkSize) - 1;
-        int distantStep = Mathf.Max(2, overworld.DistantChunkStep);
         int activeRadius = Mathf.Max(0, overworld.ActiveChunkRadius);
 
-        for (int cy = 0; cy <= maxChunkY; cy += distantStep)
+        for (int cy = 0; cy <= maxChunkY; cy++)
         {
-            for (int cx = 0; cx <= maxChunkX; cx += distantStep)
+            for (int cx = 0; cx <= maxChunkX; cx++)
             {
                 if (Mathf.Abs(cx - centerChunk.x) <= activeRadius && Mathf.Abs(cy - centerChunk.y) <= activeRadius) { continue; }
                 Vector2Int cc = new Vector2Int(cx, cy);
                 if (!loadedOverworldChunks.ContainsKey(cc))
                 {
-                    GameObject chunk = BuildChunk(cc, heightmap, overworld, distantStep, false);
+                    GameObject chunk = BuildChunk(cc, heightmap, overworld, Mathf.Max(2, overworld.DistantChunkStep), false);
                     if (chunk != null) { loadedOverworldChunks[cc] = chunk; lowDetailOverworldChunks.Add(cc); }
                 }
             }
