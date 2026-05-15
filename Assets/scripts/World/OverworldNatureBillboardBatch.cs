@@ -21,6 +21,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     private int[] meshTris;
     private int[] quadOrder;
     private Rect[] atlasRects;
+    private Vector2[] atlasNativeSizes;
 
     private static Texture2D cachedDensityMap;
     private static string cachedDensityPath;
@@ -34,7 +35,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         TryLoadControlMaps(flats);
         int climateId = EstimateClimateId(chunkCoord, flats, vertices);
         OverworldNatureBiomeProfile profile = flats.GetBiomeProfileForClimate(climateId);
-        Material atlasMaterial = BuildAtlasMaterial(flats, profile, out atlasRects);
+        Material atlasMaterial = BuildAtlasMaterial(flats, profile, out atlasRects, out atlasNativeSizes);
         if (atlasMaterial == null || atlasRects == null || atlasRects.Length == 0) { return; }
 
         meshFilter = gameObject.AddComponent<MeshFilter>();
@@ -100,7 +101,14 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
                 }
             }
 
-            if (category == NatureCategory.Tree)
+            if (flats.UseTextureNativeSize && atlasNativeSizes != null && spriteIndex >= 0 && spriteIndex < atlasNativeSizes.Length)
+            {
+                float ppu = Mathf.Max(1f, flats.TexturePixelsPerUnit);
+                Vector2 native = atlasNativeSizes[spriteIndex];
+                baseWidth = native.x / ppu;
+                baseHeight = native.y / ppu;
+            }
+            else if (category == NatureCategory.Tree)
             {
                 baseHeight = flats.TreeHeight;
                 baseWidth = flats.TreeWidth;
@@ -317,10 +325,12 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         return (dr * dr + dg * dg + db * db) <= (20 * 20);
     }
 
-    private Material BuildAtlasMaterial(OverworldNatureFlatsController flats, OverworldNatureBiomeProfile profile, out Rect[] rects)
+    private Material BuildAtlasMaterial(OverworldNatureFlatsController flats, OverworldNatureBiomeProfile profile, out Rect[] rects, out Vector2[] nativeSizes)
     {
         rects = null;
+        nativeSizes = null;
         List<Texture2D> textures = new List<Texture2D>();
+        List<Vector2> sizes = new List<Vector2>();
         categoryAtlasIndices = new Dictionary<NatureCategory, List<int>>();
         Material baseMat = null;
 
@@ -336,6 +346,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
                 if (baseMat == null) { baseMat = mats[i]; }
                 categoryAtlasIndices[category].Add(textures.Count);
                 textures.Add(tex);
+                sizes.Add(new Vector2(tex.width, tex.height));
             }
         }
 
@@ -356,6 +367,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
 
         Texture2D atlas = new Texture2D(2048, 2048, TextureFormat.RGBA32, false);
         rects = atlas.PackTextures(textures.ToArray(), 2, 2048, false);
+        nativeSizes = sizes.ToArray();
         atlas.wrapMode = TextureWrapMode.Clamp;
         atlas.filterMode = FilterMode.Point;
 
