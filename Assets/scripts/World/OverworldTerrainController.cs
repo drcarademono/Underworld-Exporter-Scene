@@ -17,6 +17,13 @@ public class OverworldTerrainController : MonoBehaviour
     [Range(1,6)] public int ActiveChunkRadius = 2;
     public bool LoadWholeMapAtStartup = false;
 
+
+    [Header("Overworld Time")]
+    [Range(0,23)] public int StartHour = 12;
+    [Range(0,59)] public int StartMinute = 0;
+    [Range(0,59)] public int StartSecond = 0;
+    [Range(0.05f, 20f)] public float ClockRateSecondsPerGameSecond = 1f;
+
     [Header("View Distance")]
     [Range(100f, 20000f)] public float OverworldFarClip = 6000f;
 
