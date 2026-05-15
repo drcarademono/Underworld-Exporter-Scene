@@ -101,6 +101,10 @@ public class OverworldSkyController : MonoBehaviour
         {
             SunLight.transform.rotation = Quaternion.Euler(sunAngle, -30f, 0f);
         }
+
+        // Dynamic Skies shader animates clouds/stars/moons from _WorldTime.
+        // Drive it from authoritative game time so sky motion follows UW time passage.
+        runtimeSky.SetFloat("_WorldTime", GameClock.TotalSeconds);
     }
 
     private void UpdateWeather()
