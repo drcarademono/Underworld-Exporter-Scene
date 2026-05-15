@@ -13,7 +13,7 @@ public class OverworldNatureCategoryMaterials
 public class OverworldNatureBiomeProfile
 {
     public string Name;
-    public int ClimateId;
+    public int ClimateId; // 0=Temperate,1=Mountain,2=Rainforest,3=Desert
 
     [Header("Distribution")]
     [Range(0f, 1f)] public float BaseDensity = 0.05f;
@@ -83,6 +83,19 @@ public class OverworldNatureFlatsController : MonoBehaviour
     [Range(-2f, 2f)] public float GroundOffset = 0.2f;
     [Range(0, 4000)] public int MaxBillboardsPerChunk = 1000;
 
+    
+
+    [Header("Nature Control Maps (2048x2048)")]
+    public string NatureDensityMapResourcePath = "UIX/nature_density_map";
+    public string NatureClimateMapResourcePath = "UIX/nature_climate_map";
+    [Range(1024f, 65536f)] public float NatureMapWorldWidth = 16384f;
+    [Range(1024f, 65536f)] public float NatureMapWorldHeight = 16384f;
+
+    [Header("Climate Map Colors")]
+    public Color32 MountainColor = new Color32(0, 255, 0, 255);
+    public Color32 RainforestColor = new Color32(0, 0, 255, 255);
+    public Color32 DesertColor = new Color32(255, 255, 0, 255);
+
     [Header("Biome Profiles")]
     public OverworldNatureBiomeProfile[] BiomeProfiles;
 
@@ -105,28 +118,28 @@ public class OverworldNatureFlatsController : MonoBehaviour
         BiomeProfiles = new OverworldNatureBiomeProfile[]
         {
             // Temperate Woodland (WO 231/223 style)
-            NewProfile("Temperate", 231, 0.25f, 0.55f, 0.01f, 0.9f, 0.4f, 3, 0.4f, 0.7f,
+            NewProfile("Temperate", 0, 0.25f, 0.55f, 0.01f, 0.9f, 0.4f, 3, 0.4f, 0.7f,
                 0.65f, 0.25f, 0.08f, 0.02f,
                 0.20f, 0.50f, 0.25f, 0.05f,
                 0.03f, 0.24f, 0.68f, 0.05f,
                 0.006f, 0.62f, 0.75f),
 
             // Mountain (WO 226)
-            NewProfile("Mountain", 226, 0.20f, 0.45f, 0.015f, 0.65f, 0.3f, 2, 0.2f, 0.38f,
+            NewProfile("Mountain", 1, 0.20f, 0.45f, 0.015f, 0.65f, 0.3f, 2, 0.2f, 0.38f,
                 0.55f, 0.20f, 0.05f, 0.20f,
                 0.12f, 0.28f, 0.40f, 0.20f,
                 0.02f, 0.13f, 0.70f, 0.15f,
                 0.008f, 0.58f, 0.65f),
 
             // Rainforest (WO 227)
-            NewProfile("Rainforest", 227, 0.30f, 0.65f, 0.04f, 0.95f, 0.35f, 3, 0.2f, 0.5f,
+            NewProfile("Rainforest", 2, 0.30f, 0.65f, 0.04f, 0.95f, 0.35f, 3, 0.2f, 0.5f,
                 0.55f, 0.35f, 0.08f, 0.02f,
                 0.18f, 0.52f, 0.26f, 0.04f,
                 0.02f, 0.30f, 0.64f, 0.04f,
                 0.005f, 0.60f, 0.70f),
 
             // Desert (WO 224)
-            NewProfile("Desert", 224, 0.12f, 0.30f, 0.15f, 0.5f, 0.15f, 2, 0.2f, 0.5f,
+            NewProfile("Desert", 3, 0.12f, 0.30f, 0.15f, 0.5f, 0.15f, 2, 0.2f, 0.5f,
                 0.15f, 0.35f, 0.00f, 0.50f,
                 0.05f, 0.35f, 0.05f, 0.55f,
                 0.00f, 0.20f, 0.20f, 0.60f,
@@ -177,10 +190,10 @@ public class OverworldNatureFlatsController : MonoBehaviour
         int band = Mathf.Abs(chunkCoord.y % 4);
         switch (band)
         {
-            case 0: return 224; // desert
-            case 1: return 226; // mountain
-            case 2: return 227; // rainforest
-            default: return 231; // temperate
+            case 0: return 3; // desert
+            case 1: return 1; // mountain
+            case 2: return 2; // rainforest
+            default: return 0; // temperate
         }
     }
 }

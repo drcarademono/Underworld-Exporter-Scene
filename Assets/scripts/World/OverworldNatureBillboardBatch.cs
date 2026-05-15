@@ -22,11 +22,17 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     private int[] quadOrder;
     private Rect[] atlasRects;
 
+    private static Texture2D cachedDensityMap;
+    private static string cachedDensityPath;
+    private static Texture2D cachedClimateMap;
+    private static string cachedClimatePath;
+
     public void Initialize(Vector3[] vertices, int[] grassTriangles, OverworldNatureFlatsController flats, float waterSurfaceEpsilon, Vector2Int chunkCoord)
     {
         if (vertices == null || grassTriangles == null || flats == null || !flats.EnableNatureFlats) { return; }
 
-        int climateId = flats.EstimateClimateIdForChunk(chunkCoord);
+        TryLoadControlMaps(flats);
+        int climateId = EstimateClimateId(chunkCoord, flats, vertices);
         OverworldNatureBiomeProfile profile = flats.GetBiomeProfileForClimate(climateId);
         Material atlasMaterial = BuildAtlasMaterial(flats, profile, out atlasRects);
         if (atlasMaterial == null || atlasRects == null || atlasRects.Length == 0) { return; }
@@ -47,6 +53,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             float threshold = Mathf.Lerp(baseDensity, clusterDensity, cluster);
             threshold *= ComputeContextDensity(center, vertices[grassTriangles[i]], vertices[grassTriangles[i+1]], vertices[grassTriangles[i+2]], profile);
             threshold *= ComputeClearingFactor(center, flats, profile, macro);
+            threshold *= SampleDensityMap(center, flats);
             threshold = Mathf.Clamp01(threshold);
             if (Deterministic01(center, flats.NatureSeed) <= threshold) { candidates.Add(i); }
         }
@@ -229,6 +236,48 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         float forestBias = Mathf.Clamp01((macroNoise - profile.ForestLimit) * 4f);
         float reduction = Mathf.Clamp01(profile.ClearingStrength * (0.5f + 0.5f * forestBias) * clearingMask);
         return Mathf.Clamp(1f - reduction, 0.05f, 1f);
+    }
+
+    private static void TryLoadControlMaps(OverworldNatureFlatsController flats)
+    {
+        if (cachedDensityMap == null || cachedDensityPath != flats.NatureDensityMapResourcePath)
+        {
+            cachedDensityPath = flats.NatureDensityMapResourcePath;
+            cachedDensityMap = string.IsNullOrEmpty(cachedDensityPath) ? null : Resources.Load<Texture2D>(cachedDensityPath);
+        }
+        if (cachedClimateMap == null || cachedClimatePath != flats.NatureClimateMapResourcePath)
+        {
+            cachedClimatePath = flats.NatureClimateMapResourcePath;
+            cachedClimateMap = string.IsNullOrEmpty(cachedClimatePath) ? null : Resources.Load<Texture2D>(cachedClimatePath);
+        }
+    }
+
+    private static float SampleDensityMap(Vector3 worldPos, OverworldNatureFlatsController flats)
+    {
+        if (cachedDensityMap == null) { return 1f; }
+        float u = Mathf.Clamp01(worldPos.x / Mathf.Max(1f, flats.NatureMapWorldWidth));
+        float v = Mathf.Clamp01(worldPos.z / Mathf.Max(1f, flats.NatureMapWorldHeight));
+        Color c = cachedDensityMap.GetPixelBilinear(u, v);
+        return Mathf.Clamp01(c.grayscale);
+    }
+
+    private static int EstimateClimateId(Vector2Int chunkCoord, OverworldNatureFlatsController flats, Vector3[] vertices)
+    {
+        if (cachedClimateMap == null || vertices == null || vertices.Length == 0) { return flats.EstimateClimateIdForChunk(chunkCoord); }
+        Vector3 center = vertices[vertices.Length / 2];
+        float u = Mathf.Clamp01(center.x / Mathf.Max(1f, flats.NatureMapWorldWidth));
+        float v = Mathf.Clamp01(center.z / Mathf.Max(1f, flats.NatureMapWorldHeight));
+        Color32 c = cachedClimateMap.GetPixelBilinear(u, v);
+        if (IsNear(c, flats.MountainColor)) { return 1; }
+        if (IsNear(c, flats.RainforestColor)) { return 2; }
+        if (IsNear(c, flats.DesertColor)) { return 3; }
+        return 0;
+    }
+
+    private static bool IsNear(Color32 a, Color32 b)
+    {
+        int dr = a.r - b.r; int dg = a.g - b.g; int db = a.b - b.b;
+        return (dr * dr + dg * dg + db * db) <= (20 * 20);
     }
 
     private Material BuildAtlasMaterial(OverworldNatureFlatsController flats, OverworldNatureBiomeProfile profile, out Rect[] rects)
