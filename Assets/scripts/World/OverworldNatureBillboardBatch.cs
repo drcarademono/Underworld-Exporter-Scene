@@ -185,10 +185,10 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
 
         if (baseMat == null || textures.Count == 0) { return null; }
 
-        Texture2D atlas = new Texture2D(2048, 2048, TextureFormat.RGBA32, true);
+        Texture2D atlas = new Texture2D(2048, 2048, TextureFormat.RGBA32, false);
         rects = atlas.PackTextures(textures.ToArray(), 2, 2048, false);
         atlas.wrapMode = TextureWrapMode.Clamp;
-        atlas.filterMode = FilterMode.Bilinear;
+        atlas.filterMode = FilterMode.Point;
 
         Material m = new Material(baseMat);
         m.mainTexture = atlas;
