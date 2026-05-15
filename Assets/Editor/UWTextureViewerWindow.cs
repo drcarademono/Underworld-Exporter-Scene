@@ -116,7 +116,8 @@ public class UWTextureViewerWindow : EditorWindow
                 LoadGRSet(target, category, "Tiles", new[] { GRLoader.TMFLAT_GR, GRLoader.TMOBJ_GR, GRLoader.DOORS_GR });
                 break;
             case AssetCategory.Sprites:
-                LoadGRSet(target, category, "Sprites", new[] { GRLoader.OBJECTS_GR, GRLoader.ANIMO_GR, GRLoader.WEAPONS_GR, GRLoader.BODIES_GR, GRLoader.ARMOR_F_GR, GRLoader.ARMOR_M_GR, GRLoader.HEADS_GR, GRLoader.CHARHEAD_GR, GRLoader.GENHEAD_GR, GRLoader.GHED_GR, GRLoader.FLASKS_GR, GRLoader.SPELLS_GR });
+                LoadGRSet(target, category, "Sprites", new[] { GRLoader.OBJECTS_GR, GRLoader.ANIMO_GR, GRLoader.TMOBJ_GR, GRLoader.WEAPONS_GR, GRLoader.BODIES_GR, GRLoader.ARMOR_F_GR, GRLoader.ARMOR_M_GR, GRLoader.HEADS_GR, GRLoader.CHARHEAD_GR, GRLoader.GENHEAD_GR, GRLoader.GHED_GR, GRLoader.FLASKS_GR, GRLoader.SPELLS_GR });
+                LoadCritterSprites(target, category);
                 break;
             case AssetCategory.UI:
                 LoadGRSet(target, category, "UI", new[] { GRLoader.PANELS_GR, GRLoader.BUTTONS_GR, GRLoader.CURSORS_GR, GRLoader.CHRBTNS_GR, GRLoader.COMPASS_GR, GRLoader.CONVERSE_GR, GRLoader.CHAINS_GR, GRLoader.DRAGONS_GR, GRLoader.EYES_GR, GRLoader.INV_GR, GRLoader.LFTI_GR, GRLoader.OPBTN_GR, GRLoader.OPTB_GR, GRLoader.OPTBTNS_GR, GRLoader.POWER_GR, GRLoader.QUEST_GR, GRLoader.SCRLEDGE_GR, GRLoader.GEMPT_GR });
@@ -162,6 +163,43 @@ public class UWTextureViewerWindow : EditorWindow
             Texture2D tex = loader.LoadImageAt(i);
             if (tex == null) { continue; }
             target.Add(new TextureEntry { texture = tex, label = $"UI_BYT_#{i}", category = category, likelyWater = IsLikelyWater(tex) });
+        }
+    }
+
+
+    private void LoadCritterSprites(List<TextureEntry> target, AssetCategory category)
+    {
+        for (int critterId = 0; critterId < 64; critterId++)
+        {
+            CritLoader critLoader;
+            try
+            {
+                critLoader = new CritLoader(critterId);
+            }
+            catch
+            {
+                continue;
+            }
+
+            if (critLoader == null || critLoader.critter == null || critLoader.critter.AnimInfo == null || critLoader.critter.AnimInfo.animSprites == null)
+            {
+                continue;
+            }
+
+            Sprite[] sprites = critLoader.critter.AnimInfo.animSprites;
+            for (int i = 0; i < sprites.Length; i++)
+            {
+                Sprite spr = sprites[i];
+                if (spr == null || spr.texture == null) { continue; }
+                Texture2D tex = spr.texture;
+                target.Add(new TextureEntry
+                {
+                    texture = tex,
+                    label = $"Sprites_CRITTER{critterId:D2}_#{i}",
+                    category = category,
+                    likelyWater = IsLikelyWater(tex)
+                });
+            }
         }
     }
 
