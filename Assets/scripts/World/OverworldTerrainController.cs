@@ -14,11 +14,11 @@ public class OverworldTerrainController : MonoBehaviour
 
     [Header("Chunking")]
     [Range(16,128)] public int ChunkSizeSamples = 64;
-    [Range(1,6)] public int ActiveChunkRadius = 2;
+    [Range(1,6)] public int ActiveChunkRadius = 1;
     [Range(1,8)] public int TerrainDecimationStep = 1;
     public bool LoadWholeMapAtStartup = false;
     public bool LoadDistantChunks = true;
-    [Range(2, 12)] public int DistantChunkStep = 4;
+    [Range(2, 12)] public int DistantChunkStep = 6;
 
 
     [Header("Overworld Time")]

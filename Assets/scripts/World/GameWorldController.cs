@@ -215,6 +215,22 @@ public class GameWorldController : UWEBase
     private OverworldSkyController overworldSkyController = null;
     private int overworldTerrainMapWidth = 0;
     private int overworldTerrainMapHeight = 0;
+    private Texture2D cachedOverworldHeightmap = null;
+    private readonly Queue<OverworldChunkBuildRequest> overworldChunkBuildQueue = new Queue<OverworldChunkBuildRequest>();
+    private readonly HashSet<Vector2Int> queuedOverworldChunks = new HashSet<Vector2Int>();
+    private readonly Dictionary<Vector2Int, OverworldChunkBuildRequest> pendingOverworldChunkRequests = new Dictionary<Vector2Int, OverworldChunkBuildRequest>();
+    private readonly Stack<GameObject> overworldChunkPool = new Stack<GameObject>();
+    private Coroutine overworldChunkBuildCoroutine = null;
+
+    private struct OverworldChunkBuildRequest
+    {
+        public Vector2Int chunkCoord;
+        public int sampleStep;
+        public bool withCollision;
+        public bool withNatureBillboards;
+        public bool lowDetail;
+        public bool noNature;
+    }
 
     /// <summary>
     /// What level the player starts on in a quick start
@@ -653,7 +669,8 @@ public class GameWorldController : UWEBase
         }
 
         lastPlayerChunk = currentChunk;
-        Texture2D map = Resources.Load<Texture2D>(overworld.HeightmapResourcePath);
+        Texture2D map = cachedOverworldHeightmap;
+        if (map == null) { return; }
         EnsureChunksAround(currentChunk, map, overworld);
         if (overworld.LoadDistantChunks)
         {
@@ -1063,18 +1080,9 @@ public class GameWorldController : UWEBase
         }
 
         lastPlayerChunk = GetPlayerChunkCoord(overworld, UWCharacter.Instance.transform.position);
-        if (overworld.LoadWholeMapAtStartup)
-        {
-            EnsureAllChunks(heightmap, overworld);
-        }
-        else
-        {
-            EnsureChunksAround(lastPlayerChunk, heightmap, overworld);
-            if (overworld.LoadDistantChunks)
-            {
-                EnsureDistantChunks(lastPlayerChunk, heightmap, overworld);
-            }
-        }
+        EnsureChunksAround(lastPlayerChunk, heightmap, overworld);
+        if (overworld.LoadDistantChunks) { EnsureDistantChunks(lastPlayerChunk, heightmap, overworld); }
+        StartOverworldChunkBuildWorker();
         overworldStreamingInitialized = true;
 
         Light sunLight = FindObjectOfType<Light>();
@@ -1142,11 +1150,11 @@ public class GameWorldController : UWEBase
                 Vector2Int cc = new Vector2Int(cx, cy);
                 if (!loadedOverworldChunks.ContainsKey(cc))
                 {
-                    GameObject chunk = BuildChunk(cc, heightmap, overworld, 1, true, true);
-                    if (chunk != null) { loadedOverworldChunks[cc] = chunk; }
+                    EnqueueOverworldChunkBuild(cc, 1, true, true, false, false);
                 }
             }
         }
+        StartOverworldChunkBuildWorker();
     }
 
     private void UpdateOverworldTerrainType(OverworldTerrainController overworld)
@@ -1178,14 +1186,12 @@ public class GameWorldController : UWEBase
                 wanted.Add(cc);
                 if (!loadedOverworldChunks.ContainsKey(cc))
                 {
-                    GameObject chunk = BuildChunk(cc, heightmap, overworld, 1, true, true);
-                    if (chunk != null) { loadedOverworldChunks[cc] = chunk; lowDetailOverworldChunks.Remove(cc); noNatureOverworldChunks.Remove(cc); }
+                    EnqueueOverworldChunkBuild(cc, 1, true, true, false, false);
                 }
                 else if (lowDetailOverworldChunks.Contains(cc) || noNatureOverworldChunks.Contains(cc))
                 {
-                    if (loadedOverworldChunks[cc] != null) { Destroy(loadedOverworldChunks[cc]); }
-                    GameObject chunk = BuildChunk(cc, heightmap, overworld, 1, true, true);
-                    if (chunk != null) { loadedOverworldChunks[cc] = chunk; lowDetailOverworldChunks.Remove(cc); noNatureOverworldChunks.Remove(cc); }
+                    RecycleOverworldChunk(cc);
+                    EnqueueOverworldChunkBuild(cc, 1, true, true, false, false);
                 }
             }
         }
@@ -1195,12 +1201,13 @@ public class GameWorldController : UWEBase
         {
             if (!wanted.Contains(kvp.Key) && !lowDetailOverworldChunks.Contains(kvp.Key))
             {
-                if (kvp.Value != null) { Destroy(kvp.Value); }
+                RecycleOverworldChunk(kvp.Key);
                 noNatureOverworldChunks.Remove(kvp.Key);
                 toRemove.Add(kvp.Key);
             }
         }
         foreach (var k in toRemove) { loadedOverworldChunks.Remove(k); }
+        StartOverworldChunkBuildWorker();
     }
 
 
@@ -1232,27 +1239,81 @@ public class GameWorldController : UWEBase
 
                 if (!loadedOverworldChunks.ContainsKey(cc))
                 {
-                    GameObject chunk = BuildChunk(cc, heightmap, overworld, sampleStep, true, false);
-                    if (chunk != null)
-                    {
-                        loadedOverworldChunks[cc] = chunk;
-                        if (sampleStep > 1) { lowDetailOverworldChunks.Add(cc); } else { lowDetailOverworldChunks.Remove(cc); }
-                        noNatureOverworldChunks.Add(cc);
-                    }
+                    EnqueueOverworldChunkBuild(cc, sampleStep, true, false, sampleStep > 1, true);
                 }
                 else if (lowDetailOverworldChunks.Contains(cc) && (sampleStep == 1))
                 {
-                    if (loadedOverworldChunks[cc] != null) { Destroy(loadedOverworldChunks[cc]); }
-                    GameObject chunk = BuildChunk(cc, heightmap, overworld, 1, true, false);
-                    if (chunk != null)
-                    {
-                        loadedOverworldChunks[cc] = chunk;
-                        lowDetailOverworldChunks.Remove(cc);
-                        noNatureOverworldChunks.Add(cc);
-                    }
+                    RecycleOverworldChunk(cc);
+                    EnqueueOverworldChunkBuild(cc, 1, true, false, false, true);
                 }
             }
         }
+        StartOverworldChunkBuildWorker();
+    }
+
+    private void EnqueueOverworldChunkBuild(Vector2Int coord, int sampleStep, bool withCollision, bool withNatureBillboards, bool lowDetail, bool noNature)
+    {
+        OverworldChunkBuildRequest req = new OverworldChunkBuildRequest
+        {
+            chunkCoord = coord,
+            sampleStep = sampleStep,
+            withCollision = withCollision,
+            withNatureBillboards = withNatureBillboards,
+            lowDetail = lowDetail,
+            noNature = noNature
+        };
+        pendingOverworldChunkRequests[coord] = req;
+        if (queuedOverworldChunks.Add(coord))
+        {
+            overworldChunkBuildQueue.Enqueue(req);
+        }
+    }
+
+    private void StartOverworldChunkBuildWorker()
+    {
+        if (overworldChunkBuildCoroutine == null)
+        {
+            overworldChunkBuildCoroutine = StartCoroutine(ProcessOverworldChunkBuildQueue());
+        }
+    }
+
+    private IEnumerator ProcessOverworldChunkBuildQueue()
+    {
+        while (overworldChunkBuildQueue.Count > 0)
+        {
+            float frameBudget = 0.004f;
+            float start = Time.realtimeSinceStartup;
+            OverworldTerrainController overworld = GetOverworldController();
+            while (overworldChunkBuildQueue.Count > 0 && (Time.realtimeSinceStartup - start) < frameBudget)
+            {
+                var req = overworldChunkBuildQueue.Dequeue();
+                queuedOverworldChunks.Remove(req.chunkCoord);
+                if (!pendingOverworldChunkRequests.ContainsKey(req.chunkCoord)) { continue; }
+                if (pendingOverworldChunkRequests[req.chunkCoord].sampleStep != req.sampleStep) { continue; }
+                pendingOverworldChunkRequests.Remove(req.chunkCoord);
+                GameObject chunk = BuildChunk(req.chunkCoord, cachedOverworldHeightmap, overworld, req.sampleStep, req.withCollision, req.withNatureBillboards);
+                if (chunk != null)
+                {
+                    loadedOverworldChunks[req.chunkCoord] = chunk;
+                    if (req.lowDetail) { lowDetailOverworldChunks.Add(req.chunkCoord); } else { lowDetailOverworldChunks.Remove(req.chunkCoord); }
+                    if (req.noNature) { noNatureOverworldChunks.Add(req.chunkCoord); } else { noNatureOverworldChunks.Remove(req.chunkCoord); }
+                }
+            }
+            yield return null;
+        }
+        overworldChunkBuildCoroutine = null;
+    }
+
+    private void RecycleOverworldChunk(Vector2Int coord)
+    {
+        if (!loadedOverworldChunks.ContainsKey(coord)) { return; }
+        GameObject go = loadedOverworldChunks[coord];
+        loadedOverworldChunks.Remove(coord);
+        pendingOverworldChunkRequests.Remove(coord);
+        if (go == null) { return; }
+        go.SetActive(false);
+        go.transform.SetParent(OverworldTerrainRoot != null ? OverworldTerrainRoot.transform : null, false);
+        overworldChunkPool.Push(go);
     }
 
     private GameObject BuildChunk(Vector2Int chunkCoord, Texture2D heightmap, OverworldTerrainController overworld, int sampleStep = 1, bool withCollision = true, bool withNatureBillboards = true)
@@ -1466,15 +1527,26 @@ public class GameWorldController : UWEBase
         mesh.SetTriangles(grass, 1);
         mesh.SetTriangles(stone, 2);
 
-        GameObject go = new GameObject($"OverworldTerrain_{chunkCoord.x}_{chunkCoord.y}");
+        GameObject go = (overworldChunkPool.Count > 0) ? overworldChunkPool.Pop() : new GameObject();
+        go.name = $"OverworldTerrain_{chunkCoord.x}_{chunkCoord.y}";
+        go.SetActive(true);
         go.transform.SetParent(OverworldTerrainRoot.transform, true);
-        MeshFilter mf = go.AddComponent<MeshFilter>();
-        MeshRenderer mr = go.AddComponent<MeshRenderer>();
+        for (int c = go.transform.childCount - 1; c >= 0; c--) { Destroy(go.transform.GetChild(c).gameObject); }
+        MeshFilter mf = go.GetComponent<MeshFilter>();
+        if (mf == null) { mf = go.AddComponent<MeshFilter>(); }
+        MeshRenderer mr = go.GetComponent<MeshRenderer>();
+        if (mr == null) { mr = go.AddComponent<MeshRenderer>(); }
         mf.sharedMesh = mesh;
         if (withCollision)
         {
-            MeshCollider mc = go.AddComponent<MeshCollider>();
+            MeshCollider mc = go.GetComponent<MeshCollider>();
+            if (mc == null) { mc = go.AddComponent<MeshCollider>(); }
             mc.sharedMesh = mesh;
+        }
+        else
+        {
+            MeshCollider mc = go.GetComponent<MeshCollider>();
+            if (mc != null) { mc.sharedMesh = null; Destroy(mc); }
         }
         mr.materials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
 
@@ -3179,3 +3251,4 @@ public class GameWorldController : UWEBase
         }
     }
 }
+        cachedOverworldHeightmap = heightmap;
