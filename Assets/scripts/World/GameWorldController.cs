@@ -1453,7 +1453,7 @@ public class GameWorldController : UWEBase
             }
             else
             {
-                result.mainTextureScale = new Vector2(sampleWidth / 3f, sampleHeight / 3f);
+                result.mainTextureScale = new Vector2(sampleWidth, sampleHeight);
             }
         }
         else
@@ -1523,7 +1523,7 @@ public class GameWorldController : UWEBase
         {
             texture.wrapMode = TextureWrapMode.Repeat;
             mat.mainTexture = texture;
-            mat.mainTextureScale = new Vector2(sampleWidth / 3f, sampleHeight / 3f);
+            mat.mainTextureScale = new Vector2(sampleWidth, sampleHeight);
         }
         else
         {
