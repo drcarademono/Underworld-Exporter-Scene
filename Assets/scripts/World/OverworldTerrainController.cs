@@ -56,4 +56,10 @@ public class OverworldTerrainController : MonoBehaviour
 
     [Header("Texture Filtering")]
     public bool EnableOverworldTerrainMipmaps = false;
+
+    [Header("Transition Tiles")]
+    public bool UseTransitionTileTexturing = true;
+    [Range(8,128)] public int TransitionPixelsPerTile = 32;
+    public string TransitionTilesFolder = "Assets/Generated/OverworldTransitions";
 }
+

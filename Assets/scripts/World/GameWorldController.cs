@@ -1642,7 +1642,33 @@ public class GameWorldController : UWEBase
             MeshCollider mc = go.GetComponent<MeshCollider>();
             if (mc != null) { mc.sharedMesh = null; Destroy(mc); }
         }
-        mr.materials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
+        if (overworld.UseTransitionTileTexturing)
+        {
+            Texture2D chunkTex = OverworldTerrainTexturing.BuildChunkTransitionTexture(
+                terrainClassFull,
+                fullSampleWidth,
+                fullSampleHeight,
+                Mathf.Max(8, overworld.TransitionPixelsPerTile),
+                overworld.TransitionTilesFolder);
+            if (chunkTex != null)
+            {
+                Material grassMat = new Material(overworldGrassMat);
+                Material stoneMat = new Material(overworldStoneMat);
+                grassMat.mainTexture = chunkTex;
+                stoneMat.mainTexture = chunkTex;
+                grassMat.mainTextureScale = Vector2.one;
+                stoneMat.mainTextureScale = Vector2.one;
+                mr.materials = new Material[] { overworldWaterMat, grassMat, stoneMat };
+            }
+            else
+            {
+                mr.materials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
+            }
+        }
+        else
+        {
+            mr.materials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
+        }
 
         OverworldNatureFlatsController natureFlats = GetOverworldNatureFlatsController();
         if (withCollision && withNatureBillboards && (natureFlats != null) && natureFlats.EnableNatureFlats)
