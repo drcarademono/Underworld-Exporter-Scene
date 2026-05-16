@@ -13,6 +13,7 @@ public static class OverworldTerrainTexturing
     }
 
     private static readonly Dictionary<string, Texture2D> cache = new Dictionary<string, Texture2D>();
+    private static readonly Dictionary<string, Color32[]> scaledTileCache = new Dictionary<string, Color32[]>();
 
     public static Texture2D BuildChunkTransitionTexture(int[] terrainClassFull, int width, int height, int pixelsPerTile, string assetsRelativeFolder, Texture2D grassBase, Texture2D stoneBase, out BuildStats stats)
     {
@@ -25,6 +26,7 @@ public static class OverworldTerrainTexturing
         Texture2D output = new Texture2D(outW, outH, TextureFormat.RGBA32, false);
         output.filterMode = FilterMode.Point;
         output.wrapMode = TextureWrapMode.Clamp;
+        Color32[] outputPixels = new Color32[outW * outH];
 
         for (int ty = 0; ty < tileH; ty++)
         {
@@ -51,10 +53,11 @@ public static class OverworldTerrainTexturing
 
                 if (tile != null)
                 {
-                    BlitNearest(tile, output, tx * pixelsPerTile, ty * pixelsPerTile, pixelsPerTile, pixelsPerTile);
+                    BlitNearest(tile, outputPixels, outW, tx * pixelsPerTile, ty * pixelsPerTile, pixelsPerTile, pixelsPerTile);
                 }
             }
         }
+        output.SetPixels32(outputPixels);
         output.Apply(false, false);
         return output;
     }
@@ -107,19 +110,39 @@ public static class OverworldTerrainTexturing
         return tex;
     }
 
-    private static void BlitNearest(Texture2D src, Texture2D dst, int dx, int dy, int w, int h)
+    private static void BlitNearest(Texture2D src, Color32[] dstPixels, int dstWidth, int dx, int dy, int w, int h)
     {
-        Color32[] srcPixels = src.GetPixels32();
+        Color32[] srcPixels = GetScaledTile(src, w, h);
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                dstPixels[(dy + y) * dstWidth + (dx + x)] = srcPixels[y * w + x];
+            }
+        }
+    }
+
+    private static Color32[] GetScaledTile(Texture2D src, int w, int h)
+    {
+        string key = src.GetInstanceID() + ":" + w + "x" + h;
+        if (scaledTileCache.TryGetValue(key, out var scaled)) return scaled;
+
+        Color32[] sourcePixels = src.GetPixels32();
         int sw = src.width;
         int sh = src.height;
+        scaled = new Color32[w * h];
+
         for (int y = 0; y < h; y++)
         {
             int sy = Mathf.Clamp(Mathf.FloorToInt((y / (float)h) * sh), 0, sh - 1);
             for (int x = 0; x < w; x++)
             {
                 int sx = Mathf.Clamp(Mathf.FloorToInt((x / (float)w) * sw), 0, sw - 1);
-                dst.SetPixel(dx + x, dy + y, srcPixels[(sy * sw) + sx]);
+                scaled[y * w + x] = sourcePixels[(sy * sw) + sx];
             }
         }
+
+        scaledTileCache[key] = scaled;
+        return scaled;
     }
 }
