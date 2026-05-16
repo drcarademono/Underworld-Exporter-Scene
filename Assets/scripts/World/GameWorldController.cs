@@ -1244,26 +1244,57 @@ public class GameWorldController : UWEBase
         int transitionRadius = activeRadius + 1;
         int distantStep = Mathf.Max(2, overworld.DistantChunkStep);
 
-        for (int cy = 0; cy <= maxChunkY; cy++)
+        foreach (Vector2Int cc in EnumerateChunksByDistance(centerChunk, maxChunkX, maxChunkY))
         {
-            for (int cx = 0; cx <= maxChunkX; cx++)
-            {
-                if (Mathf.Abs(cx - centerChunk.x) <= activeRadius && Mathf.Abs(cy - centerChunk.y) <= activeRadius) { continue; }
-                Vector2Int cc = new Vector2Int(cx, cy);
-                bool inTransitionBand = (Mathf.Abs(cx - centerChunk.x) <= transitionRadius) && (Mathf.Abs(cy - centerChunk.y) <= transitionRadius);
-                int sampleStep = inTransitionBand ? 1 : distantStep;
+            if (Mathf.Abs(cc.x - centerChunk.x) <= activeRadius && Mathf.Abs(cc.y - centerChunk.y) <= activeRadius) { continue; }
+            bool inTransitionBand = (Mathf.Abs(cc.x - centerChunk.x) <= transitionRadius) && (Mathf.Abs(cc.y - centerChunk.y) <= transitionRadius);
+            int sampleStep = inTransitionBand ? 1 : distantStep;
 
-                if (!loadedOverworldChunks.ContainsKey(cc))
-                {
-                    EnqueueOverworldChunkBuild(cc, sampleStep, true, false, sampleStep > 1, true);
-                }
-                else if (lowDetailOverworldChunks.Contains(cc) && (sampleStep == 1))
-                {
-                    EnqueueOverworldChunkBuild(cc, 1, true, false, false, true);
-                }
+            if (!loadedOverworldChunks.ContainsKey(cc))
+            {
+                EnqueueOverworldChunkBuild(cc, sampleStep, true, false, sampleStep > 1, true);
+            }
+            else if (lowDetailOverworldChunks.Contains(cc) && (sampleStep == 1))
+            {
+                EnqueueOverworldChunkBuild(cc, 1, true, false, false, true);
             }
         }
         StartOverworldChunkBuildWorker();
+    }
+
+    private IEnumerable<Vector2Int> EnumerateChunksByDistance(Vector2Int centerChunk, int maxChunkX, int maxChunkY)
+    {
+        int clampedCenterX = Mathf.Clamp(centerChunk.x, 0, maxChunkX);
+        int clampedCenterY = Mathf.Clamp(centerChunk.y, 0, maxChunkY);
+        int maxRadius = Mathf.Max(
+            Mathf.Max(clampedCenterX, maxChunkX - clampedCenterX),
+            Mathf.Max(clampedCenterY, maxChunkY - clampedCenterY));
+
+        yield return new Vector2Int(clampedCenterX, clampedCenterY);
+        for (int r = 1; r <= maxRadius; r++)
+        {
+            int minX = clampedCenterX - r;
+            int maxX = clampedCenterX + r;
+            int minY = clampedCenterY - r;
+            int maxY = clampedCenterY + r;
+
+            for (int x = minX; x <= maxX; x++)
+            {
+                if (x >= 0 && x <= maxChunkX)
+                {
+                    if (minY >= 0 && minY <= maxChunkY) { yield return new Vector2Int(x, minY); }
+                    if (maxY >= 0 && maxY <= maxChunkY && maxY != minY) { yield return new Vector2Int(x, maxY); }
+                }
+            }
+            for (int y = minY + 1; y <= maxY - 1; y++)
+            {
+                if (y >= 0 && y <= maxChunkY)
+                {
+                    if (minX >= 0 && minX <= maxChunkX) { yield return new Vector2Int(minX, y); }
+                    if (maxX >= 0 && maxX <= maxChunkX && maxX != minX) { yield return new Vector2Int(maxX, y); }
+                }
+            }
+        }
     }
 
     private void EnqueueOverworldChunkBuild(Vector2Int coord, int sampleStep, bool withCollision, bool withNatureBillboards, bool lowDetail, bool noNature)
@@ -1638,13 +1669,13 @@ public class GameWorldController : UWEBase
             Vector3 mid = (va + vb) * 0.5f;
             Vector3 toCenter = (new Vector3((sampleWidth - 1) * 0.5f, 0f, (sampleHeight - 1) * 0.5f) * tileWorldSize) - new Vector3(mid.x, 0f, mid.z);
             if (Vector3.Dot(outward, toCenter) > 0f) { outward = -outward; }
-            // 30-degree skirt from horizontal: mostly outward, gently downward.
-            Vector3 angledOffset = (outward * 0.8660254f * skirtDepth) + (Vector3.down * 0.5f * skirtDepth);
+            // 60-degree skirt from horizontal: steeper downward.
+            Vector3 angledOffset = (outward * 0.5f * skirtDepth) + (Vector3.down * 0.8660254f * skirtDepth);
             skirtVerts.Add(va + angledOffset);
             skirtVerts.Add(vb + angledOffset);
             int ax = a % sampleWidth; int az = a / sampleWidth;
             int bx = b % sampleWidth; int bz = b / sampleWidth;
-            float skirtUvTileSize = Mathf.Max(0.01f, tileWorldSize * 2f);
+            float skirtUvTileSize = Mathf.Max(0.01f, tileWorldSize);
             float edgeU0 = (Mathf.Abs(va.x - vb.x) > Mathf.Abs(va.z - vb.z))
                 ? (Mathf.Min(va.x, vb.x) / skirtUvTileSize)
                 : (Mathf.Min(va.z, vb.z) / skirtUvTileSize);
