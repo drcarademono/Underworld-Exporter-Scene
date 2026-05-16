@@ -1587,6 +1587,8 @@ public class GameWorldController : UWEBase
         if (geometrySampleStep > 1)
         {
             AddEdgeStitchStrip(go.transform, vertices, terrainClassByVertex, sampleWidth, sampleHeight);
+            // Fallback seam concealment for cases where stitch strips are too subtle against lighting/terrain.
+            AddDistantChunkSkirt(go.transform, vertices, terrainClassByVertex, sampleWidth, sampleHeight, Mathf.Max(2f, geometrySampleStep * overworld.TileWorldSize * 0.35f) * 2f, overworld.TileWorldSize);
         }
         if (withCollision)
         {
