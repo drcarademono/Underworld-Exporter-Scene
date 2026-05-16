@@ -1586,7 +1586,7 @@ public class GameWorldController : UWEBase
 
         if (geometrySampleStep > 1)
         {
-            AddDistantChunkSkirt(go.transform, vertices, terrainClassByVertex, sampleWidth, sampleHeight, Mathf.Max(2f, geometrySampleStep * overworld.TileWorldSize * 0.35f) * 5f, overworld.TileWorldSize);
+            AddEdgeStitchStrip(go.transform, vertices, terrainClassByVertex, sampleWidth, sampleHeight);
         }
         if (withCollision)
         {
@@ -1683,6 +1683,70 @@ public class GameWorldController : UWEBase
         MeshFilter mf = skirt.AddComponent<MeshFilter>();
         MeshRenderer mr = skirt.AddComponent<MeshRenderer>();
         mf.sharedMesh = skirtMesh;
+        mr.sharedMaterials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
+    }
+
+    private void AddEdgeStitchStrip(Transform parent, Vector3[] vertices, int[] terrainClassByVertex, int sampleWidth, int sampleHeight)
+    {
+        if (vertices == null || vertices.Length == 0) { return; }
+        if (sampleWidth < 3 || sampleHeight < 3) { return; }
+
+        List<Vector3> stitchVerts = new List<Vector3>();
+        List<Vector2> stitchUvs = new List<Vector2>();
+        List<int> waterTris = new List<int>();
+        List<int> grassTris = new List<int>();
+        List<int> stoneTris = new List<int>();
+
+        void AddStitchQuad(int edgeOuterA, int edgeOuterB, int edgeInnerA, int edgeInnerB)
+        {
+            int baseIndex = stitchVerts.Count;
+            Vector3 v0 = vertices[edgeOuterA];
+            Vector3 v1 = vertices[edgeOuterB];
+            Vector3 v2 = vertices[edgeInnerA];
+            Vector3 v3 = vertices[edgeInnerB];
+            stitchVerts.Add(v0); stitchVerts.Add(v1); stitchVerts.Add(v2); stitchVerts.Add(v3);
+
+            int ax = edgeOuterA % sampleWidth; int az = edgeOuterA / sampleWidth;
+            int bx = edgeOuterB % sampleWidth; int bz = edgeOuterB / sampleWidth;
+            int cx = edgeInnerA % sampleWidth; int cz = edgeInnerA / sampleWidth;
+            int dx = edgeInnerB % sampleWidth; int dz = edgeInnerB / sampleWidth;
+            stitchUvs.Add(new Vector2(ax / (float)(sampleWidth - 1), az / (float)(sampleHeight - 1)));
+            stitchUvs.Add(new Vector2(bx / (float)(sampleWidth - 1), bz / (float)(sampleHeight - 1)));
+            stitchUvs.Add(new Vector2(cx / (float)(sampleWidth - 1), cz / (float)(sampleHeight - 1)));
+            stitchUvs.Add(new Vector2(dx / (float)(sampleWidth - 1), dz / (float)(sampleHeight - 1)));
+
+            int edgeClass = 1;
+            if (terrainClassByVertex != null && terrainClassByVertex.Length > Mathf.Max(Mathf.Max(edgeOuterA, edgeOuterB), Mathf.Max(edgeInnerA, edgeInnerB)))
+            {
+                edgeClass = terrainClassByVertex[edgeOuterA];
+            }
+            List<int> target = (edgeClass == 0) ? waterTris : ((edgeClass == 2) ? stoneTris : grassTris);
+            target.Add(baseIndex + 0); target.Add(baseIndex + 2); target.Add(baseIndex + 1);
+            target.Add(baseIndex + 1); target.Add(baseIndex + 2); target.Add(baseIndex + 3);
+        }
+
+        for (int x = 0; x < sampleWidth - 1; x++) { AddStitchQuad(x, x + 1, sampleWidth + x, sampleWidth + x + 1); }
+        for (int x = 0; x < sampleWidth - 1; x++) { int z = sampleHeight - 1; AddStitchQuad(z * sampleWidth + x + 1, z * sampleWidth + x, (z - 1) * sampleWidth + x + 1, (z - 1) * sampleWidth + x); }
+        for (int z = 0; z < sampleHeight - 1; z++) { AddStitchQuad((z + 1) * sampleWidth, z * sampleWidth, (z + 1) * sampleWidth + 1, z * sampleWidth + 1); }
+        for (int z = 0; z < sampleHeight - 1; z++) { int x = sampleWidth - 1; AddStitchQuad(z * sampleWidth + x, (z + 1) * sampleWidth + x, z * sampleWidth + (x - 1), (z + 1) * sampleWidth + (x - 1)); }
+
+        if (stitchVerts.Count == 0) { return; }
+        Mesh stitchMesh = new Mesh();
+        stitchMesh.indexFormat = (stitchVerts.Count > 65535) ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
+        stitchMesh.SetVertices(stitchVerts);
+        stitchMesh.SetUVs(0, stitchUvs);
+        stitchMesh.subMeshCount = 3;
+        stitchMesh.SetTriangles(waterTris, 0);
+        stitchMesh.SetTriangles(grassTris, 1);
+        stitchMesh.SetTriangles(stoneTris, 2);
+        stitchMesh.RecalculateNormals();
+        stitchMesh.RecalculateBounds();
+
+        GameObject stitch = new GameObject("ChunkEdgeStitch");
+        stitch.transform.SetParent(parent, false);
+        MeshFilter mf = stitch.AddComponent<MeshFilter>();
+        MeshRenderer mr = stitch.AddComponent<MeshRenderer>();
+        mf.sharedMesh = stitchMesh;
         mr.sharedMaterials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
     }
 
