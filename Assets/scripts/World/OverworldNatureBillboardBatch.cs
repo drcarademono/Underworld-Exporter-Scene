@@ -136,6 +136,8 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         batchMesh.vertices = meshVerts;
         batchMesh.uv = meshUvs;
         batchMesh.triangles = meshTris;
+        batchMesh.RecalculateNormals();
+        batchMesh.RecalculateNormals();
         batchMesh.RecalculateBounds();
         meshFilter.sharedMesh = batchMesh;
     }

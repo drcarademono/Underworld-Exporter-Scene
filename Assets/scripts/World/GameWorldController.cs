@@ -1261,8 +1261,9 @@ public class GameWorldController : UWEBase
                 int pz = Mathf.Clamp(globalZ * tilesPerPixel, 0, heightmap.height - 1);
                 float elevation = SampleSmoothedHeight(heightmap, px, pz);
                 float shapedElevation = Mathf.Pow(elevation, 1.65f);
-                float noise = Mathf.PerlinNoise((globalX + 101.231f) * overworld.PerlinScale, (globalZ + 77.777f) * overworld.PerlinScale) - 0.5f;
-                float y = shapedElevation * overworld.HeightScale + noise * overworld.PerlinStrength - overworld.SeaLevelOffset;
+                float noise = (Mathf.PerlinNoise((globalX + 101.231f) * overworld.PerlinScale, (globalZ + 77.777f) * overworld.PerlinScale) * 2f) - 1f;
+                float perlinDisplacement = noise * overworld.PerlinStrength * Mathf.Max(1f, overworld.HeightScale * 0.2f);
+                float y = shapedElevation * overworld.HeightScale + perlinDisplacement - overworld.SeaLevelOffset;
                 if (y < 0f) { y = 0f; }
 
                 if ((globalX >= 0) && (globalX < overworldTerrainMapWidth) && (globalZ >= 0) && (globalZ < overworldTerrainMapHeight))
