@@ -1268,8 +1268,9 @@ public class GameWorldController : UWEBase
         int endY = Mathf.Min(totalSampleHeight - 1, startY + chunkSize);
         if ((endX - startX) < 1 || (endY - startY) < 1) { return null; }
 
+        int baseSampleStep = Mathf.Max(1, sampleStep);
         int decimationStep = Mathf.Max(1, overworld.TerrainDecimationStep);
-        sampleStep = Mathf.Max(1, sampleStep * decimationStep);
+        sampleStep = Mathf.Max(1, baseSampleStep * decimationStep);
         int sampleWidth = ((endX - startX) / sampleStep) + 1;
         int sampleHeight = ((endY - startY) / sampleStep) + 1;
 
@@ -1277,6 +1278,42 @@ public class GameWorldController : UWEBase
         Vector2[] uvs = new Vector2[sampleWidth * sampleHeight];
         int[] triangles = new int[(sampleWidth - 1) * (sampleHeight - 1) * 6];
         int[] terrainClassByVertex = new int[sampleWidth * sampleHeight]; //0=water,1=grass,2=stone
+
+        int fullSampleWidth = ((endX - startX) / baseSampleStep) + 1;
+        int fullSampleHeight = ((endY - startY) / baseSampleStep) + 1;
+        int[] terrainClassFull = new int[fullSampleWidth * fullSampleHeight];
+
+        for (int fz = 0; fz < fullSampleHeight; fz++)
+        {
+            for (int fx = 0; fx < fullSampleWidth; fx++)
+            {
+                int fullGlobalX = Mathf.Min(endX, startX + (fx * baseSampleStep));
+                int fullGlobalZ = Mathf.Min(endY, startY + (fz * baseSampleStep));
+                int fullPx = Mathf.Clamp(fullGlobalX * tilesPerPixel, 0, heightmap.width - 1);
+                int fullPz = Mathf.Clamp(fullGlobalZ * tilesPerPixel, 0, heightmap.height - 1);
+                float fullElevation = SampleSmoothedHeight(heightmap, fullPx, fullPz);
+                float fullShapedElevation = Mathf.Pow(fullElevation, 1.65f);
+                float fullNoise = (Mathf.PerlinNoise((fullGlobalX + 101.231f) * overworld.PerlinScale, (fullGlobalZ + 77.777f) * overworld.PerlinScale) * 2f) - 1f;
+                float fullPerlinDisplacement = fullNoise * overworld.PerlinStrength * Mathf.Max(1f, overworld.HeightScale * 0.2f);
+                float fullY = fullShapedElevation * overworld.HeightScale + fullPerlinDisplacement - overworld.SeaLevelOffset;
+                if (fullY < 0f) { fullY = 0f; }
+
+                int fullIndex = (fz * fullSampleWidth) + fx;
+                if (fullY <= overworld.WaterSurfaceEpsilon)
+                {
+                    terrainClassFull[fullIndex] = 0;
+                }
+                else
+                {
+                    float hE = SampleSmoothedHeight(heightmap, Mathf.Clamp(fullPx + tilesPerPixel, 0, heightmap.width - 1), fullPz);
+                    float hW = SampleSmoothedHeight(heightmap, Mathf.Clamp(fullPx - tilesPerPixel, 0, heightmap.width - 1), fullPz);
+                    float hN = SampleSmoothedHeight(heightmap, fullPx, Mathf.Clamp(fullPz + tilesPerPixel, 0, heightmap.height - 1));
+                    float hS = SampleSmoothedHeight(heightmap, fullPx, Mathf.Clamp(fullPz - tilesPerPixel, 0, heightmap.height - 1));
+                    float slopeMagnitude = Mathf.Sqrt(((hE - hW) * (hE - hW)) + ((hN - hS) * (hN - hS)));
+                    terrainClassFull[fullIndex] = (slopeMagnitude > 0.022f) ? 2 : 1;
+                }
+            }
+        }
 
         for (int z = 0; z < sampleHeight; z++)
         {
@@ -1328,19 +1365,9 @@ public class GameWorldController : UWEBase
 
                 vertices[index] = new Vector3(globalX * overworld.TileWorldSize, y, globalZ * overworld.TileWorldSize);
                 uvs[index] = new Vector2(x / (float)(sampleWidth - 1), z / (float)(sampleHeight - 1));
-                if (y <= overworld.WaterSurfaceEpsilon)
-                {
-                    terrainClassByVertex[index] = 0;
-                }
-                else
-                {
-                    float hE = SampleSmoothedHeight(heightmap, Mathf.Clamp(px + tilesPerPixel, 0, heightmap.width - 1), pz);
-                    float hW = SampleSmoothedHeight(heightmap, Mathf.Clamp(px - tilesPerPixel, 0, heightmap.width - 1), pz);
-                    float hN = SampleSmoothedHeight(heightmap, px, Mathf.Clamp(pz + tilesPerPixel, 0, heightmap.height - 1));
-                    float hS = SampleSmoothedHeight(heightmap, px, Mathf.Clamp(pz - tilesPerPixel, 0, heightmap.height - 1));
-                    float slopeMagnitude = Mathf.Sqrt(((hE - hW) * (hE - hW)) + ((hN - hS) * (hN - hS)));
-                    terrainClassByVertex[index] = (slopeMagnitude > 0.022f) ? 2 : 1;
-                }
+                int fullX = Mathf.Clamp((globalX - startX) / baseSampleStep, 0, fullSampleWidth - 1);
+                int fullZ = Mathf.Clamp((globalZ - startY) / baseSampleStep, 0, fullSampleHeight - 1);
+                terrainClassByVertex[index] = terrainClassFull[(fullZ * fullSampleWidth) + fullX];
 
                 if ((x < sampleWidth - 1) && (z < sampleHeight - 1))
                 {
@@ -1366,7 +1393,6 @@ public class GameWorldController : UWEBase
         List<int> water = new List<int>();
         List<int> grass = new List<int>();
         List<int> stone = new List<int>();
-        bool useTextureInterpolation = overworld.EnableDecimatedTextureInterpolation && (sampleStep > 1);
         for (int z = 0; z < sampleHeight - 1; z++)
         {
             for (int x = 0; x < sampleWidth - 1; x++)
@@ -1381,17 +1407,7 @@ public class GameWorldController : UWEBase
                 int ctl = terrainClassByVertex[tl];
                 int ctr = terrainClassByVertex[tr];
 
-                bool useBlTrDiagonal = false;
-                if (useTextureInterpolation)
-                {
-                    int sameEdgesBlTr = CountSameClassEdges(cbl, ctl, ctr) + CountSameClassEdges(cbl, ctr, cbr);
-                    int sameEdgesBrTl = CountSameClassEdges(cbl, ctl, cbr) + CountSameClassEdges(cbr, ctl, ctr);
-                    useBlTrDiagonal = (sameEdgesBlTr > sameEdgesBrTl);
-                    if (sameEdgesBlTr == sameEdgesBrTl)
-                    {
-                        useBlTrDiagonal = (cbl == ctr) && (cbr != ctl);
-                    }
-                }
+                bool useBlTrDiagonal = (cbl == ctr) && (cbr != ctl);
 
                 int i0; int i1; int i2;
                 int j0; int j1; int j2;
@@ -1534,15 +1550,6 @@ public class GameWorldController : UWEBase
         if (materialClass == 0) { water.Add(i0); water.Add(i1); water.Add(i2); }
         else if (materialClass == 2) { stone.Add(i0); stone.Add(i1); stone.Add(i2); }
         else { grass.Add(i0); grass.Add(i1); grass.Add(i2); }
-    }
-
-    private static int CountSameClassEdges(int a, int b, int c)
-    {
-        int score = 0;
-        if (a == b) { score++; }
-        if (b == c) { score++; }
-        if (c == a) { score++; }
-        return score;
     }
 
     private Material BuildOverworldSurfaceMaterial(int textureIndex, Material overrideMaterial, Color fallbackColor, int sampleWidth, int sampleHeight)
