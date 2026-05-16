@@ -10,7 +10,6 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     private MeshFilter meshFilter;
     private MeshRenderer meshRenderer;
     private Mesh batchMesh;
-    private Light overworldSun;
 
     private Vector3[] quadCenters;
     private float[] quadWidths;
@@ -20,6 +19,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     private Vector3[] meshVerts;
     private Vector2[] meshUvs;
     private int[] meshTris;
+    private Vector3[] meshNormals;
     private int[] quadOrder;
     private Rect[] atlasRects;
     private Vector2[] atlasNativeSizes;
@@ -41,7 +41,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
 
         meshFilter = gameObject.AddComponent<MeshFilter>();
         meshRenderer = gameObject.AddComponent<MeshRenderer>();
-        meshRenderer.material = atlasMaterial;
+        meshRenderer.sharedMaterial = atlasMaterial;
 
         List<int> candidates = new List<int>(grassTriangles.Length / 3);
         for (int i = 0; i < grassTriangles.Length; i += 3)
@@ -82,6 +82,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         meshVerts = new Vector3[quadCount * VertsPerQuad];
         meshUvs = new Vector2[quadCount * VertsPerQuad];
         meshTris = new int[quadCount * TrisPerQuad];
+        meshNormals = new Vector3[quadCount * VertsPerQuad];
 
         for (int q = 0; q < quadCount; q++)
         {
@@ -138,9 +139,8 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         batchMesh.uv = meshUvs;
         batchMesh.triangles = meshTris;
         batchMesh.RecalculateNormals();
-        batchMesh.RecalculateNormals();
+        batchMesh.normals = meshNormals;
         batchMesh.RecalculateBounds();
-        UpdateLightingTint();
         meshFilter.sharedMesh = batchMesh;
     }
 
@@ -154,34 +154,6 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         batchMesh.RecalculateBounds();
     }
 
-
-    private void UpdateLightingTint()
-    {
-        if (meshRenderer == null || meshRenderer.material == null) { return; }
-        if (overworldSun == null)
-        {
-            GameObject sunObj = GameObject.Find("OverworldSun");
-            if (sunObj != null) { overworldSun = sunObj.GetComponent<Light>(); }
-            if (overworldSun == null)
-            {
-                Light[] lights = GameObject.FindObjectsOfType<Light>();
-                for (int i = 0; i < lights.Length; i++)
-                {
-                    if (lights[i] != null && lights[i].type == LightType.Directional) { overworldSun = lights[i]; break; }
-                }
-            }
-        }
-
-        float sun = (overworldSun != null && overworldSun.enabled) ? Mathf.Clamp01(overworldSun.intensity) : 0f;
-        Color ambient = RenderSettings.ambientLight;
-        float ambientLum = Mathf.Clamp01((ambient.r + ambient.g + ambient.b) / 3f);
-        float daylight = Mathf.Clamp01(ambientLum * 0.65f + sun * 0.35f);
-        Color tint = Color.Lerp(new Color(0.35f, 0.38f, 0.42f, 1f), Color.white, daylight);
-
-        Material m = meshRenderer.material;
-        if (m.HasProperty("_Color")) { m.color = tint; }
-        if (m.HasProperty("_EmissionColor")) { m.SetColor("_EmissionColor", Color.black); }
-    }
 
     private void RebuildGeometry()
     {
@@ -201,6 +173,11 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             meshVerts[vi + 1] = quadCenters[q] + side;
             meshVerts[vi + 2] = quadCenters[q] - side + (Vector3.up * quadHeights[q]);
             meshVerts[vi + 3] = quadCenters[q] + side + (Vector3.up * quadHeights[q]);
+
+            meshNormals[vi + 0] = Vector3.up;
+            meshNormals[vi + 1] = Vector3.up;
+            meshNormals[vi + 2] = Vector3.up;
+            meshNormals[vi + 3] = Vector3.up;
 
             Rect r = atlasRects[Mathf.Clamp(quadSpriteIndex[q], 0, atlasRects.Length - 1)];
             meshUvs[vi + 0] = new Vector2(r.xMin, r.yMin);
@@ -424,6 +401,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         if (m.HasProperty("_Metallic")) { m.SetFloat("_Metallic", 0f); }
         if (m.HasProperty("_Mode")) { m.SetFloat("_Mode", 1f); }
         if (m.HasProperty("_Cutoff")) { m.SetFloat("_Cutoff", 0.33f); }
+        if (m.HasProperty("_Cull")) { m.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off); }
         m.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
         m.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
         m.SetInt("_ZWrite", 1);
