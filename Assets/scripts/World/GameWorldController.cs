@@ -1268,13 +1268,15 @@ public class GameWorldController : UWEBase
         int endY = Mathf.Min(totalSampleHeight - 1, startY + chunkSize);
         if ((endX - startX) < 1 || (endY - startY) < 1) { return null; }
 
-        sampleStep = Mathf.Max(1, sampleStep);
+        int decimationStep = Mathf.Max(1, overworld.TerrainDecimationStep);
+        sampleStep = Mathf.Max(1, sampleStep * decimationStep);
         int sampleWidth = ((endX - startX) / sampleStep) + 1;
         int sampleHeight = ((endY - startY) / sampleStep) + 1;
 
         Vector3[] vertices = new Vector3[sampleWidth * sampleHeight];
         Vector2[] uvs = new Vector2[sampleWidth * sampleHeight];
         int[] triangles = new int[(sampleWidth - 1) * (sampleHeight - 1) * 6];
+        int[] terrainClassByVertex = new int[sampleWidth * sampleHeight]; //0=water,1=grass,2=stone
 
         int triIndex = 0;
         for (int z = 0; z < sampleHeight; z++)
@@ -1327,6 +1329,19 @@ public class GameWorldController : UWEBase
 
                 vertices[index] = new Vector3(globalX * overworld.TileWorldSize, y, globalZ * overworld.TileWorldSize);
                 uvs[index] = new Vector2(x / (float)(sampleWidth - 1), z / (float)(sampleHeight - 1));
+                if (y <= overworld.WaterSurfaceEpsilon)
+                {
+                    terrainClassByVertex[index] = 0;
+                }
+                else
+                {
+                    float hE = SampleSmoothedHeight(heightmap, Mathf.Clamp(px + tilesPerPixel, 0, heightmap.width - 1), pz);
+                    float hW = SampleSmoothedHeight(heightmap, Mathf.Clamp(px - tilesPerPixel, 0, heightmap.width - 1), pz);
+                    float hN = SampleSmoothedHeight(heightmap, px, Mathf.Clamp(pz + tilesPerPixel, 0, heightmap.height - 1));
+                    float hS = SampleSmoothedHeight(heightmap, px, Mathf.Clamp(pz - tilesPerPixel, 0, heightmap.height - 1));
+                    float slopeMagnitude = Mathf.Sqrt(((hE - hW) * (hE - hW)) + ((hN - hS) * (hN - hS)));
+                    terrainClassByVertex[index] = (slopeMagnitude > 0.022f) ? 2 : 1;
+                }
 
                 if ((x < sampleWidth - 1) && (z < sampleHeight - 1))
                 {
@@ -1351,11 +1366,21 @@ public class GameWorldController : UWEBase
         for (int i = 0; i < triangles.Length; i += 3)
         {
             int i0 = triangles[i]; int i1 = triangles[i + 1]; int i2 = triangles[i + 2];
-            Vector3 v0 = vertices[i0]; Vector3 v1 = vertices[i1]; Vector3 v2 = vertices[i2];
-            if (Mathf.Approximately(v0.y, 0f) && Mathf.Approximately(v1.y, 0f) && Mathf.Approximately(v2.y, 0f))
-            { water.Add(i0); water.Add(i1); water.Add(i2); continue; }
-            Vector3 n = Vector3.Cross(v1 - v0, v2 - v0).normalized;
-            if (n.y < overworld.SteepSlopeNormalThreshold) { stone.Add(i0); stone.Add(i1); stone.Add(i2); }
+            int c0 = terrainClassByVertex[i0];
+            int c1 = terrainClassByVertex[i1];
+            int c2 = terrainClassByVertex[i2];
+            int materialClass;
+            if ((c0 == c1) || (c0 == c2)) { materialClass = c0; }
+            else if (c1 == c2) { materialClass = c1; }
+            else
+            {
+                Vector3 v0 = vertices[i0]; Vector3 v1 = vertices[i1]; Vector3 v2 = vertices[i2];
+                Vector3 n = Vector3.Cross(v1 - v0, v2 - v0).normalized;
+                materialClass = (n.y < overworld.SteepSlopeNormalThreshold) ? 2 : 1;
+            }
+
+            if (materialClass == 0) { water.Add(i0); water.Add(i1); water.Add(i2); }
+            else if (materialClass == 2) { stone.Add(i0); stone.Add(i1); stone.Add(i2); }
             else { grass.Add(i0); grass.Add(i1); grass.Add(i2); }
         }
         mesh.subMeshCount = 3;
