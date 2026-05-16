@@ -10,6 +10,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     private MeshFilter meshFilter;
     private MeshRenderer meshRenderer;
     private Mesh batchMesh;
+    private Light overworldSun;
 
     private Vector3[] quadCenters;
     private float[] quadWidths;
@@ -40,7 +41,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
 
         meshFilter = gameObject.AddComponent<MeshFilter>();
         meshRenderer = gameObject.AddComponent<MeshRenderer>();
-        meshRenderer.sharedMaterial = atlasMaterial;
+        meshRenderer.material = atlasMaterial;
 
         List<int> candidates = new List<int>(grassTriangles.Length / 3);
         for (int i = 0; i < grassTriangles.Length; i += 3)
@@ -139,6 +140,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         batchMesh.RecalculateNormals();
         batchMesh.RecalculateNormals();
         batchMesh.RecalculateBounds();
+        UpdateLightingTint();
         meshFilter.sharedMesh = batchMesh;
     }
 
@@ -150,6 +152,35 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         batchMesh.uv = meshUvs;
         batchMesh.triangles = meshTris;
         batchMesh.RecalculateBounds();
+    }
+
+
+    private void UpdateLightingTint()
+    {
+        if (meshRenderer == null || meshRenderer.material == null) { return; }
+        if (overworldSun == null)
+        {
+            GameObject sunObj = GameObject.Find("OverworldSun");
+            if (sunObj != null) { overworldSun = sunObj.GetComponent<Light>(); }
+            if (overworldSun == null)
+            {
+                Light[] lights = GameObject.FindObjectsOfType<Light>();
+                for (int i = 0; i < lights.Length; i++)
+                {
+                    if (lights[i] != null && lights[i].type == LightType.Directional) { overworldSun = lights[i]; break; }
+                }
+            }
+        }
+
+        float sun = (overworldSun != null && overworldSun.enabled) ? Mathf.Clamp01(overworldSun.intensity) : 0f;
+        Color ambient = RenderSettings.ambientLight;
+        float ambientLum = Mathf.Clamp01((ambient.r + ambient.g + ambient.b) / 3f);
+        float daylight = Mathf.Clamp01(ambientLum * 0.65f + sun * 0.35f);
+        Color tint = Color.Lerp(new Color(0.35f, 0.38f, 0.42f, 1f), Color.white, daylight);
+
+        Material m = meshRenderer.material;
+        if (m.HasProperty("_Color")) { m.color = tint; }
+        if (m.HasProperty("_EmissionColor")) { m.SetColor("_EmissionColor", Color.black); }
     }
 
     private void RebuildGeometry()
