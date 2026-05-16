@@ -1684,18 +1684,13 @@ public class GameWorldController : UWEBase
         List<int> grassTris = new List<int>();
         List<int> stoneTris = new List<int>();
 
-        void AddEdge(int a, int b)
+        void AddEdge(int a, int b, Vector3 outward)
         {
             int baseIndex = skirtVerts.Count;
             Vector3 va = vertices[a];
             Vector3 vb = vertices[b];
             skirtVerts.Add(va);
             skirtVerts.Add(vb);
-            Vector3 edgeDir = new Vector3(vb.x - va.x, 0f, vb.z - va.z).normalized;
-            Vector3 outward = Vector3.Cross(Vector3.up, edgeDir).normalized;
-            Vector3 mid = (va + vb) * 0.5f;
-            Vector3 toCenter = (new Vector3((sampleWidth - 1) * 0.5f, 0f, (sampleHeight - 1) * 0.5f) * tileWorldSize) - new Vector3(mid.x, 0f, mid.z);
-            if (Vector3.Dot(outward, toCenter) > 0f) { outward = -outward; }
             // 60-degree skirt from horizontal: steeper downward.
             Vector3 angledOffset = (outward * 0.5f * skirtDepth) + (Vector3.down * 0.8660254f * skirtDepth);
             skirtVerts.Add(va + angledOffset);
@@ -1728,10 +1723,10 @@ public class GameWorldController : UWEBase
             target.Add(baseIndex + 1); target.Add(baseIndex + 3); target.Add(baseIndex + 2);
         }
 
-        for (int x = 0; x < sampleWidth - 1; x++) { AddEdge(x, x + 1); }
-        for (int x = 0; x < sampleWidth - 1; x++) { int z = sampleHeight - 1; AddEdge(z * sampleWidth + x + 1, z * sampleWidth + x); }
-        for (int z = 0; z < sampleHeight - 1; z++) { AddEdge((z + 1) * sampleWidth, z * sampleWidth); }
-        for (int z = 0; z < sampleHeight - 1; z++) { int x = sampleWidth - 1; AddEdge(z * sampleWidth + x, (z + 1) * sampleWidth + x); }
+        for (int x = 0; x < sampleWidth - 1; x++) { AddEdge(x, x + 1, Vector3.back); } // north edge
+        for (int x = 0; x < sampleWidth - 1; x++) { int z = sampleHeight - 1; AddEdge(z * sampleWidth + x + 1, z * sampleWidth + x, Vector3.forward); } // south edge
+        for (int z = 0; z < sampleHeight - 1; z++) { AddEdge((z + 1) * sampleWidth, z * sampleWidth, Vector3.left); } // west edge
+        for (int z = 0; z < sampleHeight - 1; z++) { int x = sampleWidth - 1; AddEdge(z * sampleWidth + x, (z + 1) * sampleWidth + x, Vector3.right); } // east edge
 
         if (skirtVerts.Count == 0) { return; }
         Mesh skirtMesh = new Mesh();
