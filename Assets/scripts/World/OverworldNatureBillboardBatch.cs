@@ -106,7 +106,8 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
                 Vector2 native = atlasNativeSizes[spriteIndex];
                 float tileWorldSize = ResolveTerrainTileWorldSize();
                 const float terrainTileTexels = 64f;
-                float worldUnitsPerPixel = tileWorldSize / terrainTileTexels;
+                // Terrain material scales textures as sampleWidth/3, so one 64x64 terrain texture spans ~3 overworld tiles.
+                float worldUnitsPerPixel = (tileWorldSize * 3f) / terrainTileTexels;
                 baseWidth = native.x * worldUnitsPerPixel;
                 baseHeight = native.y * worldUnitsPerPixel;
             }
