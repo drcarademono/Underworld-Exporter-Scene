@@ -1574,7 +1574,7 @@ public class GameWorldController : UWEBase
         return 1;
     }
 
-    private static float SampleTerrainHeightAt(int sampleX, int sampleZ, int tilesPerPixel, Texture2D heightmap, OverworldTerrainController overworld)
+    private float SampleTerrainHeightAt(int sampleX, int sampleZ, int tilesPerPixel, Texture2D heightmap, OverworldTerrainController overworld)
     {
         int px = Mathf.Clamp(sampleX * tilesPerPixel, 0, heightmap.width - 1);
         int pz = Mathf.Clamp(sampleZ * tilesPerPixel, 0, heightmap.height - 1);
