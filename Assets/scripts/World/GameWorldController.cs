@@ -1269,8 +1269,9 @@ public class GameWorldController : UWEBase
         if ((endX - startX) < 1 || (endY - startY) < 1) { return null; }
 
         sampleStep = Mathf.Max(1, sampleStep);
-        int sampleWidth = ((endX - startX) / sampleStep) + 1;
-        int sampleHeight = ((endY - startY) / sampleStep) + 1;
+        int effectiveSampleStep = Mathf.Max(1, sampleStep * Mathf.Max(1, overworld.VertexDecimationStep));
+        int sampleWidth = ((endX - startX) / effectiveSampleStep) + 1;
+        int sampleHeight = ((endY - startY) / effectiveSampleStep) + 1;
 
         Vector3[] vertices = new Vector3[sampleWidth * sampleHeight];
         Vector2[] uvs = new Vector2[sampleWidth * sampleHeight];
@@ -1282,8 +1283,8 @@ public class GameWorldController : UWEBase
             for (int x = 0; x < sampleWidth; x++)
             {
                 int index = z * sampleWidth + x;
-                int globalX = Mathf.Min(endX, startX + (x * sampleStep));
-                int globalZ = Mathf.Min(endY, startY + (z * sampleStep));
+                int globalX = Mathf.Min(endX, startX + (x * effectiveSampleStep));
+                int globalZ = Mathf.Min(endY, startY + (z * effectiveSampleStep));
                 int px = Mathf.Clamp(globalX * tilesPerPixel, 0, heightmap.width - 1);
                 int pz = Mathf.Clamp(globalZ * tilesPerPixel, 0, heightmap.height - 1);
                 float elevation = SampleSmoothedHeight(heightmap, px, pz);
@@ -1386,14 +1387,14 @@ public class GameWorldController : UWEBase
 
         if (!withCollision && (sampleStep > 1))
         {
-            AddDistantChunkSkirt(go.transform, vertices, sampleWidth, sampleHeight, Mathf.Max(2f, sampleStep * overworld.TileWorldSize * 0.35f));
+            AddDistantChunkSkirt(go.transform, vertices, sampleWidth, sampleHeight, Mathf.Max(2f, effectiveSampleStep * overworld.TileWorldSize * 0.35f));
         }
         if (withCollision)
         {
             GameObject waterContact = new GameObject("WaterContact");
             waterContact.transform.SetParent(go.transform, false);
-            float chunkWorldWidth = (sampleWidth - 1) * overworld.TileWorldSize * sampleStep;
-            float chunkWorldHeight = (sampleHeight - 1) * overworld.TileWorldSize * sampleStep;
+            float chunkWorldWidth = (sampleWidth - 1) * overworld.TileWorldSize * effectiveSampleStep;
+            float chunkWorldHeight = (sampleHeight - 1) * overworld.TileWorldSize * effectiveSampleStep;
             waterContact.transform.position = new Vector3(
                 startX * overworld.TileWorldSize + (chunkWorldWidth * 0.5f),
                 0f,

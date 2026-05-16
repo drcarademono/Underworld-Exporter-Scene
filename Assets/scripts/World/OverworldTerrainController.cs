@@ -19,6 +19,8 @@ public class OverworldTerrainController : MonoBehaviour
     public bool LoadDistantChunks = true;
     [Range(2, 12)] public int DistantChunkStep = 4;
 
+    [Header("Retro Terrain")]
+    [Range(1, 8)] public int VertexDecimationStep = 1;
 
     [Header("Overworld Time")]
     [Range(0,23)] public int StartHour = 12;
