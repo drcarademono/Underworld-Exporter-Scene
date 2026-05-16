@@ -1193,6 +1193,17 @@ public class GameWorldController : UWEBase
     private void EnsureChunksAround(Vector2Int centerChunk, Texture2D heightmap, OverworldTerrainController overworld)
     {
         HashSet<Vector2Int> wanted = new HashSet<Vector2Int>();
+        HashSet<Vector2Int> keepHighDetail = new HashSet<Vector2Int>();
+        int unloadRadius = overworld.ActiveChunkRadius + Mathf.Max(0, overworld.HighDetailUnloadMargin);
+
+        for (int y = -unloadRadius; y <= unloadRadius; y++)
+        {
+            for (int x = -unloadRadius; x <= unloadRadius; x++)
+            {
+                keepHighDetail.Add(new Vector2Int(centerChunk.x + x, centerChunk.y + y));
+            }
+        }
+
         for (int y = -overworld.ActiveChunkRadius; y <= overworld.ActiveChunkRadius; y++)
         {
             for (int x = -overworld.ActiveChunkRadius; x <= overworld.ActiveChunkRadius; x++)
@@ -1215,7 +1226,7 @@ public class GameWorldController : UWEBase
         for (int i = 0; i < existingChunkKeys.Count; i++)
         {
             Vector2Int key = existingChunkKeys[i];
-            if (!wanted.Contains(key) && !lowDetailOverworldChunks.Contains(key))
+            if (!keepHighDetail.Contains(key) && !lowDetailOverworldChunks.Contains(key))
             {
                 RecycleOverworldChunk(key);
                 noNatureOverworldChunks.Remove(key);
