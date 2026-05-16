@@ -1586,7 +1586,7 @@ public class GameWorldController : UWEBase
 
         if (geometrySampleStep > 1)
         {
-            AddDistantChunkSkirt(go.transform, vertices, sampleWidth, sampleHeight, Mathf.Max(2f, geometrySampleStep * overworld.TileWorldSize * 0.35f));
+            AddDistantChunkSkirt(go.transform, vertices, terrainClassByVertex, sampleWidth, sampleHeight, Mathf.Max(2f, geometrySampleStep * overworld.TileWorldSize * 0.35f));
         }
         if (withCollision)
         {
@@ -1617,11 +1617,13 @@ public class GameWorldController : UWEBase
         return go;
     }
 
-    private void AddDistantChunkSkirt(Transform parent, Vector3[] vertices, int sampleWidth, int sampleHeight, float skirtDepth)
+    private void AddDistantChunkSkirt(Transform parent, Vector3[] vertices, int[] terrainClassByVertex, int sampleWidth, int sampleHeight, float skirtDepth)
     {
         if (vertices == null || vertices.Length == 0) { return; }
         List<Vector3> skirtVerts = new List<Vector3>();
-        List<int> skirtTris = new List<int>();
+        List<int> waterTris = new List<int>();
+        List<int> grassTris = new List<int>();
+        List<int> stoneTris = new List<int>();
 
         void AddEdge(int a, int b)
         {
@@ -1632,8 +1634,15 @@ public class GameWorldController : UWEBase
             skirtVerts.Add(vb);
             skirtVerts.Add(new Vector3(va.x, va.y - skirtDepth, va.z));
             skirtVerts.Add(new Vector3(vb.x, vb.y - skirtDepth, vb.z));
-            skirtTris.Add(baseIndex + 0); skirtTris.Add(baseIndex + 2); skirtTris.Add(baseIndex + 1);
-            skirtTris.Add(baseIndex + 1); skirtTris.Add(baseIndex + 2); skirtTris.Add(baseIndex + 3);
+            int edgeClass = 1;
+            if (terrainClassByVertex != null && terrainClassByVertex.Length > Mathf.Max(a, b))
+            {
+                edgeClass = (terrainClassByVertex[a] == terrainClassByVertex[b]) ? terrainClassByVertex[a] : terrainClassByVertex[a];
+            }
+            List<int> target = (edgeClass == 0) ? waterTris : ((edgeClass == 2) ? stoneTris : grassTris);
+            // Wind outward from chunk to keep normals facing away from terrain edge.
+            target.Add(baseIndex + 0); target.Add(baseIndex + 1); target.Add(baseIndex + 2);
+            target.Add(baseIndex + 1); target.Add(baseIndex + 3); target.Add(baseIndex + 2);
         }
 
         for (int x = 0; x < sampleWidth - 1; x++) { AddEdge(x, x + 1); }
@@ -1645,7 +1654,10 @@ public class GameWorldController : UWEBase
         Mesh skirtMesh = new Mesh();
         skirtMesh.indexFormat = (skirtVerts.Count > 65535) ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
         skirtMesh.SetVertices(skirtVerts);
-        skirtMesh.SetTriangles(skirtTris, 0);
+        skirtMesh.subMeshCount = 3;
+        skirtMesh.SetTriangles(waterTris, 0);
+        skirtMesh.SetTriangles(grassTris, 1);
+        skirtMesh.SetTriangles(stoneTris, 2);
         skirtMesh.RecalculateNormals();
         skirtMesh.RecalculateBounds();
 
@@ -1654,7 +1666,7 @@ public class GameWorldController : UWEBase
         MeshFilter mf = skirt.AddComponent<MeshFilter>();
         MeshRenderer mr = skirt.AddComponent<MeshRenderer>();
         mf.sharedMesh = skirtMesh;
-        mr.sharedMaterial = overworldStoneMat;
+        mr.sharedMaterials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
     }
 
     private static void AddTriangleToClass(int i0, int i1, int i2, int terrainClass, List<int> water, List<int> grass, List<int> stone)
