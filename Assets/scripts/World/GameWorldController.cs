@@ -1324,22 +1324,34 @@ public class GameWorldController : UWEBase
                 int globalX = Mathf.Min(endX, startX + (x * meshSampleStep));
                 int globalZ = Mathf.Min(endY, startY + (z * meshSampleStep));
 
-                int geomX = startX + ((((globalX - startX) + (geometrySampleStep / 2)) / geometrySampleStep) * geometrySampleStep);
-                int geomZ = startY + ((((globalZ - startY) + (geometrySampleStep / 2)) / geometrySampleStep) * geometrySampleStep);
-                geomX = Mathf.Clamp(geomX, startX, endX);
-                geomZ = Mathf.Clamp(geomZ, startY, endY);
+                int localX = globalX - startX;
+                int localZ = globalZ - startY;
+                int baseX = (localX / geometrySampleStep) * geometrySampleStep;
+                int baseZ = (localZ / geometrySampleStep) * geometrySampleStep;
+                int nextX = Mathf.Min(baseX + geometrySampleStep, endX - startX);
+                int nextZ = Mathf.Min(baseZ + geometrySampleStep, endY - startY);
 
-                int px = Mathf.Clamp(geomX * tilesPerPixel, 0, heightmap.width - 1);
-                int pz = Mathf.Clamp(geomZ * tilesPerPixel, 0, heightmap.height - 1);
-                float elevation = SampleSmoothedHeight(heightmap, px, pz);
-                float shapedElevation = Mathf.Pow(elevation, 1.65f);
-                float noise = (Mathf.PerlinNoise((globalX + 101.231f) * overworld.PerlinScale, (globalZ + 77.777f) * overworld.PerlinScale) * 2f) - 1f;
-                float perlinDisplacement = noise * overworld.PerlinStrength * Mathf.Max(1f, overworld.HeightScale * 0.2f);
-                float y = shapedElevation * overworld.HeightScale + perlinDisplacement - overworld.SeaLevelOffset;
+                int gx0 = startX + baseX;
+                int gz0 = startY + baseZ;
+                int gx1 = startX + nextX;
+                int gz1 = startY + nextZ;
+
+                float tx = (nextX == baseX) ? 0f : (localX - baseX) / (float)(nextX - baseX);
+                float tz = (nextZ == baseZ) ? 0f : (localZ - baseZ) / (float)(nextZ - baseZ);
+
+                float y00 = SampleTerrainHeightAt(gx0, gz0, tilesPerPixel, heightmap, overworld);
+                float y10 = SampleTerrainHeightAt(gx1, gz0, tilesPerPixel, heightmap, overworld);
+                float y01 = SampleTerrainHeightAt(gx0, gz1, tilesPerPixel, heightmap, overworld);
+                float y11 = SampleTerrainHeightAt(gx1, gz1, tilesPerPixel, heightmap, overworld);
+                float y0 = Mathf.Lerp(y00, y10, tx);
+                float y1 = Mathf.Lerp(y01, y11, tx);
+                float y = Mathf.Lerp(y0, y1, tz);
                 if (y < 0f) { y = 0f; }
 
                 if ((globalX >= 0) && (globalX < overworldTerrainMapWidth) && (globalZ >= 0) && (globalZ < overworldTerrainMapHeight))
                 {
+                    int px = Mathf.Clamp(globalX * tilesPerPixel, 0, heightmap.width - 1);
+                    int pz = Mathf.Clamp(globalZ * tilesPerPixel, 0, heightmap.height - 1);
                     if (y <= overworld.WaterSurfaceEpsilon)
                     {
                         int terrainType = TerrainDatLoader.Water;
@@ -1560,6 +1572,17 @@ public class GameWorldController : UWEBase
         if ((waterCount >= grassCount) && (waterCount >= stoneCount)) { return 0; }
         if (stoneCount >= grassCount) { return 2; }
         return 1;
+    }
+
+    private static float SampleTerrainHeightAt(int sampleX, int sampleZ, int tilesPerPixel, Texture2D heightmap, OverworldTerrainController overworld)
+    {
+        int px = Mathf.Clamp(sampleX * tilesPerPixel, 0, heightmap.width - 1);
+        int pz = Mathf.Clamp(sampleZ * tilesPerPixel, 0, heightmap.height - 1);
+        float elevation = SampleSmoothedHeight(heightmap, px, pz);
+        float shapedElevation = Mathf.Pow(elevation, 1.65f);
+        float noise = (Mathf.PerlinNoise((sampleX + 101.231f) * overworld.PerlinScale, (sampleZ + 77.777f) * overworld.PerlinScale) * 2f) - 1f;
+        float perlinDisplacement = noise * overworld.PerlinStrength * Mathf.Max(1f, overworld.HeightScale * 0.2f);
+        return shapedElevation * overworld.HeightScale + perlinDisplacement - overworld.SeaLevelOffset;
     }
 
     private Material BuildOverworldSurfaceMaterial(int textureIndex, Material overrideMaterial, Color fallbackColor, int sampleWidth, int sampleHeight)
