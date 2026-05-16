@@ -17,6 +17,7 @@ public static class OverworldTerrainTexturing
     {
         public Texture2D tileIdMap;
         public Texture2D atlasTexture;
+        public Texture2D waterMask;
         public int atlasCols;
         public int atlasRows;
     }
@@ -31,6 +32,7 @@ public static class OverworldTerrainTexturing
         int tileW = width - 1;
         int tileH = height - 1;
         byte[] ids = new byte[tileW * tileH];
+        byte[] waterFlags = new byte[tileW * tileH];
         Dictionary<string, byte> atlasLookup = new Dictionary<string, byte>();
         List<Texture2D> atlasTiles = new List<Texture2D>();
 
@@ -40,6 +42,7 @@ public static class OverworldTerrainTexturing
             {
                 stats.tileCount++;
                 int center = terrainClassFull[(ty * width) + tx];
+                if (center == 0) { waterFlags[(ty * tileW) + tx] = 255; }
                 int target = GetTransitionTarget(terrainClassFull, width, height, tx, ty, center);
                 int mask = BuildMask(terrainClassFull, width, height, tx, ty, target);
 
@@ -82,6 +85,14 @@ public static class OverworldTerrainTexturing
         for (int i = 0; i < ids.Length; i++) mapPixels[i] = new Color32(0, 0, 0, ids[i]);
         build.tileIdMap.SetPixels32(mapPixels);
         build.tileIdMap.Apply(false, false);
+
+        build.waterMask = new Texture2D(tileW, tileH, TextureFormat.Alpha8, false);
+        build.waterMask.filterMode = FilterMode.Point;
+        build.waterMask.wrapMode = TextureWrapMode.Clamp;
+        Color32[] waterPixels = new Color32[waterFlags.Length];
+        for (int i = 0; i < waterFlags.Length; i++) waterPixels[i] = new Color32(0, 0, 0, waterFlags[i]);
+        build.waterMask.SetPixels32(waterPixels);
+        build.waterMask.Apply(false, false);
 
         int atlasCols = Mathf.Clamp(Mathf.CeilToInt(Mathf.Sqrt(Mathf.Max(1, atlasTiles.Count))), 1, 16);
         int atlasRows = Mathf.CeilToInt(atlasTiles.Count / (float)atlasCols);

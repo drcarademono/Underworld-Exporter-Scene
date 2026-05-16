@@ -1589,8 +1589,8 @@ public class GameWorldController : UWEBase
                     }
                 }
 
-                int tri0Class = DominantClass(tri0Water, tri0Grass, tri0Stone);
-                int tri1Class = DominantClass(tri1Water, tri1Grass, tri1Stone);
+                int tri0Class = (tri0Water > 0) ? 0 : DominantClass(tri0Water, tri0Grass, tri0Stone);
+                int tri1Class = (tri1Water > 0) ? 0 : DominantClass(tri1Water, tri1Grass, tri1Stone);
 
                 bool onChunkBorder = (x == 0) || (z == 0) || (x == sampleWidth - 2) || (z == sampleHeight - 2);
                 if (onChunkBorder)
