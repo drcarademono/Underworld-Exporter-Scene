@@ -1075,19 +1075,41 @@ public class GameWorldController : UWEBase
         }
         overworldStreamingInitialized = true;
 
-        GameObject sun = new GameObject("OverworldSun");
-        Light sunLight = sun.AddComponent<Light>();
-        sunLight.type = LightType.Directional;
-        sunLight.color = new Color(1f, 0.97f, 0.9f);
-        sunLight.intensity = 1.0f;
-        sun.transform.rotation = Quaternion.Euler(45f, -30f, 0f);
+        Light sunLight = FindObjectOfType<Light>();
+        if (sunLight == null || sunLight.type != LightType.Directional)
+        {
+            Light[] lights = FindObjectsOfType<Light>();
+            sunLight = null;
+            for (int i = 0; i < lights.Length; i++)
+            {
+                if (lights[i] != null && lights[i].type == LightType.Directional)
+                {
+                    sunLight = lights[i];
+                    break;
+                }
+            }
+        }
+
+        if (sunLight == null)
+        {
+            GameObject sun = new GameObject("OverworldSun");
+            sunLight = sun.AddComponent<Light>();
+            sunLight.type = LightType.Directional;
+            sunLight.color = new Color(1f, 0.97f, 0.9f);
+            sunLight.intensity = 1.0f;
+            sun.transform.rotation = Quaternion.Euler(45f, -30f, 0f);
+        }
 
         Material daySky = Resources.Load<Material>("DynamicSkies/Materials/BLBSkyboxMaterial");
         Material nightSky = Resources.Load<Material>("DynamicSkies/Materials/BLBSkyboxNoSunMaterial");
         if ((daySky != null) || (nightSky != null))
         {
-            GameObject skyControllerObj = new GameObject("OverworldSkyController");
-            overworldSkyController = skyControllerObj.AddComponent<OverworldSkyController>();
+            overworldSkyController = FindObjectOfType<OverworldSkyController>();
+            if (overworldSkyController == null)
+            {
+                GameObject skyControllerObj = new GameObject("OverworldSkyController");
+                overworldSkyController = skyControllerObj.AddComponent<OverworldSkyController>();
+            }
             overworldSkyController.Initialize(daySky, nightSky, sunLight);
         }
     }
@@ -1261,8 +1283,9 @@ public class GameWorldController : UWEBase
                 int pz = Mathf.Clamp(globalZ * tilesPerPixel, 0, heightmap.height - 1);
                 float elevation = SampleSmoothedHeight(heightmap, px, pz);
                 float shapedElevation = Mathf.Pow(elevation, 1.65f);
-                float noise = Mathf.PerlinNoise((globalX + 101.231f) * overworld.PerlinScale, (globalZ + 77.777f) * overworld.PerlinScale) - 0.5f;
-                float y = shapedElevation * overworld.HeightScale + noise * overworld.PerlinStrength - overworld.SeaLevelOffset;
+                float noise = (Mathf.PerlinNoise((globalX + 101.231f) * overworld.PerlinScale, (globalZ + 77.777f) * overworld.PerlinScale) * 2f) - 1f;
+                float perlinDisplacement = noise * overworld.PerlinStrength * Mathf.Max(1f, overworld.HeightScale * 0.2f);
+                float y = shapedElevation * overworld.HeightScale + perlinDisplacement - overworld.SeaLevelOffset;
                 if (y < 0f) { y = 0f; }
 
                 if ((globalX >= 0) && (globalX < overworldTerrainMapWidth) && (globalZ >= 0) && (globalZ < overworldTerrainMapHeight))
@@ -1453,7 +1476,7 @@ public class GameWorldController : UWEBase
             }
             else
             {
-                result.mainTextureScale = new Vector2(sampleWidth / 3f, sampleHeight / 3f);
+                result.mainTextureScale = new Vector2(sampleWidth, sampleHeight);
             }
         }
         else
@@ -1523,7 +1546,7 @@ public class GameWorldController : UWEBase
         {
             texture.wrapMode = TextureWrapMode.Repeat;
             mat.mainTexture = texture;
-            mat.mainTextureScale = new Vector2(sampleWidth / 3f, sampleHeight / 3f);
+            mat.mainTextureScale = new Vector2(sampleWidth, sampleHeight);
         }
         else
         {
