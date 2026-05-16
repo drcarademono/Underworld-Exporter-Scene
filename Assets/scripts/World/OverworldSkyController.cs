@@ -64,6 +64,7 @@ public class OverworldSkyController : MonoBehaviour
     private enum WeatherState { Sunny, Cloudy, Overcast, Rain, Fog, Thunder, Snow }
 
     public Light SunLight;
+    [Range(0f, 8f)] public float MaxSunlightIntensity = 1f;
     public float MinWeatherDurationSeconds = 120f;
     public float MaxWeatherDurationSeconds = 300f;
 
@@ -100,6 +101,10 @@ public class OverworldSkyController : MonoBehaviour
         if (SunLight != null)
         {
             SunLight.transform.rotation = Quaternion.Euler(sunAngle, -30f, 0f);
+            float sunHeight = Mathf.Sin((hour / 24f) * Mathf.PI * 2f - Mathf.PI * 0.5f);
+            float daylight = Mathf.Clamp01((sunHeight + 0.12f) / 1.12f);
+            SunLight.intensity = MaxSunlightIntensity * daylight;
+            SunLight.enabled = SunLight.intensity > 0.001f;
         }
 
         // Dynamic Skies shader animates clouds/stars/moons from _WorldTime.
