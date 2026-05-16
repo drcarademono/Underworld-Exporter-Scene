@@ -1002,6 +1002,7 @@ public class GameWorldController : UWEBase
         OverworldTerrainRoot = new GameObject("OverworldTerrainRoot");
         loadedOverworldChunks.Clear();
         lowDetailOverworldChunks.Clear();
+        noNatureOverworldChunks.Clear();
 
         int tpp = Mathf.Max(1, overworld.TilesPerPixel);
         overworldTerrainMapWidth = Mathf.Max(2, heightmap.width / tpp);
@@ -1177,13 +1178,13 @@ public class GameWorldController : UWEBase
                 if (!loadedOverworldChunks.ContainsKey(cc))
                 {
                     GameObject chunk = BuildChunk(cc, heightmap, overworld, 1, true, true);
-                    if (chunk != null) { loadedOverworldChunks[cc] = chunk; lowDetailOverworldChunks.Remove(cc); }
+                    if (chunk != null) { loadedOverworldChunks[cc] = chunk; lowDetailOverworldChunks.Remove(cc); noNatureOverworldChunks.Remove(cc); }
                 }
-                else if (lowDetailOverworldChunks.Contains(cc))
+                else if (lowDetailOverworldChunks.Contains(cc) || noNatureOverworldChunks.Contains(cc))
                 {
                     if (loadedOverworldChunks[cc] != null) { Destroy(loadedOverworldChunks[cc]); }
                     GameObject chunk = BuildChunk(cc, heightmap, overworld, 1, true, true);
-                    if (chunk != null) { loadedOverworldChunks[cc] = chunk; lowDetailOverworldChunks.Remove(cc); }
+                    if (chunk != null) { loadedOverworldChunks[cc] = chunk; lowDetailOverworldChunks.Remove(cc); noNatureOverworldChunks.Remove(cc); }
                 }
             }
         }
@@ -1194,6 +1195,7 @@ public class GameWorldController : UWEBase
             if (!wanted.Contains(kvp.Key) && !lowDetailOverworldChunks.Contains(kvp.Key))
             {
                 if (kvp.Value != null) { Destroy(kvp.Value); }
+                noNatureOverworldChunks.Remove(kvp.Key);
                 toRemove.Add(kvp.Key);
             }
         }
@@ -1234,6 +1236,7 @@ public class GameWorldController : UWEBase
                     {
                         loadedOverworldChunks[cc] = chunk;
                         if (sampleStep > 1) { lowDetailOverworldChunks.Add(cc); } else { lowDetailOverworldChunks.Remove(cc); }
+                        noNatureOverworldChunks.Add(cc);
                     }
                 }
                 else if (lowDetailOverworldChunks.Contains(cc) && (sampleStep == 1))
@@ -1244,6 +1247,7 @@ public class GameWorldController : UWEBase
                     {
                         loadedOverworldChunks[cc] = chunk;
                         lowDetailOverworldChunks.Remove(cc);
+                        noNatureOverworldChunks.Add(cc);
                     }
                 }
             }
