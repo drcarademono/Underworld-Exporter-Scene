@@ -1574,6 +1574,19 @@ public class GameWorldController : UWEBase
                 int tri0Class = DominantClass(tri0Water, tri0Grass, tri0Stone);
                 int tri1Class = DominantClass(tri1Water, tri1Grass, tri1Stone);
 
+                bool onChunkBorder = (x == 0) || (z == 0) || (x == sampleWidth - 2) || (z == sampleHeight - 2);
+                if (onChunkBorder)
+                {
+                    // Handle water-at-chunk-edge edge case: if border quad has any water samples,
+                    // force both triangles to water so adjoining chunks don't leave sloped/cracked seams.
+                    bool hasAnyWaterSample = (tri0Water > 0) || (tri1Water > 0);
+                    if (hasAnyWaterSample)
+                    {
+                        tri0Class = 0;
+                        tri1Class = 0;
+                    }
+                }
+
                 if (tri0Class == 0)
                 {
                     vertices[bl].y = 0f;
