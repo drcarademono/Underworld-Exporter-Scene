@@ -1366,6 +1366,7 @@ public class GameWorldController : UWEBase
         List<int> water = new List<int>();
         List<int> grass = new List<int>();
         List<int> stone = new List<int>();
+        bool useTextureInterpolation = overworld.EnableDecimatedTextureInterpolation && (sampleStep > 1);
         for (int z = 0; z < sampleHeight - 1; z++)
         {
             for (int x = 0; x < sampleWidth - 1; x++)
@@ -1380,8 +1381,17 @@ public class GameWorldController : UWEBase
                 int ctl = terrainClassByVertex[tl];
                 int ctr = terrainClassByVertex[tr];
 
-                // Pick the diagonal that best groups matching corner classes.
-                bool useBlTrDiagonal = (cbl == ctr) && (cbr != ctl);
+                bool useBlTrDiagonal = false;
+                if (useTextureInterpolation)
+                {
+                    int sameEdgesBlTr = CountSameClassEdges(cbl, ctl, ctr) + CountSameClassEdges(cbl, ctr, cbr);
+                    int sameEdgesBrTl = CountSameClassEdges(cbl, ctl, cbr) + CountSameClassEdges(cbr, ctl, ctr);
+                    useBlTrDiagonal = (sameEdgesBlTr > sameEdgesBrTl);
+                    if (sameEdgesBlTr == sameEdgesBrTl)
+                    {
+                        useBlTrDiagonal = (cbl == ctr) && (cbr != ctl);
+                    }
+                }
 
                 int i0; int i1; int i2;
                 int j0; int j1; int j2;
@@ -1524,6 +1534,15 @@ public class GameWorldController : UWEBase
         if (materialClass == 0) { water.Add(i0); water.Add(i1); water.Add(i2); }
         else if (materialClass == 2) { stone.Add(i0); stone.Add(i1); stone.Add(i2); }
         else { grass.Add(i0); grass.Add(i1); grass.Add(i2); }
+    }
+
+    private static int CountSameClassEdges(int a, int b, int c)
+    {
+        int score = 0;
+        if (a == b) { score++; }
+        if (b == c) { score++; }
+        if (c == a) { score++; }
+        return score;
     }
 
     private Material BuildOverworldSurfaceMaterial(int textureIndex, Material overrideMaterial, Color fallbackColor, int sampleWidth, int sampleHeight)
