@@ -1378,11 +1378,33 @@ public class GameWorldController : UWEBase
         loadedOverworldChunks.Remove(coord);
         pendingOverworldChunkRequests.Remove(coord);
         if (go == null) { return; }
+        ReleaseOverworldRuntimeMaterials(go);
         go.SetActive(false);
         go.transform.SetParent(OverworldTerrainRoot != null ? OverworldTerrainRoot.transform : null, false);
         overworldChunkPool.Push(go);
     }
 
+
+    private void ReleaseOverworldRuntimeMaterials(GameObject go)
+    {
+        if (go == null) { return; }
+        MeshRenderer mr = go.GetComponent<MeshRenderer>();
+        if (mr == null) { return; }
+        Material[] mats = mr.materials;
+        if (mats == null) { return; }
+        for (int i = 0; i < mats.Length; i++)
+        {
+            Material m = mats[i];
+            if (m == null) { continue; }
+            bool isRuntimeClone = m.name.Contains("(Clone)");
+            if (isRuntimeClone)
+            {
+                Texture t = m.mainTexture;
+                if (t != null && t.name.StartsWith("OWChunkTex_")) { Destroy(t); }
+                Destroy(m);
+            }
+        }
+    }
     private GameObject BuildChunk(Vector2Int chunkCoord, Texture2D heightmap, OverworldTerrainController overworld, int sampleStep = 1, bool withCollision = true, bool withNatureBillboards = true)
     {
         int tilesPerPixel = Mathf.Max(1, overworld.TilesPerPixel);
@@ -1642,7 +1664,7 @@ public class GameWorldController : UWEBase
             MeshCollider mc = go.GetComponent<MeshCollider>();
             if (mc != null) { mc.sharedMesh = null; Destroy(mc); }
         }
-        if (overworld.UseTransitionTileTexturing && withCollision)
+        if (overworld.UseTransitionTileTexturing && withCollision && (sampleStep <= 1))
         {
             System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
             Texture2D grassBase = (overworldGrassMat != null) ? (overworldGrassMat.mainTexture as Texture2D) : null;
@@ -1659,6 +1681,7 @@ public class GameWorldController : UWEBase
                 out stats);
             if (chunkTex != null)
             {
+                chunkTex.name = $"OWChunkTex_{chunkCoord.x}_{chunkCoord.y}";
                 Material grassMat = new Material(overworldGrassMat);
                 Material stoneMat = new Material(overworldStoneMat);
                 grassMat.mainTexture = chunkTex;

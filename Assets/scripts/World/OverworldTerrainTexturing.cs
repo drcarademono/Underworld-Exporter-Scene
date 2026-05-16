@@ -109,13 +109,16 @@ public static class OverworldTerrainTexturing
 
     private static void BlitNearest(Texture2D src, Texture2D dst, int dx, int dy, int w, int h)
     {
+        Color32[] srcPixels = src.GetPixels32();
+        int sw = src.width;
+        int sh = src.height;
         for (int y = 0; y < h; y++)
         {
-            int sy = Mathf.FloorToInt((y / (float)h) * src.height);
+            int sy = Mathf.Clamp(Mathf.FloorToInt((y / (float)h) * sh), 0, sh - 1);
             for (int x = 0; x < w; x++)
             {
-                int sx = Mathf.FloorToInt((x / (float)w) * src.width);
-                dst.SetPixel(dx + x, dy + y, src.GetPixel(sx, sy));
+                int sx = Mathf.Clamp(Mathf.FloorToInt((x / (float)w) * sw), 0, sw - 1);
+                dst.SetPixel(dx + x, dy + y, srcPixels[(sy * sw) + sx]);
             }
         }
     }
