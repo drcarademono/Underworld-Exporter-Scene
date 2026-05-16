@@ -323,9 +323,14 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     private static float SampleDensityMap(Vector3 worldPos, OverworldNatureFlatsController flats)
     {
         if (cachedDensityMap == null) { return 1f; }
+
         float u = Mathf.Clamp01(worldPos.x / Mathf.Max(1f, flats.NatureMapWorldWidth));
         float v = Mathf.Clamp01(worldPos.z / Mathf.Max(1f, flats.NatureMapWorldHeight));
-        Color c = cachedDensityMap.GetPixelBilinear(u, v);
+
+        // Pixel-accurate sampling (not bilinear): one map pixel controls one world cell region.
+        int px = Mathf.Clamp(Mathf.FloorToInt(u * cachedDensityMap.width), 0, cachedDensityMap.width - 1);
+        int py = Mathf.Clamp(Mathf.FloorToInt(v * cachedDensityMap.height), 0, cachedDensityMap.height - 1);
+        Color c = cachedDensityMap.GetPixel(px, py);
         return Mathf.Clamp01(c.grayscale);
     }
 
@@ -335,7 +340,9 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         Vector3 center = vertices[vertices.Length / 2];
         float u = Mathf.Clamp01(center.x / Mathf.Max(1f, flats.NatureMapWorldWidth));
         float v = Mathf.Clamp01(center.z / Mathf.Max(1f, flats.NatureMapWorldHeight));
-        Color32 c = cachedClimateMap.GetPixelBilinear(u, v);
+        int cx = Mathf.Clamp(Mathf.FloorToInt(u * cachedClimateMap.width), 0, cachedClimateMap.width - 1);
+        int cy = Mathf.Clamp(Mathf.FloorToInt(v * cachedClimateMap.height), 0, cachedClimateMap.height - 1);
+        Color32 c = cachedClimateMap.GetPixel(cx, cy);
         if (IsNear(c, flats.MountainColor)) { return 1; }
         if (IsNear(c, flats.RainforestColor)) { return 2; }
         if (IsNear(c, flats.DesertColor)) { return 3; }
