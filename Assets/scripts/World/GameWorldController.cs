@@ -1675,7 +1675,8 @@ public class GameWorldController : UWEBase
             skirtVerts.Add(vb + angledOffset);
             int ax = a % sampleWidth; int az = a / sampleWidth;
             int bx = b % sampleWidth; int bz = b / sampleWidth;
-            float skirtUvTileSize = Mathf.Max(0.01f, tileWorldSize);
+            // Skirt UVs need to match terrain material texel density; terrain is effectively 64x larger in UV world scale.
+            float skirtUvTileSize = Mathf.Max(0.01f, tileWorldSize * 64f);
             float edgeU0 = (Mathf.Abs(va.x - vb.x) > Mathf.Abs(va.z - vb.z))
                 ? (Mathf.Min(va.x, vb.x) / skirtUvTileSize)
                 : (Mathf.Min(va.z, vb.z) / skirtUvTileSize);
