@@ -1075,19 +1075,41 @@ public class GameWorldController : UWEBase
         }
         overworldStreamingInitialized = true;
 
-        GameObject sun = new GameObject("OverworldSun");
-        Light sunLight = sun.AddComponent<Light>();
-        sunLight.type = LightType.Directional;
-        sunLight.color = new Color(1f, 0.97f, 0.9f);
-        sunLight.intensity = 1.0f;
-        sun.transform.rotation = Quaternion.Euler(45f, -30f, 0f);
+        Light sunLight = FindObjectOfType<Light>();
+        if (sunLight == null || sunLight.type != LightType.Directional)
+        {
+            Light[] lights = FindObjectsOfType<Light>();
+            sunLight = null;
+            for (int i = 0; i < lights.Length; i++)
+            {
+                if (lights[i] != null && lights[i].type == LightType.Directional)
+                {
+                    sunLight = lights[i];
+                    break;
+                }
+            }
+        }
+
+        if (sunLight == null)
+        {
+            GameObject sun = new GameObject("OverworldSun");
+            sunLight = sun.AddComponent<Light>();
+            sunLight.type = LightType.Directional;
+            sunLight.color = new Color(1f, 0.97f, 0.9f);
+            sunLight.intensity = 1.0f;
+            sun.transform.rotation = Quaternion.Euler(45f, -30f, 0f);
+        }
 
         Material daySky = Resources.Load<Material>("DynamicSkies/Materials/BLBSkyboxMaterial");
         Material nightSky = Resources.Load<Material>("DynamicSkies/Materials/BLBSkyboxNoSunMaterial");
         if ((daySky != null) || (nightSky != null))
         {
-            GameObject skyControllerObj = new GameObject("OverworldSkyController");
-            overworldSkyController = skyControllerObj.AddComponent<OverworldSkyController>();
+            overworldSkyController = FindObjectOfType<OverworldSkyController>();
+            if (overworldSkyController == null)
+            {
+                GameObject skyControllerObj = new GameObject("OverworldSkyController");
+                overworldSkyController = skyControllerObj.AddComponent<OverworldSkyController>();
+            }
             overworldSkyController.Initialize(daySky, nightSky, sunLight);
         }
     }
