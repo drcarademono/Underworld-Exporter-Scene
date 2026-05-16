@@ -1212,13 +1212,15 @@ public class GameWorldController : UWEBase
         }
 
         List<Vector2Int> toRemove = new List<Vector2Int>();
-        foreach (var kvp in loadedOverworldChunks)
+        List<Vector2Int> existingChunkKeys = new List<Vector2Int>(loadedOverworldChunks.Keys);
+        for (int i = 0; i < existingChunkKeys.Count; i++)
         {
-            if (!wanted.Contains(kvp.Key) && !lowDetailOverworldChunks.Contains(kvp.Key))
+            Vector2Int key = existingChunkKeys[i];
+            if (!wanted.Contains(key) && !lowDetailOverworldChunks.Contains(key))
             {
-                RecycleOverworldChunk(kvp.Key);
-                noNatureOverworldChunks.Remove(kvp.Key);
-                toRemove.Add(kvp.Key);
+                RecycleOverworldChunk(key);
+                noNatureOverworldChunks.Remove(key);
+                toRemove.Add(key);
             }
         }
         foreach (var k in toRemove) { loadedOverworldChunks.Remove(k); }
