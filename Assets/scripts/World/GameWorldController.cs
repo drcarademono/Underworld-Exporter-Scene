@@ -1,6 +1,5 @@
 ﻿using System;
 using UnityEngine;
-using System.Diagnostics;
 #if UNITY_EDITOR
 #endif
 using System.Collections;
@@ -1645,7 +1644,7 @@ public class GameWorldController : UWEBase
         }
         if (overworld.UseTransitionTileTexturing && withCollision)
         {
-            Stopwatch sw = Stopwatch.StartNew();
+            System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
             Texture2D grassBase = (overworldGrassMat != null) ? (overworldGrassMat.mainTexture as Texture2D) : null;
             Texture2D stoneBase = (overworldStoneMat != null) ? (overworldStoneMat.mainTexture as Texture2D) : null;
             OverworldTerrainTexturing.BuildStats stats;
