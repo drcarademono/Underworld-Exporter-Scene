@@ -1205,7 +1205,6 @@ public class GameWorldController : UWEBase
                 }
                 else if (lowDetailOverworldChunks.Contains(cc) || noNatureOverworldChunks.Contains(cc))
                 {
-                    RecycleOverworldChunk(cc);
                     EnqueueOverworldChunkBuild(cc, 1, true, true, false, false);
                 }
             }
@@ -1260,7 +1259,6 @@ public class GameWorldController : UWEBase
                 }
                 else if (lowDetailOverworldChunks.Contains(cc) && (sampleStep == 1))
                 {
-                    RecycleOverworldChunk(cc);
                     EnqueueOverworldChunkBuild(cc, 1, true, false, false, true);
                 }
             }
@@ -1311,6 +1309,16 @@ public class GameWorldController : UWEBase
                 GameObject chunk = BuildChunk(req.chunkCoord, cachedOverworldHeightmap, overworld, req.sampleStep, req.withCollision, req.withNatureBillboards);
                 if (chunk != null)
                 {
+                    if (loadedOverworldChunks.ContainsKey(req.chunkCoord))
+                    {
+                        GameObject oldChunk = loadedOverworldChunks[req.chunkCoord];
+                        if ((oldChunk != null) && (oldChunk != chunk))
+                        {
+                            oldChunk.SetActive(false);
+                            oldChunk.transform.SetParent(OverworldTerrainRoot != null ? OverworldTerrainRoot.transform : null, false);
+                            overworldChunkPool.Push(oldChunk);
+                        }
+                    }
                     loadedOverworldChunks[req.chunkCoord] = chunk;
                     if (req.lowDetail) { lowDetailOverworldChunks.Add(req.chunkCoord); } else { lowDetailOverworldChunks.Remove(req.chunkCoord); }
                     if (req.noNature) { noNatureOverworldChunks.Add(req.chunkCoord); } else { noNatureOverworldChunks.Remove(req.chunkCoord); }
