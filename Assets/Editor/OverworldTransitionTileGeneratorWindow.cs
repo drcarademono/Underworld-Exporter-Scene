@@ -235,7 +235,7 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         float fx = (x + 0.5f) / size;
         float fy = (y + 0.5f) / size;
 
-        float edgeDistance = DistanceToMaskBoundary(mask, fx, fy);
+        float edgeDistance = TargetShapeDistance(mask, fx, fy);
         if (edgeDistance > borderWidth)
         {
             return true; // Deep interior remains target texture.
@@ -255,20 +255,6 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         return (shiftedDistance + jitter) >= 0f;
     }
 
-    private static float DistanceToMaskBoundary(int mask, float fx, float fy)
-    {
-        bool n = (mask & 1) != 0;
-        bool e = (mask & 2) != 0;
-        bool s = (mask & 4) != 0;
-        bool w = (mask & 8) != 0;
-
-        float d = float.NegativeInfinity;
-        if (n) { d = Mathf.Max(d, fy - 0.5f); }
-        if (e) { d = Mathf.Max(d, fx - 0.5f); }
-        if (s) { d = Mathf.Max(d, 0.5f - fy); }
-        if (w) { d = Mathf.Max(d, 0.5f - fx); }
-        return d;
-    }
     private bool OrderedDitherPass(int x, int y, int vSeed)
     {
         int threshold = Bayer4x4[x & 3, y & 3] + ditherThresholdBias;
@@ -292,25 +278,26 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
 
     private bool IsPixelInTarget(int mask, int x, int y, int size)
     {
+        float fx = (x + 0.5f) / size;
+        float fy = (y + 0.5f) / size;
+        return TargetShapeDistance(mask, fx, fy) >= 0f;
+    }
+
+    private float TargetShapeDistance(int mask, float fx, float fy)
+    {
         bool n = (mask & 1) != 0;
         bool e = (mask & 2) != 0;
         bool s = (mask & 4) != 0;
         bool w = (mask & 8) != 0;
 
-        float fx = (x + 0.5f) / size;
-        float fy = (y + 0.5f) / size;
+        float baseHalf = Mathf.Clamp(0.5f + centerFillBoost, 0.5f, 0.95f);
 
-        float baseHalf = 0.5f + centerFillBoost;
-
-        // Signed distances for each cardinal band (positive means inside that band)
         float dN = n ? (fy - (1f - baseHalf)) : float.NegativeInfinity;
         float dE = e ? (fx - (1f - baseHalf)) : float.NegativeInfinity;
         float dS = s ? (baseHalf - fy) : float.NegativeInfinity;
         float dW = w ? (baseHalf - fx) : float.NegativeInfinity;
-
         float d = Mathf.Max(Mathf.Max(dN, dE), Mathf.Max(dS, dW));
 
-        // Round elbows where two perpendicular directions are active.
         if ((n && e) || (e && s) || (s && w) || (w && n))
         {
             float cx = e ? (1f - baseHalf) : baseHalf;
@@ -323,7 +310,7 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
             d = Mathf.Max(d, radial);
         }
 
-        return d >= 0f;
+        return d;
     }
 
     private static Texture2D ResampleNearest(Texture2D src, int width, int height)
