@@ -1649,26 +1649,29 @@ public class GameWorldController : UWEBase
             MeshCollider mc = go.GetComponent<MeshCollider>();
             if (mc != null) { mc.sharedMesh = null; Destroy(mc); }
         }
-        if (overworld.UseGpuTransitionMaskPath && withCollision && (sampleStep <= 1))
+        if (overworld.UseTransitionTileTexturing && withCollision && (sampleStep <= 1))
         {
             System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
-            Shader sh = Shader.Find("Custom/OverworldTransitionBlend");
-            Texture2D maskStone = OverworldTransitionMaskBuilder.BuildMaskTexture(terrainClassFull, fullSampleWidth, fullSampleHeight, 2);
-            if (sh != null && maskStone != null)
+            Texture2D grassBase = (overworldGrassMat != null) ? (overworldGrassMat.mainTexture as Texture2D) : null;
+            Texture2D stoneBase = (overworldStoneMat != null) ? (overworldStoneMat.mainTexture as Texture2D) : null;
+            OverworldTerrainTexturing.BuildStats stats;
+            Texture2D chunkTex = OverworldTerrainTexturing.BuildChunkTransitionTexture(
+                terrainClassFull,
+                fullSampleWidth,
+                fullSampleHeight,
+                Mathf.Max(8, overworld.TransitionPixelsPerTile),
+                overworld.TransitionTilesFolder,
+                grassBase,
+                stoneBase,
+                out stats);
+            if (chunkTex != null)
             {
+                chunkTex.name = $"OWChunkTex_{chunkCoord.x}_{chunkCoord.y}";
                 OverworldChunkRuntimeTextures rt = go.GetComponent<OverworldChunkRuntimeTextures>();
                 if (rt == null) { rt = go.AddComponent<OverworldChunkRuntimeTextures>(); }
                 rt.EnsureMaterials(overworldGrassMat, overworldStoneMat);
-                if (rt.grassRuntimeMat != null)
-                {
-                    rt.grassRuntimeMat.shader = sh;
-                    rt.grassRuntimeMat.SetTexture("_MainTex", overworldGrassMat.mainTexture);
-                    rt.grassRuntimeMat.SetTexture("_BlendTex", overworldStoneMat.mainTexture);
-                    rt.grassRuntimeMat.SetTexture("_ControlTex", maskStone);
-                    rt.grassRuntimeMat.SetVector("_ControlScale", new Vector4(1f, 1f, 0f, 0f));
-                }
-                rt.SetChunkTexture(maskStone);
-                mr.materials = new Material[] { overworldWaterMat, rt.grassRuntimeMat, overworldStoneMat };
+                rt.SetChunkTexture(chunkTex);
+                mr.materials = new Material[] { overworldWaterMat, rt.grassRuntimeMat, rt.stoneRuntimeMat };
             }
             else
             {
@@ -1677,7 +1680,7 @@ public class GameWorldController : UWEBase
             sw.Stop();
             if (overworld.TransitionTexturingDiagnostics && (((chunkCoord.x + chunkCoord.y) % Mathf.Max(1, overworld.TransitionDiagLogEveryNChunks)) == 0))
             {
-                UnityEngine.Debug.Log($"OverworldGpuTransitionMask chunk={chunkCoord} ms={sw.ElapsedMilliseconds} mask={ (maskStone!=null)} shader={ (sh!=null)}");
+                UnityEngine.Debug.Log($"OverworldTransitionTexture chunk={chunkCoord} ms={sw.ElapsedMilliseconds} tiles={stats.tileCount} transitions={stats.transitionTiles} fallback={stats.fallbackCenterTiles} missing={stats.missingTransitionFiles}");
             }
         }
         else

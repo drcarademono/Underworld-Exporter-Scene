@@ -62,9 +62,6 @@ public class OverworldTerrainController : MonoBehaviour
     [Range(8,128)] public int TransitionPixelsPerTile = 32;
     public string TransitionTilesFolder = "Assets/Generated/OverworldTransitions";
 
-    [Header("GPU Transition Path")]
-    public bool UseGpuTransitionMaskPath = true;
-
     [Header("Transition Debug/Perf")]
     public bool TransitionTexturingDiagnostics = true;
     [Range(1, 200)] public int TransitionDiagLogEveryNChunks = 8;
