@@ -1072,8 +1072,8 @@ public class GameWorldController : UWEBase
             gc.clockRate = overworld.ClockRateSecondsPerGameSecond;
         }
 
-        UWCharacter.Instance.playerController.enabled = true;
-        UWCharacter.Instance.playerMotor.enabled = true;
+        UWCharacter.Instance.playerController.enabled = false;
+        UWCharacter.Instance.playerMotor.enabled = false;
         UWCharacter.Instance.transform.position = overworld.OverworldStartPos;
         if (UWCharacter.Instance.playerCam != null)
         {
@@ -1081,9 +1081,23 @@ public class GameWorldController : UWEBase
         }
 
         lastPlayerChunk = GetPlayerChunkCoord(overworld, UWCharacter.Instance.transform.position);
+        // Build the player's current chunk immediately so we never spawn over empty air.
+        if (!loadedOverworldChunks.ContainsKey(lastPlayerChunk))
+        {
+            GameObject startChunk = BuildChunk(lastPlayerChunk, heightmap, overworld, 1, true, true);
+            if (startChunk != null)
+            {
+                loadedOverworldChunks[lastPlayerChunk] = startChunk;
+                lowDetailOverworldChunks.Remove(lastPlayerChunk);
+                noNatureOverworldChunks.Remove(lastPlayerChunk);
+            }
+        }
+
         EnsureChunksAround(lastPlayerChunk, heightmap, overworld);
         if (overworld.LoadDistantChunks) { EnsureDistantChunks(lastPlayerChunk, heightmap, overworld); }
         StartOverworldChunkBuildWorker();
+        UWCharacter.Instance.playerController.enabled = true;
+        UWCharacter.Instance.playerMotor.enabled = true;
         overworldStreamingInitialized = true;
 
         Light sunLight = FindObjectOfType<Light>();
