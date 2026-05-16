@@ -10,23 +10,29 @@ public static class OverworldTerrainTexturing
         public int transitionTiles;
         public int fallbackCenterTiles;
         public int missingTransitionFiles;
+        public int uniqueAtlasTiles;
+    }
+
+    public struct TileAtlasBuild
+    {
+        public Texture2D tileIdMap;
+        public Texture2D atlasTexture;
+        public int atlasCols;
+        public int atlasRows;
     }
 
     private static readonly Dictionary<string, Texture2D> cache = new Dictionary<string, Texture2D>();
-    private static readonly Dictionary<string, Color32[]> scaledTileCache = new Dictionary<string, Color32[]>();
-
-    public static Texture2D BuildChunkTransitionTexture(int[] terrainClassFull, int width, int height, int pixelsPerTile, string assetsRelativeFolder, Texture2D grassBase, Texture2D stoneBase, out BuildStats stats)
+    public static TileAtlasBuild BuildChunkTransitionAtlas(int[] terrainClassFull, int width, int height, string assetsRelativeFolder, Texture2D grassBase, Texture2D stoneBase, out BuildStats stats)
     {
         stats = new BuildStats();
-        if (terrainClassFull == null || width < 2 || height < 2) { return null; }
+        TileAtlasBuild build = new TileAtlasBuild();
+        if (terrainClassFull == null || width < 2 || height < 2) { return build; }
+
         int tileW = width - 1;
         int tileH = height - 1;
-        int outW = tileW * pixelsPerTile;
-        int outH = tileH * pixelsPerTile;
-        Texture2D output = new Texture2D(outW, outH, TextureFormat.RGBA32, false);
-        output.filterMode = FilterMode.Point;
-        output.wrapMode = TextureWrapMode.Clamp;
-        Color32[] outputPixels = new Color32[outW * outH];
+        byte[] ids = new byte[tileW * tileH];
+        Dictionary<string, byte> atlasLookup = new Dictionary<string, byte>();
+        List<Texture2D> atlasTiles = new List<Texture2D>();
 
         for (int ty = 0; ty < tileH; ty++)
         {
@@ -38,11 +44,17 @@ public static class OverworldTerrainTexturing
                 int mask = BuildMask(terrainClassFull, width, height, tx, ty, target);
 
                 Texture2D tile = null;
+                string key;
                 if (target != center)
                 {
+                    key = $"tr_{ClassName(center)}_to_{ClassName(target)}_m{mask:D2}.png";
                     tile = LoadTransitionTile(ClassName(center), ClassName(target), mask, assetsRelativeFolder);
                     if (tile != null) { stats.transitionTiles++; }
                     else { stats.missingTransitionFiles++; }
+                }
+                else
+                {
+                    key = center == 2 ? "base_stone" : "base_grass";
                 }
 
                 if (tile == null)
@@ -51,15 +63,50 @@ public static class OverworldTerrainTexturing
                     stats.fallbackCenterTiles++;
                 }
 
-                if (tile != null)
+                if (tile == null) { continue; }
+                if (!atlasLookup.TryGetValue(key, out byte id))
                 {
-                    BlitNearest(tile, outputPixels, outW, tx * pixelsPerTile, ty * pixelsPerTile, pixelsPerTile, pixelsPerTile);
+                    id = (byte)Mathf.Clamp(atlasTiles.Count, 0, 255);
+                    atlasLookup[key] = id;
+                    atlasTiles.Add(tile);
                 }
+                ids[(ty * tileW) + tx] = id;
             }
         }
-        output.SetPixels32(outputPixels);
-        output.Apply(false, false);
-        return output;
+
+        stats.uniqueAtlasTiles = atlasTiles.Count;
+        build.tileIdMap = new Texture2D(tileW, tileH, TextureFormat.Alpha8, false);
+        build.tileIdMap.filterMode = FilterMode.Point;
+        build.tileIdMap.wrapMode = TextureWrapMode.Clamp;
+        Color32[] mapPixels = new Color32[ids.Length];
+        for (int i = 0; i < ids.Length; i++) mapPixels[i] = new Color32(0, 0, 0, ids[i]);
+        build.tileIdMap.SetPixels32(mapPixels);
+        build.tileIdMap.Apply(false, false);
+
+        int atlasCols = Mathf.Clamp(Mathf.CeilToInt(Mathf.Sqrt(Mathf.Max(1, atlasTiles.Count))), 1, 16);
+        int atlasRows = Mathf.CeilToInt(atlasTiles.Count / (float)atlasCols);
+        int tileSize = (atlasTiles.Count > 0) ? atlasTiles[0].width : 16;
+        build.atlasTexture = new Texture2D(atlasCols * tileSize, atlasRows * tileSize, TextureFormat.RGBA32, false);
+        build.atlasTexture.filterMode = FilterMode.Point;
+        build.atlasTexture.wrapMode = TextureWrapMode.Clamp;
+        Color32[] atlasPixels = new Color32[build.atlasTexture.width * build.atlasTexture.height];
+
+        for (int i = 0; i < atlasTiles.Count; i++)
+        {
+            Texture2D tile = atlasTiles[i];
+            Color32[] src = tile.GetPixels32();
+            int ox = (i % atlasCols) * tileSize;
+            int oy = (i / atlasCols) * tileSize;
+            for (int y = 0; y < tileSize; y++)
+                for (int x = 0; x < tileSize; x++)
+                    atlasPixels[(oy + y) * build.atlasTexture.width + (ox + x)] = src[y * tile.width + x];
+        }
+
+        build.atlasTexture.SetPixels32(atlasPixels);
+        build.atlasTexture.Apply(false, false);
+        build.atlasCols = atlasCols;
+        build.atlasRows = atlasRows;
+        return build;
     }
 
     private static int GetTransitionTarget(int[] data, int w, int h, int x, int y, int c)
@@ -110,39 +157,4 @@ public static class OverworldTerrainTexturing
         return tex;
     }
 
-    private static void BlitNearest(Texture2D src, Color32[] dstPixels, int dstWidth, int dx, int dy, int w, int h)
-    {
-        Color32[] srcPixels = GetScaledTile(src, w, h);
-        for (int y = 0; y < h; y++)
-        {
-            for (int x = 0; x < w; x++)
-            {
-                dstPixels[(dy + y) * dstWidth + (dx + x)] = srcPixels[y * w + x];
-            }
-        }
-    }
-
-    private static Color32[] GetScaledTile(Texture2D src, int w, int h)
-    {
-        string key = src.GetInstanceID() + ":" + w + "x" + h;
-        if (scaledTileCache.TryGetValue(key, out var scaled)) return scaled;
-
-        Color32[] sourcePixels = src.GetPixels32();
-        int sw = src.width;
-        int sh = src.height;
-        scaled = new Color32[w * h];
-
-        for (int y = 0; y < h; y++)
-        {
-            int sy = Mathf.Clamp(Mathf.FloorToInt((y / (float)h) * sh), 0, sh - 1);
-            for (int x = 0; x < w; x++)
-            {
-                int sx = Mathf.Clamp(Mathf.FloorToInt((x / (float)w) * sw), 0, sw - 1);
-                scaled[y * w + x] = sourcePixels[(sy * sw) + sx];
-            }
-        }
-
-        scaledTileCache[key] = scaled;
-        return scaled;
-    }
 }

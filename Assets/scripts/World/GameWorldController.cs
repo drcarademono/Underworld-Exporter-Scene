@@ -1655,22 +1655,22 @@ public class GameWorldController : UWEBase
             Texture2D grassBase = (overworldGrassMat != null) ? (overworldGrassMat.mainTexture as Texture2D) : null;
             Texture2D stoneBase = (overworldStoneMat != null) ? (overworldStoneMat.mainTexture as Texture2D) : null;
             OverworldTerrainTexturing.BuildStats stats;
-            Texture2D chunkTex = OverworldTerrainTexturing.BuildChunkTransitionTexture(
+            OverworldTerrainTexturing.TileAtlasBuild atlasBuild = OverworldTerrainTexturing.BuildChunkTransitionAtlas(
                 terrainClassFull,
                 fullSampleWidth,
                 fullSampleHeight,
-                Mathf.Max(8, overworld.TransitionPixelsPerTile),
                 overworld.TransitionTilesFolder,
                 grassBase,
                 stoneBase,
                 out stats);
-            if (chunkTex != null)
+            if (atlasBuild.tileIdMap != null && atlasBuild.atlasTexture != null)
             {
-                chunkTex.name = $"OWChunkTex_{chunkCoord.x}_{chunkCoord.y}";
+                atlasBuild.tileIdMap.name = $"OWChunkTileIds_{chunkCoord.x}_{chunkCoord.y}";
+                atlasBuild.atlasTexture.name = $"OWChunkAtlas_{chunkCoord.x}_{chunkCoord.y}";
                 OverworldChunkRuntimeTextures rt = go.GetComponent<OverworldChunkRuntimeTextures>();
                 if (rt == null) { rt = go.AddComponent<OverworldChunkRuntimeTextures>(); }
                 rt.EnsureMaterials(overworldGrassMat, overworldStoneMat);
-                rt.SetChunkTexture(chunkTex);
+                rt.SetTransitionAtlas(atlasBuild);
                 mr.materials = new Material[] { overworldWaterMat, rt.grassRuntimeMat, rt.stoneRuntimeMat };
             }
             else
@@ -1680,7 +1680,7 @@ public class GameWorldController : UWEBase
             sw.Stop();
             if (overworld.TransitionTexturingDiagnostics && (((chunkCoord.x + chunkCoord.y) % Mathf.Max(1, overworld.TransitionDiagLogEveryNChunks)) == 0))
             {
-                UnityEngine.Debug.Log($"OverworldTransitionTexture chunk={chunkCoord} ms={sw.ElapsedMilliseconds} tiles={stats.tileCount} transitions={stats.transitionTiles} fallback={stats.fallbackCenterTiles} missing={stats.missingTransitionFiles}");
+                UnityEngine.Debug.Log($"OverworldTransitionTexture chunk={chunkCoord} ms={sw.ElapsedMilliseconds} tiles={stats.tileCount} transitions={stats.transitionTiles} fallback={stats.fallbackCenterTiles} missing={stats.missingTransitionFiles} atlasTiles={stats.uniqueAtlasTiles}");
             }
         }
         else
