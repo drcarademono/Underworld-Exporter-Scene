@@ -1584,7 +1584,7 @@ public class GameWorldController : UWEBase
             batch.Initialize(vertices, grass.ToArray(), natureFlats, overworld.WaterSurfaceEpsilon, chunkCoord);
         }
 
-        if (!withCollision && (geometrySampleStep > 1))
+        if (geometrySampleStep > 1)
         {
             AddDistantChunkSkirt(go.transform, vertices, sampleWidth, sampleHeight, Mathf.Max(2f, geometrySampleStep * overworld.TileWorldSize * 0.35f));
         }
