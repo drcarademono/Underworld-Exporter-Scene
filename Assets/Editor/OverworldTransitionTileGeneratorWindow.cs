@@ -6,7 +6,7 @@ using UnityEngine;
 
 public class OverworldTransitionTileGeneratorWindow : EditorWindow
 {
-    private enum BlendMode { HardMask, OrderedDither, PerlinBorder, PerlinDither }
+    private enum BlendMode { HardMask, OrderedDither, PerlinBorder }
 
     private OverworldTerrainController controller;
     private Texture2D grassTexture;
@@ -21,6 +21,7 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
     private float perlinScale = 10f;
     private float perlinStrength = 0.18f;
     private float borderWidth = 0.12f;
+    private float borderStochasticity = 0.35f;
     private string outputFolder = "Assets/Generated/OverworldTransitions";
 
     private static readonly int[,] Bayer4x4 = new int[4, 4]
@@ -64,11 +65,12 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
             ditherThresholdBias = EditorGUILayout.IntSlider("Dither Bias", ditherThresholdBias, -4, 4);
         }
 
-        using (new EditorGUI.DisabledScope((blendMode != BlendMode.PerlinBorder) && (blendMode != BlendMode.PerlinDither)))
+        using (new EditorGUI.DisabledScope(blendMode != BlendMode.PerlinBorder))
         {
             perlinScale = EditorGUILayout.Slider("Perlin Scale", perlinScale, 1f, 64f);
             perlinStrength = EditorGUILayout.Slider("Perlin Strength", perlinStrength, 0f, 0.5f);
             borderWidth = EditorGUILayout.Slider("Border Width", borderWidth, 0.02f, 0.45f);
+            borderStochasticity = EditorGUILayout.Slider("Border Stochasticity", borderStochasticity, 0f, 1f);
         }
 
         EditorGUILayout.Space();
@@ -217,8 +219,6 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
                 return OrderedDitherPass(x, y, vSeed);
             case BlendMode.PerlinBorder:
                 return PerlinBorderPass(mask, x, y, size, vSeed);
-            case BlendMode.PerlinDither:
-                return PerlinDitherPass(mask, x, y, size, vSeed);
             default:
                 return true;
         }
@@ -226,30 +226,6 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
 
 
 
-    private bool PerlinDitherPass(int mask, int x, int y, int size, int vSeed)
-    {
-        float fx = (x + 0.5f) / size;
-        float fy = (y + 0.5f) / size;
-
-        float edgeDistance = DistanceToMaskBoundary(mask, fx, fy);
-        if (edgeDistance > borderWidth)
-        {
-            return true;
-        }
-
-        float n = Mathf.PerlinNoise((x + (vSeed * 0.001f)) / perlinScale, (y + (vSeed * 0.002f)) / perlinScale);
-
-        // Convert Perlin field into a stochastic threshold and combine with Bayer pattern
-        // to keep a pixel-art friendly discrete edge while avoiding repetitive straight lines.
-        int bayer = Bayer4x4[x & 3, y & 3];
-        float perlinThreshold = Mathf.Clamp01((n - 0.5f) * (perlinStrength * 4f) + 0.5f);
-        float bayerNorm = (bayer + 0.5f) / 16f;
-
-        // Positive inside mask, negative near outside; map into blend factor in border band.
-        float bandT = Mathf.InverseLerp(-borderWidth, borderWidth, edgeDistance);
-        float combined = (bandT * 0.6f) + (perlinThreshold * 0.4f);
-        return combined >= bayerNorm;
-    }
     private bool PerlinBorderPass(int mask, int x, int y, int size, int vSeed)
     {
         float fx = (x + 0.5f) / size;
@@ -258,13 +234,21 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         float edgeDistance = DistanceToMaskBoundary(mask, fx, fy);
         if (edgeDistance > borderWidth)
         {
-            return true;
+            return true; // Deep interior remains target texture.
         }
 
         float n = Mathf.PerlinNoise((x + (vSeed * 0.001f)) / perlinScale, (y + (vSeed * 0.002f)) / perlinScale);
         float signedNoise = (n * 2f) - 1f;
-        float jitteredDistance = edgeDistance + (signedNoise * perlinStrength);
-        return jitteredDistance >= 0f;
+
+        // Organic boundary shift from Perlin field.
+        float shiftedDistance = edgeDistance + (signedNoise * perlinStrength);
+
+        // Stochastic breakup near the boundary: stronger randomness close to edge, fades to interior.
+        float edgeBandT = Mathf.Clamp01((borderWidth - Mathf.Abs(edgeDistance)) / Mathf.Max(0.0001f, borderWidth));
+        float localRandom = Hash2DTo4Bit(x, y, vSeed) / 15f;
+        float jitter = (localRandom - 0.5f) * 2f * borderStochasticity * edgeBandT;
+
+        return (shiftedDistance + jitter) >= 0f;
     }
 
     private static float DistanceToMaskBoundary(int mask, float fx, float fy)
