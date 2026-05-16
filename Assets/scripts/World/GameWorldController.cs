@@ -1402,31 +1402,44 @@ public class GameWorldController : UWEBase
                 int tl = bl + sampleWidth;
                 int tr = tl + 1;
 
-                // Pure full-resolution classification: choose one material class for the whole decimated quad
-                // from the underlying full-sample region, then assign both coarse triangles to that class.
+                // Pure full-resolution classification: classify each coarse triangle separately by
+                // sampling the underlying full-resolution class grid and splitting by triangle half.
                 int fullStartX = Mathf.Clamp((x * sampleStep) / baseSampleStep, 0, fullSampleWidth - 1);
                 int fullStartZ = Mathf.Clamp((z * sampleStep) / baseSampleStep, 0, fullSampleHeight - 1);
                 int fullEndX = Mathf.Clamp(((x + 1) * sampleStep) / baseSampleStep, 0, fullSampleWidth - 1);
                 int fullEndZ = Mathf.Clamp(((z + 1) * sampleStep) / baseSampleStep, 0, fullSampleHeight - 1);
-
-                int waterCount = 0; int grassCount = 0; int stoneCount = 0;
+                int tri0Water = 0; int tri0Grass = 0; int tri0Stone = 0;
+                int tri1Water = 0; int tri1Grass = 0; int tri1Stone = 0;
+                int fullWidth = Mathf.Max(1, fullEndX - fullStartX);
+                int fullHeight = Mathf.Max(1, fullEndZ - fullStartZ);
                 for (int fz = fullStartZ; fz <= fullEndZ; fz++)
                 {
+                    float nz = (fz - fullStartZ) / (float)fullHeight;
                     for (int fx = fullStartX; fx <= fullEndX; fx++)
                     {
+                        float nx = (fx - fullStartX) / (float)fullWidth;
                         int c = terrainClassFull[(fz * fullSampleWidth) + fx];
-                        if (c == 0) { waterCount++; }
-                        else if (c == 2) { stoneCount++; }
-                        else { grassCount++; }
+                        bool inTri0 = nx >= nz; // (bl,tr,br) half
+                        if (inTri0)
+                        {
+                            if (c == 0) { tri0Water++; }
+                            else if (c == 2) { tri0Stone++; }
+                            else { tri0Grass++; }
+                        }
+                        else
+                        {
+                            if (c == 0) { tri1Water++; }
+                            else if (c == 2) { tri1Stone++; }
+                            else { tri1Grass++; }
+                        }
                     }
                 }
 
-                int quadClass = 1;
-                if ((waterCount >= grassCount) && (waterCount >= stoneCount)) { quadClass = 0; }
-                else if (stoneCount >= grassCount) { quadClass = 2; }
+                int tri0Class = DominantClass(tri0Water, tri0Grass, tri0Stone);
+                int tri1Class = DominantClass(tri1Water, tri1Grass, tri1Stone);
 
-                AddTriangleToClass(bl, tl, tr, quadClass, water, grass, stone);
-                AddTriangleToClass(bl, tr, br, quadClass, water, grass, stone);
+                AddTriangleToClass(bl, tr, br, tri0Class, water, grass, stone);
+                AddTriangleToClass(bl, tl, tr, tri1Class, water, grass, stone);
             }
         }
         mesh.subMeshCount = 3;
@@ -1533,6 +1546,13 @@ public class GameWorldController : UWEBase
         if (terrainClass == 0) { water.Add(i0); water.Add(i1); water.Add(i2); }
         else if (terrainClass == 2) { stone.Add(i0); stone.Add(i1); stone.Add(i2); }
         else { grass.Add(i0); grass.Add(i1); grass.Add(i2); }
+    }
+
+    private static int DominantClass(int waterCount, int grassCount, int stoneCount)
+    {
+        if ((waterCount >= grassCount) && (waterCount >= stoneCount)) { return 0; }
+        if (stoneCount >= grassCount) { return 2; }
+        return 1;
     }
 
     private Material BuildOverworldSurfaceMaterial(int textureIndex, Material overrideMaterial, Color fallbackColor, int sampleWidth, int sampleHeight)
