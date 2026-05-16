@@ -1371,7 +1371,7 @@ public class GameWorldController : UWEBase
         mr.materials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
 
         OverworldNatureFlatsController natureFlats = GetOverworldNatureFlatsController();
-        if (withCollision && (sampleStep == 1) && (natureFlats != null) && natureFlats.EnableNatureFlats)
+        if (withCollision && (natureFlats != null) && natureFlats.EnableNatureFlats)
         {
             GameObject natureBillboards = new GameObject("NatureBillboards");
             natureBillboards.transform.SetParent(go.transform, false);
