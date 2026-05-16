@@ -1638,19 +1638,21 @@ public class GameWorldController : UWEBase
             Vector3 mid = (va + vb) * 0.5f;
             Vector3 toCenter = (new Vector3((sampleWidth - 1) * 0.5f, 0f, (sampleHeight - 1) * 0.5f) * tileWorldSize) - new Vector3(mid.x, 0f, mid.z);
             if (Vector3.Dot(outward, toCenter) > 0f) { outward = -outward; }
-            Vector3 angledOffset = (outward - Vector3.up).normalized * skirtDepth;
+            // 30-degree skirt from horizontal: mostly outward, gently downward.
+            Vector3 angledOffset = (outward * 0.8660254f * skirtDepth) + (Vector3.down * 0.5f * skirtDepth);
             skirtVerts.Add(va + angledOffset);
             skirtVerts.Add(vb + angledOffset);
             int ax = a % sampleWidth; int az = a / sampleWidth;
             int bx = b % sampleWidth; int bz = b / sampleWidth;
+            float skirtUvTileSize = Mathf.Max(0.01f, tileWorldSize * 2f);
             float edgeU0 = (Mathf.Abs(va.x - vb.x) > Mathf.Abs(va.z - vb.z))
-                ? (Mathf.Min(va.x, vb.x) / Mathf.Max(0.01f, tileWorldSize))
-                : (Mathf.Min(va.z, vb.z) / Mathf.Max(0.01f, tileWorldSize));
-            float edgeU1 = edgeU0 + (Vector3.Distance(new Vector3(va.x, 0f, va.z), new Vector3(vb.x, 0f, vb.z)) / Mathf.Max(0.01f, tileWorldSize));
-            float topV0 = va.y / Mathf.Max(0.01f, tileWorldSize);
-            float topV1 = vb.y / Mathf.Max(0.01f, tileWorldSize);
-            float bottomV0 = (va.y - skirtDepth) / Mathf.Max(0.01f, tileWorldSize);
-            float bottomV1 = (vb.y - skirtDepth) / Mathf.Max(0.01f, tileWorldSize);
+                ? (Mathf.Min(va.x, vb.x) / skirtUvTileSize)
+                : (Mathf.Min(va.z, vb.z) / skirtUvTileSize);
+            float edgeU1 = edgeU0 + (Vector3.Distance(new Vector3(va.x, 0f, va.z), new Vector3(vb.x, 0f, vb.z)) / skirtUvTileSize);
+            float topV0 = va.y / skirtUvTileSize;
+            float topV1 = vb.y / skirtUvTileSize;
+            float bottomV0 = (va.y - skirtDepth) / skirtUvTileSize;
+            float bottomV1 = (vb.y - skirtDepth) / skirtUvTileSize;
             // World-space UV mapping to keep square texels on vertical skirts.
             skirtUvs.Add(new Vector2(edgeU0, topV0));
             skirtUvs.Add(new Vector2(edgeU1, topV1));
