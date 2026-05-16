@@ -30194,9 +30194,9 @@ MonoBehaviour:
   ClockRateSecondsPerGameSecond: 20
   OverworldFarClip: 16000
   HeightScale: 80
-  PerlinStrength: 5
-  PerlinScale: 0.02
-  SeaLevelOffset: 2.5
+  PerlinStrength: 0
+  PerlinScale: 0.0005
+  SeaLevelOffset: 1
   SteepSlopeNormalThreshold: 0.78
   WaterTextureIndex: 184
   WaterTextureAnimEndIndex: 188
@@ -30237,6 +30237,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OverworldSkyController
   SunLight: {fileID: 0}
+  MaxSunlightIntensity: 0.7
   MinWeatherDurationSeconds: 120
   MaxWeatherDurationSeconds: 300
 --- !u!114 &853464907
@@ -30257,16 +30258,30 @@ MonoBehaviour:
   - {fileID: 2100000, guid: 71267cf979135fb93b62b828a2a7d37f, type: 2}
   TerrainSpriteMaterials: []
   NatureSeed: 2048
-  BaseDensity: 0.05
-  ClusterDensity: 0.45
+  BaseDensity: 0.1
+  ClusterDensity: 0.5
   PerlinScale: 0.0025
   TerrainSpriteChance: 0.22
   TreeWidth: 4.5
   TreeHeight: 9
   TerrainSpriteWidth: 3.5
   TerrainSpriteHeight: 3.5
-  GroundOffset: 0.2
+  GroundOffset: 0
   MaxBillboardsPerChunk: 1000
+  NatureDensityMapResourcePath: UIX/nature_density_map
+  NatureClimateMapResourcePath: UIX/nature_climate_map
+  NatureMapWorldWidth: 16384
+  NatureMapWorldHeight: 16384
+  MountainColor:
+    serializedVersion: 2
+    rgba: 4278255360
+  RainforestColor:
+    serializedVersion: 2
+    rgba: 4294901760
+  DesertColor:
+    serializedVersion: 2
+    rgba: 4278255615
+  BiomeProfiles: []
 --- !u!1 &855120957
 GameObject:
   m_ObjectHideFlags: 0
