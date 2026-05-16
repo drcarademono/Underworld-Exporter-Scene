@@ -1708,10 +1708,11 @@ public class GameWorldController : UWEBase
             float bottomV0 = (va.y - skirtDepth) / skirtUvTileSize;
             float bottomV1 = (vb.y - skirtDepth) / skirtUvTileSize;
             // World-space UV mapping to keep square texels on vertical skirts.
-            skirtUvs.Add(new Vector2(edgeU0, topV0));
-            skirtUvs.Add(new Vector2(edgeU1, topV1));
-            skirtUvs.Add(new Vector2(edgeU0, bottomV0));
-            skirtUvs.Add(new Vector2(edgeU1, bottomV1));
+            // Rotate skirt UVs 90 degrees clockwise to align with terrain texture orientation.
+            skirtUvs.Add(new Vector2(topV0, -edgeU0));
+            skirtUvs.Add(new Vector2(topV1, -edgeU1));
+            skirtUvs.Add(new Vector2(bottomV0, -edgeU0));
+            skirtUvs.Add(new Vector2(bottomV1, -edgeU1));
             int edgeClass = 1;
             if (terrainClassByVertex != null && terrainClassByVertex.Length > Mathf.Max(a, b))
             {
