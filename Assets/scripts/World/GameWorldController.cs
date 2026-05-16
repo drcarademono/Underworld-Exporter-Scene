@@ -1,5 +1,6 @@
 ﻿using System;
 using UnityEngine;
+using System.Diagnostics;
 #if UNITY_EDITOR
 #endif
 using System.Collections;
@@ -1642,14 +1643,21 @@ public class GameWorldController : UWEBase
             MeshCollider mc = go.GetComponent<MeshCollider>();
             if (mc != null) { mc.sharedMesh = null; Destroy(mc); }
         }
-        if (overworld.UseTransitionTileTexturing)
+        if (overworld.UseTransitionTileTexturing && withCollision)
         {
+            Stopwatch sw = Stopwatch.StartNew();
+            Texture2D grassBase = (overworldGrassMat != null) ? (overworldGrassMat.mainTexture as Texture2D) : null;
+            Texture2D stoneBase = (overworldStoneMat != null) ? (overworldStoneMat.mainTexture as Texture2D) : null;
+            OverworldTerrainTexturing.BuildStats stats;
             Texture2D chunkTex = OverworldTerrainTexturing.BuildChunkTransitionTexture(
                 terrainClassFull,
                 fullSampleWidth,
                 fullSampleHeight,
                 Mathf.Max(8, overworld.TransitionPixelsPerTile),
-                overworld.TransitionTilesFolder);
+                overworld.TransitionTilesFolder,
+                grassBase,
+                stoneBase,
+                out stats);
             if (chunkTex != null)
             {
                 Material grassMat = new Material(overworldGrassMat);
@@ -1663,6 +1671,11 @@ public class GameWorldController : UWEBase
             else
             {
                 mr.materials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
+            }
+            sw.Stop();
+            if (overworld.TransitionTexturingDiagnostics && (((chunkCoord.x + chunkCoord.y) % Mathf.Max(1, overworld.TransitionDiagLogEveryNChunks)) == 0))
+            {
+                UnityEngine.Debug.Log($"OverworldTransitionTexture chunk={chunkCoord} ms={sw.ElapsedMilliseconds} tiles={stats.tileCount} transitions={stats.transitionTiles} fallback={stats.fallbackCenterTiles} missing={stats.missingTransitionFiles}");
             }
         }
         else
