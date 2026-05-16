@@ -1270,9 +1270,10 @@ public class GameWorldController : UWEBase
 
         int baseSampleStep = Mathf.Max(1, sampleStep);
         int decimationStep = Mathf.Max(1, overworld.TerrainDecimationStep);
-        sampleStep = Mathf.Max(1, baseSampleStep * decimationStep);
-        int sampleWidth = ((endX - startX) / sampleStep) + 1;
-        int sampleHeight = ((endY - startY) / sampleStep) + 1;
+        int meshSampleStep = baseSampleStep; // keep high-resolution mesh topology
+        int geometrySampleStep = Mathf.Max(1, baseSampleStep * decimationStep); // snap heights to coarse sampling
+        int sampleWidth = ((endX - startX) / meshSampleStep) + 1;
+        int sampleHeight = ((endY - startY) / meshSampleStep) + 1;
 
         Vector3[] vertices = new Vector3[sampleWidth * sampleHeight];
         Vector2[] uvs = new Vector2[sampleWidth * sampleHeight];
@@ -1320,10 +1321,16 @@ public class GameWorldController : UWEBase
             for (int x = 0; x < sampleWidth; x++)
             {
                 int index = z * sampleWidth + x;
-                int globalX = Mathf.Min(endX, startX + (x * sampleStep));
-                int globalZ = Mathf.Min(endY, startY + (z * sampleStep));
-                int px = Mathf.Clamp(globalX * tilesPerPixel, 0, heightmap.width - 1);
-                int pz = Mathf.Clamp(globalZ * tilesPerPixel, 0, heightmap.height - 1);
+                int globalX = Mathf.Min(endX, startX + (x * meshSampleStep));
+                int globalZ = Mathf.Min(endY, startY + (z * meshSampleStep));
+
+                int geomX = startX + ((((globalX - startX) + (geometrySampleStep / 2)) / geometrySampleStep) * geometrySampleStep);
+                int geomZ = startY + ((((globalZ - startY) + (geometrySampleStep / 2)) / geometrySampleStep) * geometrySampleStep);
+                geomX = Mathf.Clamp(geomX, startX, endX);
+                geomZ = Mathf.Clamp(geomZ, startY, endY);
+
+                int px = Mathf.Clamp(geomX * tilesPerPixel, 0, heightmap.width - 1);
+                int pz = Mathf.Clamp(geomZ * tilesPerPixel, 0, heightmap.height - 1);
                 float elevation = SampleSmoothedHeight(heightmap, px, pz);
                 float shapedElevation = Mathf.Pow(elevation, 1.65f);
                 float noise = (Mathf.PerlinNoise((globalX + 101.231f) * overworld.PerlinScale, (globalZ + 77.777f) * overworld.PerlinScale) * 2f) - 1f;
@@ -1404,10 +1411,10 @@ public class GameWorldController : UWEBase
 
                 // Pure full-resolution classification: classify each coarse triangle separately by
                 // sampling the underlying full-resolution class grid and splitting by triangle half.
-                int fullStartX = Mathf.Clamp((x * sampleStep) / baseSampleStep, 0, fullSampleWidth - 1);
-                int fullStartZ = Mathf.Clamp((z * sampleStep) / baseSampleStep, 0, fullSampleHeight - 1);
-                int fullEndX = Mathf.Clamp(((x + 1) * sampleStep) / baseSampleStep, 0, fullSampleWidth - 1);
-                int fullEndZ = Mathf.Clamp(((z + 1) * sampleStep) / baseSampleStep, 0, fullSampleHeight - 1);
+                int fullStartX = Mathf.Clamp((x * meshSampleStep) / baseSampleStep, 0, fullSampleWidth - 1);
+                int fullStartZ = Mathf.Clamp((z * meshSampleStep) / baseSampleStep, 0, fullSampleHeight - 1);
+                int fullEndX = Mathf.Clamp(((x + 1) * meshSampleStep) / baseSampleStep, 0, fullSampleWidth - 1);
+                int fullEndZ = Mathf.Clamp(((z + 1) * meshSampleStep) / baseSampleStep, 0, fullSampleHeight - 1);
                 int tri0Water = 0; int tri0Grass = 0; int tri0Stone = 0;
                 int tri1Water = 0; int tri1Grass = 0; int tri1Stone = 0;
                 int fullWidth = Mathf.Max(1, fullEndX - fullStartX);
@@ -1468,16 +1475,16 @@ public class GameWorldController : UWEBase
             batch.Initialize(vertices, grass.ToArray(), natureFlats, overworld.WaterSurfaceEpsilon, chunkCoord);
         }
 
-        if (!withCollision && (sampleStep > 1))
+        if (!withCollision && (geometrySampleStep > 1))
         {
-            AddDistantChunkSkirt(go.transform, vertices, sampleWidth, sampleHeight, Mathf.Max(2f, sampleStep * overworld.TileWorldSize * 0.35f));
+            AddDistantChunkSkirt(go.transform, vertices, sampleWidth, sampleHeight, Mathf.Max(2f, geometrySampleStep * overworld.TileWorldSize * 0.35f));
         }
         if (withCollision)
         {
             GameObject waterContact = new GameObject("WaterContact");
             waterContact.transform.SetParent(go.transform, false);
-            float chunkWorldWidth = (sampleWidth - 1) * overworld.TileWorldSize * sampleStep;
-            float chunkWorldHeight = (sampleHeight - 1) * overworld.TileWorldSize * sampleStep;
+            float chunkWorldWidth = (sampleWidth - 1) * overworld.TileWorldSize * meshSampleStep;
+            float chunkWorldHeight = (sampleHeight - 1) * overworld.TileWorldSize * meshSampleStep;
             waterContact.transform.position = new Vector3(
                 startX * overworld.TileWorldSize + (chunkWorldWidth * 0.5f),
                 0f,
