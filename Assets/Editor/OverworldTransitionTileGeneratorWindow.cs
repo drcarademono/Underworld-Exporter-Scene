@@ -22,6 +22,8 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
     private float perlinStrength = 0.18f;
     private float borderWidth = 0.12f;
     private float borderStochasticity = 0.35f;
+    private float centerFillBoost = 0.18f;
+    private float elbowRoundness = 0.16f;
     private string outputFolder = "Assets/Generated/OverworldTransitions";
 
     private static readonly int[,] Bayer4x4 = new int[4, 4]
@@ -71,6 +73,8 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
             perlinStrength = EditorGUILayout.Slider("Perlin Strength", perlinStrength, 0f, 0.5f);
             borderWidth = EditorGUILayout.Slider("Border Width", borderWidth, 0.02f, 0.45f);
             borderStochasticity = EditorGUILayout.Slider("Border Stochasticity", borderStochasticity, 0f, 1f);
+            centerFillBoost = EditorGUILayout.Slider("Center Fill Boost", centerFillBoost, 0f, 0.35f);
+            elbowRoundness = EditorGUILayout.Slider("Elbow Roundness", elbowRoundness, 0f, 0.35f);
         }
 
         EditorGUILayout.Space();
@@ -286,7 +290,7 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         }
     }
 
-    private static bool IsPixelInTarget(int mask, int x, int y, int size)
+    private bool IsPixelInTarget(int mask, int x, int y, int size)
     {
         bool n = (mask & 1) != 0;
         bool e = (mask & 2) != 0;
@@ -296,12 +300,30 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         float fx = (x + 0.5f) / size;
         float fy = (y + 0.5f) / size;
 
-        bool inN = fy > 0.5f;
-        bool inE = fx > 0.5f;
-        bool inS = fy < 0.5f;
-        bool inW = fx < 0.5f;
+        float baseHalf = 0.5f + centerFillBoost;
 
-        return (n && inN) || (e && inE) || (s && inS) || (w && inW);
+        // Signed distances for each cardinal band (positive means inside that band)
+        float dN = n ? (fy - (1f - baseHalf)) : float.NegativeInfinity;
+        float dE = e ? (fx - (1f - baseHalf)) : float.NegativeInfinity;
+        float dS = s ? (baseHalf - fy) : float.NegativeInfinity;
+        float dW = w ? (baseHalf - fx) : float.NegativeInfinity;
+
+        float d = Mathf.Max(Mathf.Max(dN, dE), Mathf.Max(dS, dW));
+
+        // Round elbows where two perpendicular directions are active.
+        if ((n && e) || (e && s) || (s && w) || (w && n))
+        {
+            float cx = e ? (1f - baseHalf) : baseHalf;
+            float cy = n ? (1f - baseHalf) : baseHalf;
+            if (e && s) { cy = baseHalf; }
+            if (w && s) { cx = baseHalf; cy = baseHalf; }
+            if (w && n) { cx = baseHalf; }
+
+            float radial = elbowRoundness - Vector2.Distance(new Vector2(fx, fy), new Vector2(cx, cy));
+            d = Mathf.Max(d, radial);
+        }
+
+        return d >= 0f;
     }
 
     private static Texture2D ResampleNearest(Texture2D src, int width, int height)
