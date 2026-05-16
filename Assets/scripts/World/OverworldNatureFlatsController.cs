@@ -188,13 +188,8 @@ public class OverworldNatureFlatsController : MonoBehaviour
 
     public int EstimateClimateIdForChunk(Vector2Int chunkCoord)
     {
-        int band = Mathf.Abs(chunkCoord.y % 4);
-        switch (band)
-        {
-            case 0: return 3; // desert
-            case 1: return 1; // mountain
-            case 2: return 2; // rainforest
-            default: return 0; // temperate
-        }
+        // Fallback climate estimate used only when climate control maps are unavailable.
+        // Per design, default to Temperate when no climate-map data can be resolved.
+        return 0;
     }
 }

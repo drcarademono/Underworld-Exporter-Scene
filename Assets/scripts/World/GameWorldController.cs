@@ -207,6 +207,7 @@ public class GameWorldController : UWEBase
     private Material overworldStoneMat;
     private Dictionary<Vector2Int, GameObject> loadedOverworldChunks = new Dictionary<Vector2Int, GameObject>();
     private HashSet<Vector2Int> lowDetailOverworldChunks = new HashSet<Vector2Int>();
+    private HashSet<Vector2Int> noNatureOverworldChunks = new HashSet<Vector2Int>();
     private Texture2D[] overworldWaterFrames = null;
     private int overworldWaterFrameIndex = 0;
     private float overworldWaterAnimTimer = 0f;
@@ -1002,6 +1003,7 @@ public class GameWorldController : UWEBase
         OverworldTerrainRoot = new GameObject("OverworldTerrainRoot");
         loadedOverworldChunks.Clear();
         lowDetailOverworldChunks.Clear();
+        noNatureOverworldChunks.Clear();
 
         int tpp = Mathf.Max(1, overworld.TilesPerPixel);
         overworldTerrainMapWidth = Mathf.Max(2, heightmap.width / tpp);
@@ -1140,7 +1142,7 @@ public class GameWorldController : UWEBase
                 Vector2Int cc = new Vector2Int(cx, cy);
                 if (!loadedOverworldChunks.ContainsKey(cc))
                 {
-                    GameObject chunk = BuildChunk(cc, heightmap, overworld);
+                    GameObject chunk = BuildChunk(cc, heightmap, overworld, 1, true, true);
                     if (chunk != null) { loadedOverworldChunks[cc] = chunk; }
                 }
             }
@@ -1176,14 +1178,14 @@ public class GameWorldController : UWEBase
                 wanted.Add(cc);
                 if (!loadedOverworldChunks.ContainsKey(cc))
                 {
-                    GameObject chunk = BuildChunk(cc, heightmap, overworld);
-                    if (chunk != null) { loadedOverworldChunks[cc] = chunk; lowDetailOverworldChunks.Remove(cc); }
+                    GameObject chunk = BuildChunk(cc, heightmap, overworld, 1, true, true);
+                    if (chunk != null) { loadedOverworldChunks[cc] = chunk; lowDetailOverworldChunks.Remove(cc); noNatureOverworldChunks.Remove(cc); }
                 }
-                else if (lowDetailOverworldChunks.Contains(cc))
+                else if (lowDetailOverworldChunks.Contains(cc) || noNatureOverworldChunks.Contains(cc))
                 {
                     if (loadedOverworldChunks[cc] != null) { Destroy(loadedOverworldChunks[cc]); }
-                    GameObject chunk = BuildChunk(cc, heightmap, overworld);
-                    if (chunk != null) { loadedOverworldChunks[cc] = chunk; lowDetailOverworldChunks.Remove(cc); }
+                    GameObject chunk = BuildChunk(cc, heightmap, overworld, 1, true, true);
+                    if (chunk != null) { loadedOverworldChunks[cc] = chunk; lowDetailOverworldChunks.Remove(cc); noNatureOverworldChunks.Remove(cc); }
                 }
             }
         }
@@ -1194,6 +1196,7 @@ public class GameWorldController : UWEBase
             if (!wanted.Contains(kvp.Key) && !lowDetailOverworldChunks.Contains(kvp.Key))
             {
                 if (kvp.Value != null) { Destroy(kvp.Value); }
+                noNatureOverworldChunks.Remove(kvp.Key);
                 toRemove.Add(kvp.Key);
             }
         }
@@ -1229,28 +1232,30 @@ public class GameWorldController : UWEBase
 
                 if (!loadedOverworldChunks.ContainsKey(cc))
                 {
-                    GameObject chunk = BuildChunk(cc, heightmap, overworld, sampleStep, false);
+                    GameObject chunk = BuildChunk(cc, heightmap, overworld, sampleStep, true, false);
                     if (chunk != null)
                     {
                         loadedOverworldChunks[cc] = chunk;
                         if (sampleStep > 1) { lowDetailOverworldChunks.Add(cc); } else { lowDetailOverworldChunks.Remove(cc); }
+                        noNatureOverworldChunks.Add(cc);
                     }
                 }
                 else if (lowDetailOverworldChunks.Contains(cc) && (sampleStep == 1))
                 {
                     if (loadedOverworldChunks[cc] != null) { Destroy(loadedOverworldChunks[cc]); }
-                    GameObject chunk = BuildChunk(cc, heightmap, overworld, 1, false);
+                    GameObject chunk = BuildChunk(cc, heightmap, overworld, 1, true, false);
                     if (chunk != null)
                     {
                         loadedOverworldChunks[cc] = chunk;
                         lowDetailOverworldChunks.Remove(cc);
+                        noNatureOverworldChunks.Add(cc);
                     }
                 }
             }
         }
     }
 
-    private GameObject BuildChunk(Vector2Int chunkCoord, Texture2D heightmap, OverworldTerrainController overworld, int sampleStep = 1, bool withCollision = true)
+    private GameObject BuildChunk(Vector2Int chunkCoord, Texture2D heightmap, OverworldTerrainController overworld, int sampleStep = 1, bool withCollision = true, bool withNatureBillboards = true)
     {
         int tilesPerPixel = Mathf.Max(1, overworld.TilesPerPixel);
         int chunkSize = Mathf.Max(2, overworld.ChunkSizeSamples);
@@ -1371,7 +1376,7 @@ public class GameWorldController : UWEBase
         mr.materials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
 
         OverworldNatureFlatsController natureFlats = GetOverworldNatureFlatsController();
-        if (withCollision && (sampleStep == 1) && (natureFlats != null) && natureFlats.EnableNatureFlats)
+        if (withCollision && withNatureBillboards && (natureFlats != null) && natureFlats.EnableNatureFlats)
         {
             GameObject natureBillboards = new GameObject("NatureBillboards");
             natureBillboards.transform.SetParent(go.transform, false);
