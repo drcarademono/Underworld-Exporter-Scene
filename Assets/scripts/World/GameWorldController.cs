@@ -1621,6 +1621,7 @@ public class GameWorldController : UWEBase
     {
         if (vertices == null || vertices.Length == 0) { return; }
         List<Vector3> skirtVerts = new List<Vector3>();
+        List<Vector2> skirtUvs = new List<Vector2>();
         List<int> waterTris = new List<int>();
         List<int> grassTris = new List<int>();
         List<int> stoneTris = new List<int>();
@@ -1634,6 +1635,17 @@ public class GameWorldController : UWEBase
             skirtVerts.Add(vb);
             skirtVerts.Add(new Vector3(va.x, va.y - skirtDepth, va.z));
             skirtVerts.Add(new Vector3(vb.x, vb.y - skirtDepth, vb.z));
+            int ax = a % sampleWidth; int az = a / sampleWidth;
+            int bx = b % sampleWidth; int bz = b / sampleWidth;
+            float uvaX = ax / (float)(sampleWidth - 1);
+            float uvaY = az / (float)(sampleHeight - 1);
+            float uvbX = bx / (float)(sampleWidth - 1);
+            float uvbY = bz / (float)(sampleHeight - 1);
+            // Match terrain UV tiling exactly by projecting skirt UVs from the same top-edge grid coords.
+            skirtUvs.Add(new Vector2(uvaX, uvaY));
+            skirtUvs.Add(new Vector2(uvbX, uvbY));
+            skirtUvs.Add(new Vector2(uvaX, uvaY));
+            skirtUvs.Add(new Vector2(uvbX, uvbY));
             int edgeClass = 1;
             if (terrainClassByVertex != null && terrainClassByVertex.Length > Mathf.Max(a, b))
             {
@@ -1654,6 +1666,7 @@ public class GameWorldController : UWEBase
         Mesh skirtMesh = new Mesh();
         skirtMesh.indexFormat = (skirtVerts.Count > 65535) ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
         skirtMesh.SetVertices(skirtVerts);
+        skirtMesh.SetUVs(0, skirtUvs);
         skirtMesh.subMeshCount = 3;
         skirtMesh.SetTriangles(waterTris, 0);
         skirtMesh.SetTriangles(grassTris, 1);
