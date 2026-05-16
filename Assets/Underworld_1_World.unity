@@ -30155,8 +30155,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 853464905}
-  - component: {fileID: 853464904}
   - component: {fileID: 853464906}
+  - component: {fileID: 853464904}
   - component: {fileID: 853464907}
   m_Layer: 0
   m_Name: _OverworldController
@@ -30179,15 +30179,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::OverworldTerrainController
   StartInOverworld: 1
   OverworldStartPos: {x: 0, y: 5, z: 0}
-  OverworldStartTile: {x: 730, y: 1258}
+  OverworldStartTile: {x: 830, y: 1358}
   HeightmapResourcePath: UIX/Britannia_Corv_Heightmap
   TilesPerPixel: 1
   TileWorldSize: 1
   ChunkSizeSamples: 64
   ActiveChunkRadius: 2
+  HighDetailUnloadMargin: 3
+  TerrainDecimationStep: 1
   LoadWholeMapAtStartup: 0
   LoadDistantChunks: 1
-  DistantChunkStep: 4
+  DistantChunkStep: 2
   StartHour: 12
   StartMinute: 0
   StartSecond: 0
@@ -30209,6 +30211,9 @@ MonoBehaviour:
     type: 2}
   StoneMaterialOverride: {fileID: 0}
   EnableOverworldTerrainMipmaps: 0
+  UseTransitionTileTexturing: 1
+  TransitionPixelsPerTile: 32
+  TransitionTilesFolder: Assets/Generated/OverworldTransitions
 --- !u!4 &853464905
 Transform:
   m_ObjectHideFlags: 0
@@ -30237,7 +30242,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OverworldSkyController
   SunLight: {fileID: 0}
-  MaxSunlightIntensity: 0.7
+  MaxSunlightIntensity: 0.5
   MinWeatherDurationSeconds: 120
   MaxWeatherDurationSeconds: 300
 --- !u!114 &853464907
@@ -42957,7 +42962,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -50.700195, y: -10.047012}
+  m_AnchoredPosition: {x: -50.700195, y: -10.047028}
   m_SizeDelta: {x: -561.3, y: -390.01}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1208676313
@@ -74757,7 +74762,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 33.80005, y: -10.047012}
+  m_AnchoredPosition: {x: 33.80005, y: -10.047028}
   m_SizeDelta: {x: -561.3, y: -390.01}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2082366210
