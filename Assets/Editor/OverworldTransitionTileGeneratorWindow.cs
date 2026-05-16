@@ -6,7 +6,7 @@ using UnityEngine;
 
 public class OverworldTransitionTileGeneratorWindow : EditorWindow
 {
-    private enum BlendMode { HardMask, OrderedDither }
+    private enum BlendMode { HardMask, OrderedDither, PerlinBorder }
 
     private OverworldTerrainController controller;
     private Texture2D grassTexture;
@@ -18,6 +18,9 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
     private int variantsPerMask = 1; // 1-3
     private int seed = 1337;
     private int ditherThresholdBias = 0;
+    private float perlinScale = 10f;
+    private float perlinStrength = 0.18f;
+    private float borderWidth = 0.12f;
     private string outputFolder = "Assets/Generated/OverworldTransitions";
 
     private static readonly int[,] Bayer4x4 = new int[4, 4]
@@ -59,6 +62,13 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         using (new EditorGUI.DisabledScope(blendMode != BlendMode.OrderedDither))
         {
             ditherThresholdBias = EditorGUILayout.IntSlider("Dither Bias", ditherThresholdBias, -4, 4);
+        }
+
+        using (new EditorGUI.DisabledScope(blendMode != BlendMode.PerlinBorder))
+        {
+            perlinScale = EditorGUILayout.Slider("Perlin Scale", perlinScale, 1f, 64f);
+            perlinStrength = EditorGUILayout.Slider("Perlin Strength", perlinStrength, 0f, 0.5f);
+            borderWidth = EditorGUILayout.Slider("Border Width", borderWidth, 0.02f, 0.45f);
         }
 
         EditorGUILayout.Space();
@@ -180,7 +190,7 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
                             continue;
                         }
 
-                        bool chooseB = (blendMode == BlendMode.HardMask) || OrderedDitherPass(x, y, vSeed);
+                        bool chooseB = ChooseTargetPixel(mask, x, y, tileSize, vSeed);
                         outTex.SetPixel(x, y, chooseB ? srcB.GetPixel(x, y) : srcA.GetPixel(x, y));
                     }
                 }
@@ -196,6 +206,53 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         }
     }
 
+
+    private bool ChooseTargetPixel(int mask, int x, int y, int size, int vSeed)
+    {
+        switch (blendMode)
+        {
+            case BlendMode.HardMask:
+                return true;
+            case BlendMode.OrderedDither:
+                return OrderedDitherPass(x, y, vSeed);
+            case BlendMode.PerlinBorder:
+                return PerlinBorderPass(mask, x, y, size, vSeed);
+            default:
+                return true;
+        }
+    }
+
+    private bool PerlinBorderPass(int mask, int x, int y, int size, int vSeed)
+    {
+        float fx = (x + 0.5f) / size;
+        float fy = (y + 0.5f) / size;
+
+        float edgeDistance = DistanceToMaskBoundary(mask, fx, fy);
+        if (edgeDistance > borderWidth)
+        {
+            return true;
+        }
+
+        float n = Mathf.PerlinNoise((x + (vSeed * 0.001f)) / perlinScale, (y + (vSeed * 0.002f)) / perlinScale);
+        float signedNoise = (n * 2f) - 1f;
+        float jitteredDistance = edgeDistance + (signedNoise * perlinStrength);
+        return jitteredDistance >= 0f;
+    }
+
+    private static float DistanceToMaskBoundary(int mask, float fx, float fy)
+    {
+        bool n = (mask & 1) != 0;
+        bool e = (mask & 2) != 0;
+        bool s = (mask & 4) != 0;
+        bool w = (mask & 8) != 0;
+
+        float d = float.NegativeInfinity;
+        if (n) { d = Mathf.Max(d, fy - 0.5f); }
+        if (e) { d = Mathf.Max(d, fx - 0.5f); }
+        if (s) { d = Mathf.Max(d, 0.5f - fy); }
+        if (w) { d = Mathf.Max(d, 0.5f - fx); }
+        return d;
+    }
     private bool OrderedDitherPass(int x, int y, int vSeed)
     {
         int threshold = Bayer4x4[x & 3, y & 3] + ditherThresholdBias;
