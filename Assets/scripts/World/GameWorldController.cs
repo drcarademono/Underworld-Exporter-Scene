@@ -1227,10 +1227,9 @@ public class GameWorldController : UWEBase
                 bool inTransitionBand = (Mathf.Abs(cx - centerChunk.x) <= transitionRadius) && (Mathf.Abs(cy - centerChunk.y) <= transitionRadius);
                 int sampleStep = inTransitionBand ? 1 : distantStep;
 
-                bool needsCollision = (sampleStep == 1);
                 if (!loadedOverworldChunks.ContainsKey(cc))
                 {
-                    GameObject chunk = BuildChunk(cc, heightmap, overworld, sampleStep, needsCollision);
+                    GameObject chunk = BuildChunk(cc, heightmap, overworld, sampleStep, true);
                     if (chunk != null)
                     {
                         loadedOverworldChunks[cc] = chunk;
