@@ -1402,28 +1402,31 @@ public class GameWorldController : UWEBase
                 int tl = bl + sampleWidth;
                 int tr = tl + 1;
 
-                int cbl = terrainClassByVertex[bl];
-                int cbr = terrainClassByVertex[br];
-                int ctl = terrainClassByVertex[tl];
-                int ctr = terrainClassByVertex[tr];
+                // Pure full-resolution classification: choose one material class for the whole decimated quad
+                // from the underlying full-sample region, then assign both coarse triangles to that class.
+                int fullStartX = Mathf.Clamp((x * sampleStep) / baseSampleStep, 0, fullSampleWidth - 1);
+                int fullStartZ = Mathf.Clamp((z * sampleStep) / baseSampleStep, 0, fullSampleHeight - 1);
+                int fullEndX = Mathf.Clamp(((x + 1) * sampleStep) / baseSampleStep, 0, fullSampleWidth - 1);
+                int fullEndZ = Mathf.Clamp(((z + 1) * sampleStep) / baseSampleStep, 0, fullSampleHeight - 1);
 
-                bool useBlTrDiagonal = (cbl == ctr) && (cbr != ctl);
-
-                int i0; int i1; int i2;
-                int j0; int j1; int j2;
-                if (useBlTrDiagonal)
+                int waterCount = 0; int grassCount = 0; int stoneCount = 0;
+                for (int fz = fullStartZ; fz <= fullEndZ; fz++)
                 {
-                    i0 = bl; i1 = tl; i2 = tr;
-                    j0 = bl; j1 = tr; j2 = br;
-                }
-                else
-                {
-                    i0 = bl; i1 = tl; i2 = br;
-                    j0 = br; j1 = tl; j2 = tr;
+                    for (int fx = fullStartX; fx <= fullEndX; fx++)
+                    {
+                        int c = terrainClassFull[(fz * fullSampleWidth) + fx];
+                        if (c == 0) { waterCount++; }
+                        else if (c == 2) { stoneCount++; }
+                        else { grassCount++; }
+                    }
                 }
 
-                AddTriangleByMaterial(i0, i1, i2, terrainClassByVertex, vertices, overworld.SteepSlopeNormalThreshold, water, grass, stone);
-                AddTriangleByMaterial(j0, j1, j2, terrainClassByVertex, vertices, overworld.SteepSlopeNormalThreshold, water, grass, stone);
+                int quadClass = 1;
+                if ((waterCount >= grassCount) && (waterCount >= stoneCount)) { quadClass = 0; }
+                else if (stoneCount >= grassCount) { quadClass = 2; }
+
+                AddTriangleToClass(bl, tl, tr, quadClass, water, grass, stone);
+                AddTriangleToClass(bl, tr, br, quadClass, water, grass, stone);
             }
         }
         mesh.subMeshCount = 3;
@@ -1525,30 +1528,10 @@ public class GameWorldController : UWEBase
         mr.sharedMaterial = overworldStoneMat;
     }
 
-    private static void AddTriangleByMaterial(
-        int i0, int i1, int i2,
-        int[] terrainClassByVertex,
-        Vector3[] vertices,
-        float steepSlopeNormalThreshold,
-        List<int> water,
-        List<int> grass,
-        List<int> stone)
+    private static void AddTriangleToClass(int i0, int i1, int i2, int terrainClass, List<int> water, List<int> grass, List<int> stone)
     {
-        int c0 = terrainClassByVertex[i0];
-        int c1 = terrainClassByVertex[i1];
-        int c2 = terrainClassByVertex[i2];
-        int materialClass;
-        if ((c0 == c1) || (c0 == c2)) { materialClass = c0; }
-        else if (c1 == c2) { materialClass = c1; }
-        else
-        {
-            Vector3 v0 = vertices[i0]; Vector3 v1 = vertices[i1]; Vector3 v2 = vertices[i2];
-            Vector3 n = Vector3.Cross(v1 - v0, v2 - v0).normalized;
-            materialClass = (n.y < steepSlopeNormalThreshold) ? 2 : 1;
-        }
-
-        if (materialClass == 0) { water.Add(i0); water.Add(i1); water.Add(i2); }
-        else if (materialClass == 2) { stone.Add(i0); stone.Add(i1); stone.Add(i2); }
+        if (terrainClass == 0) { water.Add(i0); water.Add(i1); water.Add(i2); }
+        else if (terrainClass == 2) { stone.Add(i0); stone.Add(i1); stone.Add(i2); }
         else { grass.Add(i0); grass.Add(i1); grass.Add(i2); }
     }
 
