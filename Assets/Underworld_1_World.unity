@@ -30156,8 +30156,8 @@ GameObject:
   m_Component:
   - component: {fileID: 853464905}
   - component: {fileID: 853464904}
-  - component: {fileID: 853464907}
   - component: {fileID: 853464906}
+  - component: {fileID: 853464907}
   m_Layer: 0
   m_Name: _OverworldController
   m_TagString: Untagged
@@ -30253,13 +30253,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OverworldNatureFlatsController
   EnableNatureFlats: 1
-  TreeMaterials:
-  - {fileID: 2100000, guid: 19ab25b9ebcee063a98377fc21d70494, type: 2}
-  - {fileID: 2100000, guid: 71267cf979135fb93b62b828a2a7d37f, type: 2}
+  TreeMaterials: []
   TerrainSpriteMaterials: []
   NatureSeed: 2048
-  BaseDensity: 0.1
-  ClusterDensity: 0.5
+  BaseDensity: 0.05
+  ClusterDensity: 0.45
   PerlinScale: 0.0025
   TerrainSpriteChance: 0.22
   TreeWidth: 4.5
@@ -30270,8 +30268,8 @@ MonoBehaviour:
   MaxBillboardsPerChunk: 1000
   NatureDensityMapResourcePath: UIX/nature_density_map
   NatureClimateMapResourcePath: UIX/nature_climate_map
-  NatureMapWorldWidth: 16384
-  NatureMapWorldHeight: 16384
+  NatureMapWorldWidth: 2048
+  NatureMapWorldHeight: 2048
   MountainColor:
     serializedVersion: 2
     rgba: 4278255360
@@ -30281,7 +30279,137 @@ MonoBehaviour:
   DesertColor:
     serializedVersion: 2
     rgba: 4278255615
-  BiomeProfiles: []
+  BiomeProfiles:
+  - Name: Temperate
+    ClimateId: 0
+    BaseDensity: 0.25
+    ClusterDensity: 0.55
+    MacroNoiseFrequency: 0.01
+    MacroNoiseAmplitude: 0.9
+    MacroNoisePersistence: 0.4
+    MacroNoiseOctaves: 3
+    FlowerLimit: 0.4
+    ForestLimit: 0.7
+    ClearingNoiseFrequency: 0.006
+    ClearingThreshold: 0.62
+    ClearingStrength: 0.75
+    FlowerHabitatFlowerWeight: 0.65
+    FlowerHabitatBushWeight: 0.25
+    FlowerHabitatTreeWeight: 0.08
+    FlowerHabitatRockWeight: 0.02
+    GrassHabitatFlowerWeight: 0.2
+    GrassHabitatBushWeight: 0.5
+    GrassHabitatTreeWeight: 0.25
+    GrassHabitatRockWeight: 0.05
+    ForestHabitatFlowerWeight: 0.03
+    ForestHabitatBushWeight: 0.24
+    ForestHabitatTreeWeight: 0.68
+    ForestHabitatRockWeight: 0.05
+    ElevationDensityMultiplier: 1
+    SlopeDensityMultiplier: 0.6
+    Categories:
+      Trees:
+      - {fileID: 2100000, guid: 19ab25b9ebcee063a98377fc21d70494, type: 2}
+      - {fileID: 2100000, guid: 71267cf979135fb93b62b828a2a7d37f, type: 2}
+      Bushes: []
+      Flowers: []
+      Rocks: []
+  - Name: Mountain
+    ClimateId: 1
+    BaseDensity: 0.2
+    ClusterDensity: 0.45
+    MacroNoiseFrequency: 0.015
+    MacroNoiseAmplitude: 0.65
+    MacroNoisePersistence: 0.3
+    MacroNoiseOctaves: 2
+    FlowerLimit: 0.2
+    ForestLimit: 0.38
+    ClearingNoiseFrequency: 0.008
+    ClearingThreshold: 0.58
+    ClearingStrength: 0.65
+    FlowerHabitatFlowerWeight: 0.55
+    FlowerHabitatBushWeight: 0.2
+    FlowerHabitatTreeWeight: 0.05
+    FlowerHabitatRockWeight: 0.2
+    GrassHabitatFlowerWeight: 0.12
+    GrassHabitatBushWeight: 0.28
+    GrassHabitatTreeWeight: 0.4
+    GrassHabitatRockWeight: 0.2
+    ForestHabitatFlowerWeight: 0.02
+    ForestHabitatBushWeight: 0.13
+    ForestHabitatTreeWeight: 0.7
+    ForestHabitatRockWeight: 0.15
+    ElevationDensityMultiplier: 1
+    SlopeDensityMultiplier: 0.6
+    Categories:
+      Trees: []
+      Bushes: []
+      Flowers: []
+      Rocks: []
+  - Name: Rainforest
+    ClimateId: 2
+    BaseDensity: 0.3
+    ClusterDensity: 0.65
+    MacroNoiseFrequency: 0.04
+    MacroNoiseAmplitude: 0.95
+    MacroNoisePersistence: 0.35
+    MacroNoiseOctaves: 3
+    FlowerLimit: 0.2
+    ForestLimit: 0.5
+    ClearingNoiseFrequency: 0.005
+    ClearingThreshold: 0.6
+    ClearingStrength: 0.7
+    FlowerHabitatFlowerWeight: 0.55
+    FlowerHabitatBushWeight: 0.35
+    FlowerHabitatTreeWeight: 0.08
+    FlowerHabitatRockWeight: 0.02
+    GrassHabitatFlowerWeight: 0.18
+    GrassHabitatBushWeight: 0.52
+    GrassHabitatTreeWeight: 0.26
+    GrassHabitatRockWeight: 0.04
+    ForestHabitatFlowerWeight: 0.02
+    ForestHabitatBushWeight: 0.3
+    ForestHabitatTreeWeight: 0.64
+    ForestHabitatRockWeight: 0.04
+    ElevationDensityMultiplier: 1
+    SlopeDensityMultiplier: 0.6
+    Categories:
+      Trees: []
+      Bushes: []
+      Flowers: []
+      Rocks: []
+  - Name: Desert
+    ClimateId: 3
+    BaseDensity: 0.12
+    ClusterDensity: 0.3
+    MacroNoiseFrequency: 0.15
+    MacroNoiseAmplitude: 0.5
+    MacroNoisePersistence: 0.15
+    MacroNoiseOctaves: 2
+    FlowerLimit: 0.2
+    ForestLimit: 0.5
+    ClearingNoiseFrequency: 0.01
+    ClearingThreshold: 0.52
+    ClearingStrength: 0.85
+    FlowerHabitatFlowerWeight: 0.15
+    FlowerHabitatBushWeight: 0.35
+    FlowerHabitatTreeWeight: 0
+    FlowerHabitatRockWeight: 0.5
+    GrassHabitatFlowerWeight: 0.05
+    GrassHabitatBushWeight: 0.35
+    GrassHabitatTreeWeight: 0.05
+    GrassHabitatRockWeight: 0.55
+    ForestHabitatFlowerWeight: 0
+    ForestHabitatBushWeight: 0.2
+    ForestHabitatTreeWeight: 0.2
+    ForestHabitatRockWeight: 0.6
+    ElevationDensityMultiplier: 1
+    SlopeDensityMultiplier: 0.6
+    Categories:
+      Trees: []
+      Bushes: []
+      Flowers: []
+      Rocks: []
 --- !u!1 &855120957
 GameObject:
   m_ObjectHideFlags: 0
@@ -42829,7 +42957,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -50.700195, y: -10.047}
+  m_AnchoredPosition: {x: -50.700195, y: -10.047012}
   m_SizeDelta: {x: -561.3, y: -390.01}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1208676313
@@ -74629,7 +74757,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 33.80005, y: -10.046997}
+  m_AnchoredPosition: {x: 33.80005, y: -10.047012}
   m_SizeDelta: {x: -561.3, y: -390.01}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2082366210
