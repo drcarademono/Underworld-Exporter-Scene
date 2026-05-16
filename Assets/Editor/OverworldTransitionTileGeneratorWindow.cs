@@ -6,7 +6,7 @@ using UnityEngine;
 
 public class OverworldTransitionTileGeneratorWindow : EditorWindow
 {
-    private enum BlendMode { HardMask, OrderedDither, PerlinBorder }
+    private enum BlendMode { HardMask, OrderedDither, PerlinBorder, PerlinDither }
 
     private OverworldTerrainController controller;
     private Texture2D grassTexture;
@@ -64,7 +64,7 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
             ditherThresholdBias = EditorGUILayout.IntSlider("Dither Bias", ditherThresholdBias, -4, 4);
         }
 
-        using (new EditorGUI.DisabledScope(blendMode != BlendMode.PerlinBorder))
+        using (new EditorGUI.DisabledScope((blendMode != BlendMode.PerlinBorder) && (blendMode != BlendMode.PerlinDither)))
         {
             perlinScale = EditorGUILayout.Slider("Perlin Scale", perlinScale, 1f, 64f);
             perlinStrength = EditorGUILayout.Slider("Perlin Strength", perlinStrength, 0f, 0.5f);
@@ -217,11 +217,39 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
                 return OrderedDitherPass(x, y, vSeed);
             case BlendMode.PerlinBorder:
                 return PerlinBorderPass(mask, x, y, size, vSeed);
+            case BlendMode.PerlinDither:
+                return PerlinDitherPass(mask, x, y, size, vSeed);
             default:
                 return true;
         }
     }
 
+
+
+    private bool PerlinDitherPass(int mask, int x, int y, int size, int vSeed)
+    {
+        float fx = (x + 0.5f) / size;
+        float fy = (y + 0.5f) / size;
+
+        float edgeDistance = DistanceToMaskBoundary(mask, fx, fy);
+        if (edgeDistance > borderWidth)
+        {
+            return true;
+        }
+
+        float n = Mathf.PerlinNoise((x + (vSeed * 0.001f)) / perlinScale, (y + (vSeed * 0.002f)) / perlinScale);
+
+        // Convert Perlin field into a stochastic threshold and combine with Bayer pattern
+        // to keep a pixel-art friendly discrete edge while avoiding repetitive straight lines.
+        int bayer = Bayer4x4[x & 3, y & 3];
+        float perlinThreshold = Mathf.Clamp01((n - 0.5f) * (perlinStrength * 4f) + 0.5f);
+        float bayerNorm = (bayer + 0.5f) / 16f;
+
+        // Positive inside mask, negative near outside; map into blend factor in border band.
+        float bandT = Mathf.InverseLerp(-borderWidth, borderWidth, edgeDistance);
+        float combined = (bandT * 0.6f) + (perlinThreshold * 0.4f);
+        return combined >= bayerNorm;
+    }
     private bool PerlinBorderPass(int mask, int x, int y, int size, int vSeed)
     {
         float fx = (x + 0.5f) / size;
