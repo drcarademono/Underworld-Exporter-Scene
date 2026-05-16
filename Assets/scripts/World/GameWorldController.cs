@@ -1592,6 +1592,17 @@ public class GameWorldController : UWEBase
                 int tri0Class = (tri0Water > 0) ? 0 : DominantClass(tri0Water, tri0Grass, tri0Stone);
                 int tri1Class = (tri1Water > 0) ? 0 : DominantClass(tri1Water, tri1Grass, tri1Stone);
 
+                // Enforce shoreline consistency against actual mesh heights.
+                // If any vertex of a triangle is at/below water plane, classify that triangle as water.
+                if ((vertices[bl].y <= overworld.WaterSurfaceEpsilon) || (vertices[tr].y <= overworld.WaterSurfaceEpsilon) || (vertices[br].y <= overworld.WaterSurfaceEpsilon))
+                {
+                    tri0Class = 0;
+                }
+                if ((vertices[bl].y <= overworld.WaterSurfaceEpsilon) || (vertices[tl].y <= overworld.WaterSurfaceEpsilon) || (vertices[tr].y <= overworld.WaterSurfaceEpsilon))
+                {
+                    tri1Class = 0;
+                }
+
                 bool onChunkBorder = (x == 0) || (z == 0) || (x == sampleWidth - 2) || (z == sampleHeight - 2);
                 if (onChunkBorder)
                 {
