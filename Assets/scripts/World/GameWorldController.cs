@@ -1574,10 +1574,24 @@ public class GameWorldController : UWEBase
                 int tri0Class = DominantClass(tri0Water, tri0Grass, tri0Stone);
                 int tri1Class = DominantClass(tri1Water, tri1Grass, tri1Stone);
 
+                if (tri0Class == 0)
+                {
+                    vertices[bl].y = 0f;
+                    vertices[tr].y = 0f;
+                    vertices[br].y = 0f;
+                }
+                if (tri1Class == 0)
+                {
+                    vertices[bl].y = 0f;
+                    vertices[tl].y = 0f;
+                    vertices[tr].y = 0f;
+                }
+
                 AddTriangleToClass(bl, tr, br, tri0Class, water, grass, stone);
                 AddTriangleToClass(bl, tl, tr, tri1Class, water, grass, stone);
             }
         }
+        mesh.vertices = vertices;
         mesh.subMeshCount = 3;
         mesh.SetTriangles(water, 0);
         mesh.SetTriangles(grass, 1);
