@@ -1586,7 +1586,7 @@ public class GameWorldController : UWEBase
 
         if (geometrySampleStep > 1)
         {
-            AddDistantChunkSkirt(go.transform, vertices, terrainClassByVertex, sampleWidth, sampleHeight, Mathf.Max(2f, geometrySampleStep * overworld.TileWorldSize * 0.35f));
+            AddDistantChunkSkirt(go.transform, vertices, terrainClassByVertex, sampleWidth, sampleHeight, Mathf.Max(2f, geometrySampleStep * overworld.TileWorldSize * 0.35f) * 5f, overworld.TileWorldSize);
         }
         if (withCollision)
         {
@@ -1617,7 +1617,7 @@ public class GameWorldController : UWEBase
         return go;
     }
 
-    private void AddDistantChunkSkirt(Transform parent, Vector3[] vertices, int[] terrainClassByVertex, int sampleWidth, int sampleHeight, float skirtDepth)
+    private void AddDistantChunkSkirt(Transform parent, Vector3[] vertices, int[] terrainClassByVertex, int sampleWidth, int sampleHeight, float skirtDepth, float tileWorldSize)
     {
         if (vertices == null || vertices.Length == 0) { return; }
         List<Vector3> skirtVerts = new List<Vector3>();
@@ -1637,15 +1637,19 @@ public class GameWorldController : UWEBase
             skirtVerts.Add(new Vector3(vb.x, vb.y - skirtDepth, vb.z));
             int ax = a % sampleWidth; int az = a / sampleWidth;
             int bx = b % sampleWidth; int bz = b / sampleWidth;
-            float uvaX = ax / (float)(sampleWidth - 1);
-            float uvaY = az / (float)(sampleHeight - 1);
-            float uvbX = bx / (float)(sampleWidth - 1);
-            float uvbY = bz / (float)(sampleHeight - 1);
-            // Match terrain UV tiling exactly by projecting skirt UVs from the same top-edge grid coords.
-            skirtUvs.Add(new Vector2(uvaX, uvaY));
-            skirtUvs.Add(new Vector2(uvbX, uvbY));
-            skirtUvs.Add(new Vector2(uvaX, uvaY));
-            skirtUvs.Add(new Vector2(uvbX, uvbY));
+            float edgeU0 = (Mathf.Abs(va.x - vb.x) > Mathf.Abs(va.z - vb.z))
+                ? (Mathf.Min(va.x, vb.x) / Mathf.Max(0.01f, tileWorldSize))
+                : (Mathf.Min(va.z, vb.z) / Mathf.Max(0.01f, tileWorldSize));
+            float edgeU1 = edgeU0 + (Vector3.Distance(new Vector3(va.x, 0f, va.z), new Vector3(vb.x, 0f, vb.z)) / Mathf.Max(0.01f, tileWorldSize));
+            float topV0 = va.y / Mathf.Max(0.01f, tileWorldSize);
+            float topV1 = vb.y / Mathf.Max(0.01f, tileWorldSize);
+            float bottomV0 = (va.y - skirtDepth) / Mathf.Max(0.01f, tileWorldSize);
+            float bottomV1 = (vb.y - skirtDepth) / Mathf.Max(0.01f, tileWorldSize);
+            // World-space UV mapping to keep square texels on vertical skirts.
+            skirtUvs.Add(new Vector2(edgeU0, topV0));
+            skirtUvs.Add(new Vector2(edgeU1, topV1));
+            skirtUvs.Add(new Vector2(edgeU0, bottomV0));
+            skirtUvs.Add(new Vector2(edgeU1, bottomV1));
             int edgeClass = 1;
             if (terrainClassByVertex != null && terrainClassByVertex.Length > Mathf.Max(a, b))
             {
