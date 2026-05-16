@@ -188,13 +188,15 @@ public class OverworldNatureFlatsController : MonoBehaviour
 
     public int EstimateClimateIdForChunk(Vector2Int chunkCoord)
     {
-        int band = Mathf.Abs(chunkCoord.y % 4);
-        switch (band)
-        {
-            case 0: return 3; // desert
-            case 1: return 1; // mountain
-            case 2: return 2; // rainforest
-            default: return 0; // temperate
-        }
+        // Fallback climate estimate used only when climate control maps are unavailable.
+        // Use low-frequency 2D noise to avoid visible stripe/band artifacts from axis-aligned chunk IDs.
+        float nx = (chunkCoord.x + 1000 + (NatureSeed * 0.0137f)) * 0.061f;
+        float ny = (chunkCoord.y + 1000 + (NatureSeed * 0.0091f)) * 0.061f;
+        float n = Mathf.PerlinNoise(nx, ny);
+
+        if (n < 0.25f) { return 3; }  // desert
+        if (n < 0.50f) { return 1; }  // mountain
+        if (n < 0.75f) { return 2; }  // rainforest
+        return 0;                     // temperate
     }
 }
