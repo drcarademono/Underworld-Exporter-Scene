@@ -1294,38 +1294,6 @@ public class GameWorldController : UWEBase
                 float y = shapedElevation * overworld.HeightScale + perlinDisplacement - overworld.SeaLevelOffset;
                 if (y < 0f) { y = 0f; }
 
-                if ((globalX >= 0) && (globalX < overworldTerrainMapWidth) && (globalZ >= 0) && (globalZ < overworldTerrainMapHeight))
-                {
-                    if (y <= overworld.WaterSurfaceEpsilon)
-                    {
-                        int terrainType = TerrainDatLoader.Water;
-                        float hE = SampleSmoothedHeight(heightmap, Mathf.Clamp(px + tilesPerPixel, 0, heightmap.width - 1), pz);
-                        float hW = SampleSmoothedHeight(heightmap, Mathf.Clamp(px - tilesPerPixel, 0, heightmap.width - 1), pz);
-                        float hN = SampleSmoothedHeight(heightmap, px, Mathf.Clamp(pz + tilesPerPixel, 0, heightmap.height - 1));
-                        float hS = SampleSmoothedHeight(heightmap, px, Mathf.Clamp(pz - tilesPerPixel, 0, heightmap.height - 1));
-                        float dx = hE - hW;
-                        float dz = hN - hS;
-
-                        if (Mathf.Abs(dx) > 0.015f || Mathf.Abs(dz) > 0.015f)
-                        {
-                            if (Mathf.Abs(dx) > Mathf.Abs(dz))
-                            {
-                                terrainType = (dx > 0f) ? TerrainDatLoader.WaterFlowWest : TerrainDatLoader.WaterFlowEast;
-                            }
-                            else
-                            {
-                                terrainType = (dz > 0f) ? TerrainDatLoader.WaterFlowSouth : TerrainDatLoader.WaterFlowNorth;
-                            }
-                        }
-
-                        overworldTerrainTypeMap[globalX, globalZ] = terrainType;
-                    }
-                    else
-                    {
-                        overworldTerrainTypeMap[globalX, globalZ] = TerrainDatLoader.Normal;
-                    }
-                }
-
                 vertices[index] = new Vector3(globalX * overworld.TileWorldSize, y, globalZ * overworld.TileWorldSize);
                 uvs[index] = new Vector2(x / (float)(sampleWidth - 1), z / (float)(sampleHeight - 1));
 
@@ -1391,6 +1359,8 @@ public class GameWorldController : UWEBase
         }
         if (withCollision)
         {
+            UpdateTerrainTypesForChunk(heightmap, overworld, tilesPerPixel, startX, startY, endX, endY);
+
             GameObject waterContact = new GameObject("WaterContact");
             waterContact.transform.SetParent(go.transform, false);
             float chunkWorldWidth = (sampleWidth - 1) * overworld.TileWorldSize * effectiveSampleStep;
@@ -1416,6 +1386,43 @@ public class GameWorldController : UWEBase
         }
 
         return go;
+    }
+
+    private void UpdateTerrainTypesForChunk(Texture2D heightmap, OverworldTerrainController overworld, int tilesPerPixel, int startX, int startY, int endX, int endY)
+    {
+        if (overworldTerrainTypeMap == null) { return; }
+        for (int globalZ = startY; globalZ <= endY; globalZ++)
+        {
+            for (int globalX = startX; globalX <= endX; globalX++)
+            {
+                if ((globalX < 0) || (globalX >= overworldTerrainMapWidth) || (globalZ < 0) || (globalZ >= overworldTerrainMapHeight)) { continue; }
+                int px = Mathf.Clamp(globalX * tilesPerPixel, 0, heightmap.width - 1);
+                int pz = Mathf.Clamp(globalZ * tilesPerPixel, 0, heightmap.height - 1);
+                float elevation = SampleSmoothedHeight(heightmap, px, pz);
+                float shapedElevation = Mathf.Pow(elevation, 1.65f);
+                float noise = (Mathf.PerlinNoise((globalX + 101.231f) * overworld.PerlinScale, (globalZ + 77.777f) * overworld.PerlinScale) * 2f) - 1f;
+                float perlinDisplacement = noise * overworld.PerlinStrength * Mathf.Max(1f, overworld.HeightScale * 0.2f);
+                float y = shapedElevation * overworld.HeightScale + perlinDisplacement - overworld.SeaLevelOffset;
+                if (y < 0f) { y = 0f; }
+                if (y <= overworld.WaterSurfaceEpsilon)
+                {
+                    int terrainType = TerrainDatLoader.Water;
+                    float hE = SampleSmoothedHeight(heightmap, Mathf.Clamp(px + tilesPerPixel, 0, heightmap.width - 1), pz);
+                    float hW = SampleSmoothedHeight(heightmap, Mathf.Clamp(px - tilesPerPixel, 0, heightmap.width - 1), pz);
+                    float hN = SampleSmoothedHeight(heightmap, px, Mathf.Clamp(pz + tilesPerPixel, 0, heightmap.height - 1));
+                    float hS = SampleSmoothedHeight(heightmap, px, Mathf.Clamp(pz - tilesPerPixel, 0, heightmap.height - 1));
+                    float dx = hE - hW;
+                    float dz = hN - hS;
+                    if (Mathf.Abs(dx) > 0.015f || Mathf.Abs(dz) > 0.015f)
+                    {
+                        if (Mathf.Abs(dx) > Mathf.Abs(dz)) { terrainType = (dx > 0f) ? TerrainDatLoader.WaterFlowWest : TerrainDatLoader.WaterFlowEast; }
+                        else { terrainType = (dz > 0f) ? TerrainDatLoader.WaterFlowSouth : TerrainDatLoader.WaterFlowNorth; }
+                    }
+                    overworldTerrainTypeMap[globalX, globalZ] = terrainType;
+                }
+                else { overworldTerrainTypeMap[globalX, globalZ] = TerrainDatLoader.Normal; }
+            }
+        }
     }
 
     private void AddDistantChunkSkirt(Transform parent, Vector3[] vertices, int sampleWidth, int sampleHeight, float skirtDepth)
