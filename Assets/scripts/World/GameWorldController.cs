@@ -1278,7 +1278,6 @@ public class GameWorldController : UWEBase
         int[] triangles = new int[(sampleWidth - 1) * (sampleHeight - 1) * 6];
         int[] terrainClassByVertex = new int[sampleWidth * sampleHeight]; //0=water,1=grass,2=stone
 
-        int triIndex = 0;
         for (int z = 0; z < sampleHeight; z++)
         {
             for (int x = 0; x < sampleWidth; x++)
@@ -1346,8 +1345,12 @@ public class GameWorldController : UWEBase
                 if ((x < sampleWidth - 1) && (z < sampleHeight - 1))
                 {
                     int bl = index; int br = index + 1; int tl = index + sampleWidth; int tr = index + sampleWidth + 1;
-                    triangles[triIndex++] = bl; triangles[triIndex++] = tl; triangles[triIndex++] = tr;
-                    triangles[triIndex++] = bl; triangles[triIndex++] = tr; triangles[triIndex++] = br;
+                    triangles[0 + (6 * ((z * (sampleWidth - 1)) + x))] = bl;
+                    triangles[1 + (6 * ((z * (sampleWidth - 1)) + x))] = tl;
+                    triangles[2 + (6 * ((z * (sampleWidth - 1)) + x))] = tr;
+                    triangles[3 + (6 * ((z * (sampleWidth - 1)) + x))] = bl;
+                    triangles[4 + (6 * ((z * (sampleWidth - 1)) + x))] = tr;
+                    triangles[5 + (6 * ((z * (sampleWidth - 1)) + x))] = br;
                 }
             }
         }
@@ -1363,25 +1366,39 @@ public class GameWorldController : UWEBase
         List<int> water = new List<int>();
         List<int> grass = new List<int>();
         List<int> stone = new List<int>();
-        for (int i = 0; i < triangles.Length; i += 3)
+        for (int z = 0; z < sampleHeight - 1; z++)
         {
-            int i0 = triangles[i]; int i1 = triangles[i + 1]; int i2 = triangles[i + 2];
-            int c0 = terrainClassByVertex[i0];
-            int c1 = terrainClassByVertex[i1];
-            int c2 = terrainClassByVertex[i2];
-            int materialClass;
-            if ((c0 == c1) || (c0 == c2)) { materialClass = c0; }
-            else if (c1 == c2) { materialClass = c1; }
-            else
+            for (int x = 0; x < sampleWidth - 1; x++)
             {
-                Vector3 v0 = vertices[i0]; Vector3 v1 = vertices[i1]; Vector3 v2 = vertices[i2];
-                Vector3 n = Vector3.Cross(v1 - v0, v2 - v0).normalized;
-                materialClass = (n.y < overworld.SteepSlopeNormalThreshold) ? 2 : 1;
-            }
+                int bl = (z * sampleWidth) + x;
+                int br = bl + 1;
+                int tl = bl + sampleWidth;
+                int tr = tl + 1;
 
-            if (materialClass == 0) { water.Add(i0); water.Add(i1); water.Add(i2); }
-            else if (materialClass == 2) { stone.Add(i0); stone.Add(i1); stone.Add(i2); }
-            else { grass.Add(i0); grass.Add(i1); grass.Add(i2); }
+                int cbl = terrainClassByVertex[bl];
+                int cbr = terrainClassByVertex[br];
+                int ctl = terrainClassByVertex[tl];
+                int ctr = terrainClassByVertex[tr];
+
+                // Pick the diagonal that best groups matching corner classes.
+                bool useBlTrDiagonal = (cbl == ctr) && (cbr != ctl);
+
+                int i0; int i1; int i2;
+                int j0; int j1; int j2;
+                if (useBlTrDiagonal)
+                {
+                    i0 = bl; i1 = tl; i2 = tr;
+                    j0 = bl; j1 = tr; j2 = br;
+                }
+                else
+                {
+                    i0 = bl; i1 = tl; i2 = br;
+                    j0 = br; j1 = tl; j2 = tr;
+                }
+
+                AddTriangleByMaterial(i0, i1, i2, terrainClassByVertex, vertices, overworld.SteepSlopeNormalThreshold, water, grass, stone);
+                AddTriangleByMaterial(j0, j1, j2, terrainClassByVertex, vertices, overworld.SteepSlopeNormalThreshold, water, grass, stone);
+            }
         }
         mesh.subMeshCount = 3;
         mesh.SetTriangles(water, 0);
@@ -1480,6 +1497,33 @@ public class GameWorldController : UWEBase
         MeshRenderer mr = skirt.AddComponent<MeshRenderer>();
         mf.sharedMesh = skirtMesh;
         mr.sharedMaterial = overworldStoneMat;
+    }
+
+    private static void AddTriangleByMaterial(
+        int i0, int i1, int i2,
+        int[] terrainClassByVertex,
+        Vector3[] vertices,
+        float steepSlopeNormalThreshold,
+        List<int> water,
+        List<int> grass,
+        List<int> stone)
+    {
+        int c0 = terrainClassByVertex[i0];
+        int c1 = terrainClassByVertex[i1];
+        int c2 = terrainClassByVertex[i2];
+        int materialClass;
+        if ((c0 == c1) || (c0 == c2)) { materialClass = c0; }
+        else if (c1 == c2) { materialClass = c1; }
+        else
+        {
+            Vector3 v0 = vertices[i0]; Vector3 v1 = vertices[i1]; Vector3 v2 = vertices[i2];
+            Vector3 n = Vector3.Cross(v1 - v0, v2 - v0).normalized;
+            materialClass = (n.y < steepSlopeNormalThreshold) ? 2 : 1;
+        }
+
+        if (materialClass == 0) { water.Add(i0); water.Add(i1); water.Add(i2); }
+        else if (materialClass == 2) { stone.Add(i0); stone.Add(i1); stone.Add(i2); }
+        else { grass.Add(i0); grass.Add(i1); grass.Add(i2); }
     }
 
     private Material BuildOverworldSurfaceMaterial(int textureIndex, Material overrideMaterial, Color fallbackColor, int sampleWidth, int sampleHeight)
