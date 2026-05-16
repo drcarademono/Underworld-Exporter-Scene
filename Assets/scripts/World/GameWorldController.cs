@@ -1016,6 +1016,7 @@ public class GameWorldController : UWEBase
             Debug.LogWarning("Could not load overworld heightmap at Resources/" + overworld.HeightmapResourcePath);
             return;
         }
+        cachedOverworldHeightmap = heightmap;
 
         OverworldTerrainRoot = new GameObject("OverworldTerrainRoot");
         loadedOverworldChunks.Clear();
@@ -3251,4 +3252,3 @@ public class GameWorldController : UWEBase
         }
     }
 }
-        cachedOverworldHeightmap = heightmap;
