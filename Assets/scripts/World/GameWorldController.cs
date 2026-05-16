@@ -207,6 +207,7 @@ public class GameWorldController : UWEBase
     private Material overworldStoneMat;
     private Dictionary<Vector2Int, GameObject> loadedOverworldChunks = new Dictionary<Vector2Int, GameObject>();
     private HashSet<Vector2Int> lowDetailOverworldChunks = new HashSet<Vector2Int>();
+    private HashSet<Vector2Int> noNatureOverworldChunks = new HashSet<Vector2Int>();
     private Texture2D[] overworldWaterFrames = null;
     private int overworldWaterFrameIndex = 0;
     private float overworldWaterAnimTimer = 0f;
