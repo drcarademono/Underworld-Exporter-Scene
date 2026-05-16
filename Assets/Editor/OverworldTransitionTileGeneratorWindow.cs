@@ -22,7 +22,7 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
     private float perlinStrength = 0.18f;
     private float borderWidth = 0.12f;
     private float borderStochasticity = 0.35f;
-    private float centerFillBoost = 0.18f;
+    private float centerFillBoost = 0.08f;
     private float elbowRoundness = 0.16f;
     private string outputFolder = "Assets/Generated/OverworldTransitions";
 
@@ -290,7 +290,9 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         bool s = (mask & 4) != 0;
         bool w = (mask & 8) != 0;
 
-        float baseHalf = Mathf.Clamp(0.5f + centerFillBoost, 0.5f, 0.95f);
+        // Positive boost should enlarge the center patch/stripe of the non-target texture.
+        // So we shrink cardinal target bands toward edges as boost increases.
+        float baseHalf = Mathf.Clamp(0.5f - centerFillBoost, 0.05f, 0.5f);
 
         float dN = n ? (fy - (1f - baseHalf)) : float.NegativeInfinity;
         float dE = e ? (fx - (1f - baseHalf)) : float.NegativeInfinity;
