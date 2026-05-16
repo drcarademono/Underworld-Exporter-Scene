@@ -30186,7 +30186,7 @@ MonoBehaviour:
   ChunkSizeSamples: 64
   ActiveChunkRadius: 2
   HighDetailUnloadMargin: 3
-  TerrainDecimationStep: 1
+  TerrainDecimationStep: 4
   LoadWholeMapAtStartup: 0
   LoadDistantChunks: 1
   DistantChunkStep: 2
@@ -30214,6 +30214,8 @@ MonoBehaviour:
   UseTransitionTileTexturing: 1
   TransitionPixelsPerTile: 32
   TransitionTilesFolder: Assets/Generated/OverworldTransitions
+  TransitionTexturingDiagnostics: 1
+  TransitionDiagLogEveryNChunks: 8
 --- !u!4 &853464905
 Transform:
   m_ObjectHideFlags: 0
@@ -42962,7 +42964,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -50.700195, y: -10.047028}
+  m_AnchoredPosition: {x: -50.700195, y: -10.047012}
   m_SizeDelta: {x: -561.3, y: -390.01}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1208676313
@@ -74762,7 +74764,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 33.80005, y: -10.047028}
+  m_AnchoredPosition: {x: 33.80005, y: -10.047012}
   m_SizeDelta: {x: -561.3, y: -390.01}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2082366210
