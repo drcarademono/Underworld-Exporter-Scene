@@ -24,7 +24,7 @@ public static class OverworldTerrainTexturing
     }
 
     private static readonly Dictionary<string, Texture2D> cache = new Dictionary<string, Texture2D>();
-    public static TileAtlasBuild BuildChunkTransitionAtlas(int[] terrainClassFull, int width, int height, string assetsRelativeFolder, Texture2D waterBase, Texture2D grassBase, Texture2D stoneBase, out BuildStats stats, int cropTiles = 0)
+    public static TileAtlasBuild BuildChunkTransitionAtlas(int[] terrainClassFull, int width, int height, string assetsRelativeFolder, Texture2D waterBase, Texture2D grassBase, Texture2D stoneBase, Texture2D snowBase, out BuildStats stats, int cropTiles = 0)
     {
         stats = new BuildStats();
         TileAtlasBuild build = new TileAtlasBuild();
@@ -66,12 +66,12 @@ public static class OverworldTerrainTexturing
                 }
                 else
                 {
-                    key = (center == 0) ? "base_water" : (center == 2 ? "base_stone" : "base_grass");
+                    key = (center == 0) ? "base_water" : (center == 3 ? "base_snow" : (center == 2 ? "base_stone" : "base_grass"));
                 }
 
                 if (tile == null)
                 {
-                    tile = (center == 0) ? waterBase : ((center == 2) ? stoneBase : grassBase);
+                    tile = (center == 0) ? waterBase : ((center == 3) ? snowBase : ((center == 2) ? stoneBase : grassBase));
                     stats.fallbackCenterTiles++;
                 }
 
@@ -168,7 +168,7 @@ public static class OverworldTerrainTexturing
         if (bestNonWater < 0 || Priority(v) > Priority(bestNonWater)) bestNonWater = v;
     }
 
-    private static int Priority(int c) { if (c == 0) return 3; if (c == 2) return 2; return 1; }
+    private static int Priority(int c) { if (c == 0) return 4; if (c == 3) return 3; if (c == 2) return 2; return 1; }
 
     private static int BuildMask(int[] d, int w, int h, int tx, int ty, int target)
     {
@@ -188,24 +188,26 @@ public static class OverworldTerrainTexturing
         int tl = d[(ty + 1) * w + tx];
         int tr = d[(ty + 1) * w + (tx + 1)];
 
-        int water = 0, grass = 0, stone = 0;
-        CountClass(bl, ref water, ref grass, ref stone);
-        CountClass(br, ref water, ref grass, ref stone);
-        CountClass(tl, ref water, ref grass, ref stone);
-        CountClass(tr, ref water, ref grass, ref stone);
+        int water = 0, grass = 0, stone = 0, snow = 0;
+        CountClass(bl, ref water, ref grass, ref stone, ref snow);
+        CountClass(br, ref water, ref grass, ref stone, ref snow);
+        CountClass(tl, ref water, ref grass, ref stone, ref snow);
+        CountClass(tr, ref water, ref grass, ref stone, ref snow);
 
         if (water >= 3) return 0;
+        if (snow > 0 && snow >= stone && snow >= grass) return 3;
         if (stone > grass) return 2;
         return 1;
     }
 
-    private static void CountClass(int c, ref int water, ref int grass, ref int stone)
+    private static void CountClass(int c, ref int water, ref int grass, ref int stone, ref int snow)
     {
         if (c == 0) water++;
+        else if (c == 3) snow++;
         else if (c == 2) stone++;
         else grass++;
     }
-    private static string ClassName(int c) { if (c == 0) return "water"; if (c == 2) return "stone"; return "grass"; }
+    private static string ClassName(int c) { if (c == 0) return "water"; if (c == 3) return "snow"; if (c == 2) return "stone"; return "grass"; }
 
     private static Texture2D LoadTransitionTile(string from, string to, int mask, string folder)
     {
