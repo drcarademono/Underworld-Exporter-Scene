@@ -1980,9 +1980,15 @@ public class GameWorldController : UWEBase
                     float t = (coarseGX1 == coarseGX0) ? 0f : (globalX - coarseGX0) / (float)(coarseGX1 - coarseGX0);
                     float y0 = SampleTerrainHeightAt(coarseGX0, globalZ, tilesPerPixel, heightmap, overworld);
                     float y1 = SampleTerrainHeightAt(coarseGX1, globalZ, tilesPerPixel, heightmap, overworld);
-                    if (y0 <= overworld.WaterSurfaceEpsilon) { y0 = 0f; }
-                    if (y1 <= overworld.WaterSurfaceEpsilon) { y1 = 0f; }
+                    bool anchor0Water = y0 <= overworld.WaterSurfaceEpsilon;
+                    bool anchor1Water = y1 <= overworld.WaterSurfaceEpsilon;
+                    if (anchor0Water) { y0 = 0f; }
+                    if (anchor1Water) { y1 = 0f; }
                     float targetY = Mathf.Lerp(y0, y1, t);
+                    // Mixed-LOD shoreline safety: if either coarse anchor resolves to water,
+                    // keep the full stitched border segment clamped to water plane.
+                    // This matches low-detail clamp behavior and prevents residual cracks.
+                    if (anchor0Water || anchor1Water) { targetY = 0f; }
                     int i = (z * sampleWidth) + x;
                     vertices[i].y = Mathf.Min(vertices[i].y, targetY);
                 }
@@ -1999,9 +2005,14 @@ public class GameWorldController : UWEBase
                     float t = (coarseGZ1 == coarseGZ0) ? 0f : (globalZ - coarseGZ0) / (float)(coarseGZ1 - coarseGZ0);
                     float y0 = SampleTerrainHeightAt(globalX, coarseGZ0, tilesPerPixel, heightmap, overworld);
                     float y1 = SampleTerrainHeightAt(globalX, coarseGZ1, tilesPerPixel, heightmap, overworld);
-                    if (y0 <= overworld.WaterSurfaceEpsilon) { y0 = 0f; }
-                    if (y1 <= overworld.WaterSurfaceEpsilon) { y1 = 0f; }
+                    bool anchor0Water = y0 <= overworld.WaterSurfaceEpsilon;
+                    bool anchor1Water = y1 <= overworld.WaterSurfaceEpsilon;
+                    if (anchor0Water) { y0 = 0f; }
+                    if (anchor1Water) { y1 = 0f; }
                     float targetY = Mathf.Lerp(y0, y1, t);
+                    // Mixed-LOD shoreline safety: if either coarse anchor resolves to water,
+                    // keep the full stitched border segment clamped to water plane.
+                    if (anchor0Water || anchor1Water) { targetY = 0f; }
                     int i = (z * sampleWidth) + x;
                     vertices[i].y = Mathf.Min(vertices[i].y, targetY);
                 }
