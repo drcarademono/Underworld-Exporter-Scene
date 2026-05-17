@@ -63,23 +63,6 @@ public class OverworldTerrainController : MonoBehaviour
     [Range(0f, 30f)] public float StoneTransitionWidth = 6f;
     [Range(0f, 20f)] public float StoneNoiseScale = 5f;
     [Range(0f, 20f)] public float StoneNoiseAmplitude = 2f;
-    [Header("Other Terrain Classification")]
-    [Range(0f, 120f)] public float DirtLineAltitude = 12f;
-    [Range(0f, 30f)] public float DirtTransitionWidth = 5f;
-    [Range(0f, 20f)] public float DirtNoiseScale = 6f;
-    [Range(0f, 20f)] public float DirtNoiseAmplitude = 2f;
-    [Range(0f, 120f)] public float SwampLineAltitude = 10f;
-    [Range(0f, 30f)] public float SwampTransitionWidth = 5f;
-    [Range(0f, 20f)] public float SwampNoiseScale = 7f;
-    [Range(0f, 20f)] public float SwampNoiseAmplitude = 2f;
-    [Range(0f, 120f)] public float SandLineAltitude = 8f;
-    [Range(0f, 30f)] public float SandTransitionWidth = 5f;
-    [Range(0f, 20f)] public float SandNoiseScale = 7f;
-    [Range(0f, 20f)] public float SandNoiseAmplitude = 1.5f;
-    [Range(0f, 120f)] public float LavaLineAltitude = 55f;
-    [Range(0f, 30f)] public float LavaTransitionWidth = 4f;
-    [Range(0f, 20f)] public float LavaNoiseScale = 4f;
-    [Range(0f, 20f)] public float LavaNoiseAmplitude = 2f;
     public int GrassTextureIndex = 181;
     public int StoneTextureIndex = 253;
     public int DirtTextureIndex = 182;
