@@ -1446,9 +1446,19 @@ public class GameWorldController : UWEBase
                     float hW = SampleSmoothedHeight(heightmap, Mathf.Clamp(fullPx - tilesPerPixel, 0, heightmap.width - 1), fullPz);
                     float hN = SampleSmoothedHeight(heightmap, fullPx, Mathf.Clamp(fullPz + tilesPerPixel, 0, heightmap.height - 1));
                     float hS = SampleSmoothedHeight(heightmap, fullPx, Mathf.Clamp(fullPz - tilesPerPixel, 0, heightmap.height - 1));
-                    float slopeMagnitude = Mathf.Sqrt(((hE - hW) * (hE - hW)) + ((hN - hS) * (hN - hS)));
-                    bool isSnow = IsSnowAtHeight(fullY, fullGlobalX, fullGlobalZ, overworld);
-                    terrainClassFull[fullIndex] = (isSnow || slopeMagnitude > 0.022f) ? 2 : 1;
+                    if (overworld.RenderSnowUsingStoneLayer)
+                    {
+                        // Snow mode: class-2 is reserved for snow only so snowline rules are respected.
+                        // This enables snow transitions (class-2 <-> class-1) and prevents slope-based
+                        // stone classification from flooding the map with snow textures.
+                        bool isSnow = IsSnowAtHeight(fullY, fullGlobalX, fullGlobalZ, overworld);
+                        terrainClassFull[fullIndex] = isSnow ? 2 : 1;
+                    }
+                    else
+                    {
+                        float slopeMagnitude = Mathf.Sqrt(((hE - hW) * (hE - hW)) + ((hN - hS) * (hN - hS)));
+                        terrainClassFull[fullIndex] = (slopeMagnitude > 0.022f) ? 2 : 1;
+                    }
                 }
             }
         }
