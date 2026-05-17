@@ -205,6 +205,7 @@ public class GameWorldController : UWEBase
     private Material overworldWaterMat;
     private Material overworldGrassMat;
     private Material overworldStoneMat;
+    private Material overworldSnowMat;
     private Dictionary<Vector2Int, GameObject> loadedOverworldChunks = new Dictionary<Vector2Int, GameObject>();
     private HashSet<Vector2Int> lowDetailOverworldChunks = new HashSet<Vector2Int>();
     private HashSet<Vector2Int> noNatureOverworldChunks = new HashSet<Vector2Int>();
@@ -1037,6 +1038,7 @@ public class GameWorldController : UWEBase
         overworldWaterMat = BuildOverworldSurfaceMaterial(overworld.WaterTextureIndex, null, new Color(0.15f, 0.28f, 0.35f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
         overworldGrassMat = BuildOverworldSurfaceMaterial(overworld.GrassTextureIndex, overworld.GrassMaterialOverride, new Color(0.22f, 0.58f, 0.22f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
         overworldStoneMat = BuildOverworldSurfaceMaterial(overworld.StoneTextureIndex, overworld.StoneMaterialOverride, new Color(0.45f, 0.45f, 0.45f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
+        overworldSnowMat = BuildOverworldSurfaceMaterial(overworld.SnowTextureIndex, overworld.SnowMaterialOverride, Color.white, overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
         if (overworld.AnimateWater)
         {
             int frameCount = Mathf.Max(1, (overworld.WaterTextureAnimEndIndex - overworld.WaterTextureIndex) + 1);
@@ -1534,6 +1536,7 @@ public class GameWorldController : UWEBase
         List<int> water = new List<int>();
         List<int> grass = new List<int>();
         List<int> stone = new List<int>();
+        List<int> snow = new List<int>();
         for (int z = 0; z < sampleHeight - 1; z++)
         {
             for (int x = 0; x < sampleWidth - 1; x++)
@@ -1549,8 +1552,8 @@ public class GameWorldController : UWEBase
                 int fullStartZ = Mathf.Clamp((z * meshSampleStep) / baseSampleStep, 0, fullSampleHeight - 1);
                 int fullEndX = Mathf.Clamp(((x + 1) * meshSampleStep) / baseSampleStep, 0, fullSampleWidth - 1);
                 int fullEndZ = Mathf.Clamp(((z + 1) * meshSampleStep) / baseSampleStep, 0, fullSampleHeight - 1);
-                int tri0Water = 0; int tri0Grass = 0; int tri0Stone = 0;
-                int tri1Water = 0; int tri1Grass = 0; int tri1Stone = 0;
+                int tri0Water = 0; int tri0Grass = 0; int tri0Stone = 0; int tri0Snow = 0;
+                int tri1Water = 0; int tri1Grass = 0; int tri1Stone = 0; int tri1Snow = 0;
                 int fullWidth = Mathf.Max(1, fullEndX - fullStartX);
                 int fullHeight = Mathf.Max(1, fullEndZ - fullStartZ);
                 for (int fz = fullStartZ; fz <= fullEndZ; fz++)
@@ -1564,20 +1567,22 @@ public class GameWorldController : UWEBase
                         if (inTri0)
                         {
                             if (c == 0) { tri0Water++; }
-                            else if (c == 2 || c == 3) { tri0Stone++; }
+                            else if (c == 3) { tri0Snow++; }
+                            else if (c == 2) { tri0Stone++; }
                             else { tri0Grass++; }
                         }
                         else
                         {
                             if (c == 0) { tri1Water++; }
-                            else if (c == 2 || c == 3) { tri1Stone++; }
+                            else if (c == 3) { tri1Snow++; }
+                            else if (c == 2) { tri1Stone++; }
                             else { tri1Grass++; }
                         }
                     }
                 }
 
-                int tri0Class = DominantClass(tri0Water, tri0Grass, tri0Stone);
-                int tri1Class = DominantClass(tri1Water, tri1Grass, tri1Stone);
+                int tri0Class = DominantClass(tri0Water, tri0Grass, tri0Stone, tri0Snow);
+                int tri1Class = DominantClass(tri1Water, tri1Grass, tri1Stone, tri1Snow);
 
                 // First-principles quad classification from corner classes.
                 bool cornerBLWater = terrainClassByVertex[bl] == 0;
@@ -1638,15 +1643,16 @@ public class GameWorldController : UWEBase
                     vertices[tr].y = 0f;
                 }
 
-                AddTriangleToClass(bl, tr, br, tri0Class, water, grass, stone);
-                AddTriangleToClass(bl, tl, tr, tri1Class, water, grass, stone);
+                AddTriangleToClass(bl, tr, br, tri0Class, water, grass, stone, snow);
+                AddTriangleToClass(bl, tl, tr, tri1Class, water, grass, stone, snow);
             }
         }
         mesh.vertices = vertices;
-        mesh.subMeshCount = 3;
+        mesh.subMeshCount = 4;
         mesh.SetTriangles(water, 0);
         mesh.SetTriangles(grass, 1);
         mesh.SetTriangles(stone, 2);
+        mesh.SetTriangles(snow, 3);
 
         GameObject go = (overworldChunkPool.Count > 0) ? overworldChunkPool.Pop() : new GameObject();
         go.name = $"OverworldTerrain_{chunkCoord.x}_{chunkCoord.y}";
@@ -1739,11 +1745,11 @@ public class GameWorldController : UWEBase
                 if (rt == null) { rt = go.AddComponent<OverworldChunkRuntimeTextures>(); }
                 rt.EnsureMaterials(overworldGrassMat, overworldStoneMat);
                 rt.SetTransitionAtlas(atlasBuild);
-                mr.materials = new Material[] { overworldWaterMat, rt.grassRuntimeMat, rt.stoneRuntimeMat };
+                mr.materials = new Material[] { overworldWaterMat, rt.grassRuntimeMat, rt.stoneRuntimeMat, rt.stoneRuntimeMat };
             }
             else
             {
-                mr.materials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
+                mr.materials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat, overworldSnowMat };
             }
             sw.Stop();
             if (overworld.TransitionTexturingDiagnostics && (((chunkCoord.x + chunkCoord.y) % Mathf.Max(1, overworld.TransitionDiagLogEveryNChunks)) == 0))
@@ -1753,7 +1759,7 @@ public class GameWorldController : UWEBase
         }
         else
         {
-            mr.materials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
+            mr.materials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat, overworldSnowMat };
         }
 
         OverworldNatureFlatsController natureFlats = GetOverworldNatureFlatsController();
@@ -1806,6 +1812,7 @@ public class GameWorldController : UWEBase
         List<int> waterTris = new List<int>();
         List<int> grassTris = new List<int>();
         List<int> stoneTris = new List<int>();
+        List<int> snowTris = new List<int>();
 
         void AddEdge(int a, int b)
         {
@@ -1841,7 +1848,7 @@ public class GameWorldController : UWEBase
             {
                 edgeClass = (terrainClassByVertex[a] == terrainClassByVertex[b]) ? terrainClassByVertex[a] : terrainClassByVertex[a];
             }
-            List<int> target = (edgeClass == 0) ? waterTris : ((edgeClass == 2 || edgeClass == 3) ? stoneTris : grassTris);
+            List<int> target = (edgeClass == 0) ? waterTris : ((edgeClass == 3) ? snowTris : ((edgeClass == 2) ? stoneTris : grassTris));
             // Wind outward from chunk to keep normals facing away from terrain edge.
             target.Add(baseIndex + 0); target.Add(baseIndex + 1); target.Add(baseIndex + 2);
             target.Add(baseIndex + 1); target.Add(baseIndex + 3); target.Add(baseIndex + 2);
@@ -1857,10 +1864,11 @@ public class GameWorldController : UWEBase
         skirtMesh.indexFormat = (skirtVerts.Count > 65535) ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
         skirtMesh.SetVertices(skirtVerts);
         skirtMesh.SetUVs(0, skirtUvs);
-        skirtMesh.subMeshCount = 3;
+        skirtMesh.subMeshCount = 4;
         skirtMesh.SetTriangles(waterTris, 0);
         skirtMesh.SetTriangles(grassTris, 1);
         skirtMesh.SetTriangles(stoneTris, 2);
+        skirtMesh.SetTriangles(snowTris, 3);
         OverworldTerrainController overworld = GetOverworldController();
         skirtMesh.RecalculateNormals();
         if (overworld.SkirtUseUpwardNormals)
@@ -1882,7 +1890,7 @@ public class GameWorldController : UWEBase
         MeshFilter mf = skirt.AddComponent<MeshFilter>();
         MeshRenderer mr = skirt.AddComponent<MeshRenderer>();
         mf.sharedMesh = skirtMesh;
-        mr.sharedMaterials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
+        mr.sharedMaterials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat, overworldSnowMat };
         mr.shadowCastingMode = overworld.SkirtCastShadows
             ? UnityEngine.Rendering.ShadowCastingMode.On
             : UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -1890,16 +1898,18 @@ public class GameWorldController : UWEBase
     }
 
 
-    private static void AddTriangleToClass(int i0, int i1, int i2, int terrainClass, List<int> water, List<int> grass, List<int> stone)
+    private static void AddTriangleToClass(int i0, int i1, int i2, int terrainClass, List<int> water, List<int> grass, List<int> stone, List<int> snow)
     {
         if (terrainClass == 0) { water.Add(i0); water.Add(i1); water.Add(i2); }
-        else if (terrainClass == 2 || terrainClass == 3) { stone.Add(i0); stone.Add(i1); stone.Add(i2); }
+        else if (terrainClass == 3) { snow.Add(i0); snow.Add(i1); snow.Add(i2); }
+        else if (terrainClass == 2) { stone.Add(i0); stone.Add(i1); stone.Add(i2); }
         else { grass.Add(i0); grass.Add(i1); grass.Add(i2); }
     }
 
-    private static int DominantClass(int waterCount, int grassCount, int stoneCount)
+    private static int DominantClass(int waterCount, int grassCount, int stoneCount, int snowCount)
     {
-        if ((waterCount >= grassCount) && (waterCount >= stoneCount)) { return 0; }
+        if ((waterCount >= grassCount) && (waterCount >= stoneCount) && (waterCount >= snowCount)) { return 0; }
+        if ((snowCount >= stoneCount) && (snowCount >= grassCount)) { return 3; }
         if (stoneCount >= grassCount) { return 2; }
         return 1;
     }
