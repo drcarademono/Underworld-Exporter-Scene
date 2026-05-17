@@ -4,6 +4,7 @@ Shader "Custom/OverworldUnifiedTerrain"
     {
         _MainTex("Greyscale (R) Alpha (A)", 2D) = "white" {}
         _Color("Main Color", Color) = (1,1,1,1)
+        _ColorPaletteIn("Color Palette", 2D) = "white" {}
     }
 
     SubShader
@@ -36,11 +37,16 @@ Shader "Custom/OverworldUnifiedTerrain"
             }
 
             sampler2D _MainTex;
+            sampler2D _ColorPaletteIn;
             fixed4 _Color;
 
             float4 frag(v2f i) : COLOR
             {
-                float4 result = tex2D(_MainTex, i.uv) * _Color;
+                float greyscale = tex2D(_MainTex, i.uv).r;
+                float4 result;
+                result.rgb = tex2D(_ColorPaletteIn, float2(greyscale, 0.1)).rgb;
+                result.a = tex2D(_MainTex, i.uv).a;
+                result *= _Color;
                 return result * LIGHT_ATTENUATION(i);
             }
             ENDCG
