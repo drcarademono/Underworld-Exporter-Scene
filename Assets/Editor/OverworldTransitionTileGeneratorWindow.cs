@@ -491,6 +491,15 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         shapeRoughness = EditorPrefs.GetFloat(PrefPrefix + nameof(shapeRoughness), shapeRoughness);
         elbowRoundness = EditorPrefs.GetFloat(PrefPrefix + nameof(elbowRoundness), elbowRoundness);
         outputFolder = EditorPrefs.GetString(PrefPrefix + nameof(outputFolder), outputFolder);
+
+        LoadTexturePref(nameof(grassTexture), ref grassTexture);
+        LoadTexturePref(nameof(stoneTexture), ref stoneTexture);
+        LoadTexturePref(nameof(waterTexture), ref waterTexture);
+        LoadTexturePref(nameof(dirtTexture), ref dirtTexture);
+        LoadTexturePref(nameof(sandTexture), ref sandTexture);
+        LoadTexturePref(nameof(swampTexture), ref swampTexture);
+        LoadTexturePref(nameof(snowTexture), ref snowTexture);
+        LoadTexturePref(nameof(lavaTexture), ref lavaTexture);
     }
 
     private void SavePrefs()
@@ -509,5 +518,38 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         EditorPrefs.SetFloat(PrefPrefix + nameof(shapeRoughness), shapeRoughness);
         EditorPrefs.SetFloat(PrefPrefix + nameof(elbowRoundness), elbowRoundness);
         EditorPrefs.SetString(PrefPrefix + nameof(outputFolder), outputFolder ?? "Assets/Generated/OverworldTransitions");
+
+        SaveTexturePref(nameof(grassTexture), grassTexture);
+        SaveTexturePref(nameof(stoneTexture), stoneTexture);
+        SaveTexturePref(nameof(waterTexture), waterTexture);
+        SaveTexturePref(nameof(dirtTexture), dirtTexture);
+        SaveTexturePref(nameof(sandTexture), sandTexture);
+        SaveTexturePref(nameof(swampTexture), swampTexture);
+        SaveTexturePref(nameof(snowTexture), snowTexture);
+        SaveTexturePref(nameof(lavaTexture), lavaTexture);
+    }
+
+    private void SaveTexturePref(string key, Texture2D texture)
+    {
+        if (texture == null)
+        {
+            EditorPrefs.DeleteKey(PrefPrefix + key);
+            return;
+        }
+
+        string path = AssetDatabase.GetAssetPath(texture);
+        if (string.IsNullOrEmpty(path))
+        {
+            EditorPrefs.DeleteKey(PrefPrefix + key);
+            return;
+        }
+        EditorPrefs.SetString(PrefPrefix + key, path);
+    }
+
+    private void LoadTexturePref(string key, ref Texture2D destination)
+    {
+        string path = EditorPrefs.GetString(PrefPrefix + key, string.Empty);
+        if (string.IsNullOrEmpty(path)) { return; }
+        destination = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
     }
 }
