@@ -1945,6 +1945,11 @@ public class GameWorldController : UWEBase
         }
 
         Material result = (baseMat != null) ? new Material(baseMat) : new Material(Shader.Find("Standard"));
+        Shader overworldUnifiedShader = Shader.Find("Custom/OverworldUnifiedTerrain");
+        if (overworldUnifiedShader != null)
+        {
+            result.shader = overworldUnifiedShader;
+        }
 
         if ((overrideMaterial != null) && (overrideMaterial.mainTexture != null))
         {
