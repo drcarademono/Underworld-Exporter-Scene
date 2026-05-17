@@ -264,6 +264,7 @@ public class PlayerInventory : UWEBase
     public Light lt;
     private LightSource ls;
     private float defaultPlayerLightIntensity = -1f;
+    private float cachedMaxBrightness = 0f;
 
     public Container playerContainer;
     public short ContainerOffset = 0;//For scrolling the inventory.
@@ -312,7 +313,12 @@ public class PlayerInventory : UWEBase
                 }
             default:
                 {
-                    //UpdateUW();
+                    if ((_RES == GAME_UW2)
+                        && (GameWorldController.instance != null)
+                        && (GameWorldController.instance.StartInOverworld))
+                    {
+                        ApplyOverworldDaylightSuppression(cachedMaxBrightness);
+                    }
                     break;
                 }
         }
@@ -414,9 +420,10 @@ public class PlayerInventory : UWEBase
                 }
             }
         }
-        lt.range = LightSource.BaseBrightness + MaxBrightness;
-        ApplyOverworldDaylightSuppression(MaxBrightness);
-        if (MaxBrightness > 0)
+        cachedMaxBrightness = MaxBrightness;
+        lt.range = LightSource.BaseBrightness + cachedMaxBrightness;
+        ApplyOverworldDaylightSuppression(cachedMaxBrightness);
+        if (cachedMaxBrightness > 0)
         {
             playerUW.LightActive = true;
         }
