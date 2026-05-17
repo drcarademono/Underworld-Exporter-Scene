@@ -1611,12 +1611,24 @@ public class GameWorldController : UWEBase
                     tri1Class = 0;
                 }
 
-                // Water is a quad-level decision: if either triangle of this tile resolves to water,
-                // force both triangles to water so a single tile cannot be split between water and land.
-                if ((tri0Class == 0) || (tri1Class == 0))
+                bool clampQuadToWaterPlane = false;
+
+                // Resolve mixed shoreline quads without splitting one tile into water+land triangles.
+                // If exactly one triangle resolves to water, keep both triangles in a non-water class so
+                // transition atlas tiles can render shoreline transitions, but still clamp geometry flat.
+                if ((tri0Class == 0) != (tri1Class == 0))
                 {
-                    tri0Class = 0;
-                    tri1Class = 0;
+                    int quadGrass = tri0Grass + tri1Grass;
+                    int quadStone = tri0Stone + tri1Stone;
+                    int shorelineClass = (quadStone > quadGrass) ? 2 : 1;
+                    tri0Class = shorelineClass;
+                    tri1Class = shorelineClass;
+                    clampQuadToWaterPlane = true;
+                }
+                else if ((tri0Class == 0) && (tri1Class == 0))
+                {
+                    // True full-water quad.
+                    clampQuadToWaterPlane = true;
                 }
 
                 bool onChunkBorder = (x == 0) || (z == 0) || (x == sampleWidth - 2) || (z == sampleHeight - 2);
@@ -1629,16 +1641,17 @@ public class GameWorldController : UWEBase
                     {
                         tri0Class = 0;
                         tri1Class = 0;
+                        clampQuadToWaterPlane = true;
                     }
                 }
 
-                if (tri0Class == 0)
+                if (clampQuadToWaterPlane || (tri0Class == 0))
                 {
                     vertices[bl].y = 0f;
                     vertices[tr].y = 0f;
                     vertices[br].y = 0f;
                 }
-                if (tri1Class == 0)
+                if (clampQuadToWaterPlane || (tri1Class == 0))
                 {
                     vertices[bl].y = 0f;
                     vertices[tl].y = 0f;
