@@ -220,6 +220,11 @@ public class GameWorldController : UWEBase
     private Texture2D cachedOverworldHeightmap = null;
     private Texture2D cachedNatureClimateMap = null;
     private string cachedNatureClimateMapPath = string.Empty;
+    private OverworldNatureFlatsController cachedNatureFlatsController = null;
+    private bool terrainClassifyUseDesertClimateMap = false;
+    private float terrainClassifyClimateInvWorldW = 0f;
+    private float terrainClassifyClimateInvWorldH = 0f;
+    private Color32 terrainClassifyDesertColor;
     private readonly Queue<OverworldChunkBuildRequest> overworldChunkBuildQueue = new Queue<OverworldChunkBuildRequest>();
     private readonly HashSet<Vector2Int> queuedOverworldChunks = new HashSet<Vector2Int>();
     private readonly Dictionary<Vector2Int, OverworldChunkBuildRequest> pendingOverworldChunkRequests = new Dictionary<Vector2Int, OverworldChunkBuildRequest>();
@@ -1397,6 +1402,7 @@ public class GameWorldController : UWEBase
 
     private GameObject BuildChunk(Vector2Int chunkCoord, Texture2D heightmap, OverworldTerrainController overworld, int sampleStep = 1, bool withCollision = true, bool withNatureBillboards = true)
     {
+        PrepareTerrainClassificationContext(overworld);
         int tilesPerPixel = Mathf.Max(1, overworld.TilesPerPixel);
         int chunkSize = Mathf.Max(2, overworld.ChunkSizeSamples);
         int totalSampleWidth = Mathf.Max(2, heightmap.width / tilesPerPixel);
@@ -1963,7 +1969,7 @@ public class GameWorldController : UWEBase
         if (worldHeight <= overworld.WaterSurfaceEpsilon) { return 0; }
         if (IsSnowAtHeight(worldHeight, sampleX, sampleZ, overworld)) { return 3; }
         if (IsStoneAtHeight(worldHeight, sampleX, sampleZ, overworld)) { return 2; }
-        if (IsDesertClimateAtSample(sampleX, sampleZ)) { return 6; } // Desert climate uses sand as base terrain.
+        if (IsDesertClimateAtSample(sampleX, sampleZ, overworld)) { return 6; } // Desert climate uses sand as base terrain.
         // Preserve original stone patterning (slope-based) below the stone line,
         // while allowing stone line to add/force more stone at higher altitude.
         float hE = SampleSmoothedHeight(heightmap, Mathf.Clamp(px + tilesPerPixel, 0, heightmap.width - 1), pz);
@@ -1977,24 +1983,29 @@ public class GameWorldController : UWEBase
         return 1;
     }
 
-    private bool IsDesertClimateAtSample(int sampleX, int sampleZ)
+    private bool IsDesertClimateAtSample(int sampleX, int sampleZ, OverworldTerrainController overworld)
     {
-        OverworldNatureFlatsController flats = GetOverworldNatureFlatsController();
-        if (flats == null) { return false; }
-        Texture2D climateMap = GetNatureClimateMap(flats);
-        if (climateMap == null) { return false; }
-
-        float worldW = Mathf.Max(1f, flats.NatureMapWorldWidth);
-        float worldH = Mathf.Max(1f, flats.NatureMapWorldHeight);
-        float tileWorldSize = Mathf.Max(0.01f, GetOverworldController().TileWorldSize);
+        if (!terrainClassifyUseDesertClimateMap || cachedNatureClimateMap == null) { return false; }
+        float tileWorldSize = Mathf.Max(0.01f, overworld.TileWorldSize);
         float worldX = sampleX * tileWorldSize;
         float worldZ = sampleZ * tileWorldSize;
-        float u = Mathf.Clamp01(worldX / worldW);
-        float v = Mathf.Clamp01(worldZ / worldH);
-        int px = Mathf.Clamp(Mathf.RoundToInt(u * (climateMap.width - 1)), 0, climateMap.width - 1);
-        int py = Mathf.Clamp(Mathf.RoundToInt(v * (climateMap.height - 1)), 0, climateMap.height - 1);
-        Color32 c = climateMap.GetPixel(px, py);
-        return (c.r == flats.DesertColor.r) && (c.g == flats.DesertColor.g) && (c.b == flats.DesertColor.b);
+        float u = Mathf.Clamp01(worldX * terrainClassifyClimateInvWorldW);
+        float v = Mathf.Clamp01(worldZ * terrainClassifyClimateInvWorldH);
+        int px = Mathf.Clamp(Mathf.RoundToInt(u * (cachedNatureClimateMap.width - 1)), 0, cachedNatureClimateMap.width - 1);
+        int py = Mathf.Clamp(Mathf.RoundToInt(v * (cachedNatureClimateMap.height - 1)), 0, cachedNatureClimateMap.height - 1);
+        Color32 c = cachedNatureClimateMap.GetPixel(px, py);
+        return (c.r == terrainClassifyDesertColor.r) && (c.g == terrainClassifyDesertColor.g) && (c.b == terrainClassifyDesertColor.b);
+    }
+
+    private void PrepareTerrainClassificationContext(OverworldTerrainController overworld)
+    {
+        cachedNatureFlatsController = GetOverworldNatureFlatsController();
+        cachedNatureClimateMap = (cachedNatureFlatsController != null) ? GetNatureClimateMap(cachedNatureFlatsController) : null;
+        terrainClassifyUseDesertClimateMap = cachedNatureFlatsController != null && cachedNatureClimateMap != null;
+        if (!terrainClassifyUseDesertClimateMap) { return; }
+        terrainClassifyClimateInvWorldW = 1f / Mathf.Max(1f, cachedNatureFlatsController.NatureMapWorldWidth);
+        terrainClassifyClimateInvWorldH = 1f / Mathf.Max(1f, cachedNatureFlatsController.NatureMapWorldHeight);
+        terrainClassifyDesertColor = cachedNatureFlatsController.DesertColor;
     }
 
     private Texture2D GetNatureClimateMap(OverworldNatureFlatsController flats)
