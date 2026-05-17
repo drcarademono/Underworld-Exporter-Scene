@@ -1557,6 +1557,9 @@ public class GameWorldController : UWEBase
         List<int> water = new List<int>();
         List<int> grass = new List<int>();
         List<int> stone = new List<int>();
+        // Stitch first, then allow downstream water-clamp classification pass
+        // to be the final authority on forcing water surfaces to y=0.
+        StitchChunkBorderToCoarserNeighbors(chunkCoord, baseSampleStep, vertices, sampleWidth, sampleHeight, startX, startY, meshSampleStep, tilesPerPixel, heightmap, overworld);
         for (int z = 0; z < sampleHeight - 1; z++)
         {
             for (int x = 0; x < sampleWidth - 1; x++)
@@ -1665,7 +1668,6 @@ public class GameWorldController : UWEBase
                 AddTriangleToClass(bl, tl, tr, tri1Class, water, grass, stone);
             }
         }
-        StitchChunkBorderToCoarserNeighbors(chunkCoord, baseSampleStep, vertices, sampleWidth, sampleHeight, startX, startY, meshSampleStep, tilesPerPixel, heightmap, overworld);
         mesh.vertices = vertices;
         mesh.subMeshCount = 3;
         mesh.SetTriangles(water, 0);
@@ -1760,7 +1762,6 @@ public class GameWorldController : UWEBase
                             vertices[tr].y = 0f;
                         }
                     }
-                    StitchChunkBorderToCoarserNeighbors(chunkCoord, baseSampleStep, vertices, sampleWidth, sampleHeight, startX, startY, meshSampleStep, tilesPerPixel, heightmap, overworld);
                     mesh.vertices = vertices;
                     mesh.RecalculateNormals();
                     mesh.RecalculateBounds();
