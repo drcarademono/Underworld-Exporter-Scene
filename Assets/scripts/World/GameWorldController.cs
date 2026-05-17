@@ -1592,26 +1592,59 @@ public class GameWorldController : UWEBase
                 int tri0Class = DominantClass(tri0Water, tri0Grass, tri0Stone);
                 int tri1Class = DominantClass(tri1Water, tri1Grass, tri1Stone);
 
+                // First-principles quad classification from corner classes.
+                bool cornerBLWater = terrainClassByVertex[bl] == 0;
+                bool cornerBRWater = terrainClassByVertex[br] == 0;
+                bool cornerTLWater = terrainClassByVertex[tl] == 0;
+                bool cornerTRWater = terrainClassByVertex[tr] == 0;
+                int cornerWaterCount = (cornerBLWater ? 1 : 0) + (cornerBRWater ? 1 : 0) + (cornerTLWater ? 1 : 0) + (cornerTRWater ? 1 : 0);
+
+                bool clampQuadToWaterPlane = false;
+
+                if (cornerWaterCount >= 3)
+                {
+                    // Full water tile.
+                    tri0Class = 0;
+                    tri1Class = 0;
+                    clampQuadToWaterPlane = true;
+                }
+                else if (cornerWaterCount > 0)
+                {
+                    // Shoreline transition tile: choose shoreline land class from non-water corners,
+                    // not broad triangle counts, to avoid grass islands inside stone-water shorelines.
+                    int shorelineClass = 1;
+                    bool hasStoneLandCorner = false;
+                    if (!cornerBLWater && terrainClassByVertex[bl] == 2) hasStoneLandCorner = true;
+                    if (!cornerBRWater && terrainClassByVertex[br] == 2) hasStoneLandCorner = true;
+                    if (!cornerTLWater && terrainClassByVertex[tl] == 2) hasStoneLandCorner = true;
+                    if (!cornerTRWater && terrainClassByVertex[tr] == 2) hasStoneLandCorner = true;
+                    if (hasStoneLandCorner) shorelineClass = 2;
+
+                    tri0Class = shorelineClass;
+                    tri1Class = shorelineClass;
+                    clampQuadToWaterPlane = true;
+                }
+
                 bool onChunkBorder = (x == 0) || (z == 0) || (x == sampleWidth - 2) || (z == sampleHeight - 2);
                 if (onChunkBorder)
                 {
-                    // Handle water-at-chunk-edge edge case: if border quad has any water samples,
-                    // force both triangles to water so adjoining chunks don't leave sloped/cracked seams.
-                    bool hasAnyWaterSample = (tri0Water > 0) || (tri1Water > 0);
+                    // Keep shoreline transitions visible at chunk edges.
+                    // Border quads with water should be clamped flat, but not forcibly reclassified to full water,
+                    // otherwise transition tiles cannot render on the land/transition materials.
+                    bool hasAnyWaterSample = (tri0Water > 0) || (tri1Water > 0) || (cornerWaterCount > 0);
                     if (hasAnyWaterSample)
                     {
-                        tri0Class = 0;
-                        tri1Class = 0;
+                        clampQuadToWaterPlane = true;
                     }
                 }
 
-                if (tri0Class == 0)
+                if (clampQuadToWaterPlane || (tri0Class == 0))
                 {
                     vertices[bl].y = 0f;
                     vertices[tr].y = 0f;
                     vertices[br].y = 0f;
                 }
-                if (tri1Class == 0)
+                if (clampQuadToWaterPlane || (tri1Class == 0))
                 {
                     vertices[bl].y = 0f;
                     vertices[tl].y = 0f;
@@ -1652,25 +1685,81 @@ public class GameWorldController : UWEBase
         if (overworld.UseTransitionTileTexturing && withCollision && (sampleStep <= 1))
         {
             System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+            Texture2D waterBase = (overworldWaterMat != null) ? (overworldWaterMat.mainTexture as Texture2D) : null;
             Texture2D grassBase = (overworldGrassMat != null) ? (overworldGrassMat.mainTexture as Texture2D) : null;
             Texture2D stoneBase = (overworldStoneMat != null) ? (overworldStoneMat.mainTexture as Texture2D) : null;
             OverworldTerrainTexturing.BuildStats stats;
-            Texture2D chunkTex = OverworldTerrainTexturing.BuildChunkTransitionTexture(
-                terrainClassFull,
-                fullSampleWidth,
-                fullSampleHeight,
-                Mathf.Max(8, overworld.TransitionPixelsPerTile),
+            int texWidth = fullSampleWidth + 2;
+            int texHeight = fullSampleHeight + 2;
+            int[] terrainClassExpanded = new int[texWidth * texHeight];
+            for (int ez = 0; ez < texHeight; ez++)
+            {
+                for (int ex = 0; ex < texWidth; ex++)
+                {
+                    int fullGlobalX = Mathf.Clamp(startX + ((ex - 1) * baseSampleStep), 0, totalSampleWidth - 1);
+                    int fullGlobalZ = Mathf.Clamp(startY + ((ez - 1) * baseSampleStep), 0, totalSampleHeight - 1);
+                    int fullPx = Mathf.Clamp(fullGlobalX * tilesPerPixel, 0, heightmap.width - 1);
+                    int fullPz = Mathf.Clamp(fullGlobalZ * tilesPerPixel, 0, heightmap.height - 1);
+                    float fullElevation = SampleSmoothedHeight(heightmap, fullPx, fullPz);
+                    float fullShapedElevation = Mathf.Pow(fullElevation, 1.65f);
+                    float fullNoise = (Mathf.PerlinNoise((fullGlobalX + 101.231f) * overworld.PerlinScale, (fullGlobalZ + 77.777f) * overworld.PerlinScale) * 2f) - 1f;
+                    float fullPerlinDisplacement = fullNoise * overworld.PerlinStrength * Mathf.Max(1f, overworld.HeightScale * 0.2f);
+                    float fullY = fullShapedElevation * overworld.HeightScale + fullPerlinDisplacement - overworld.SeaLevelOffset;
+                    if (fullY < 0f) { fullY = 0f; }
+                    int idx = ez * texWidth + ex;
+                    if (fullY <= overworld.WaterSurfaceEpsilon) terrainClassExpanded[idx] = 0;
+                    else
+                    {
+                        float hE = SampleSmoothedHeight(heightmap, Mathf.Clamp(fullPx + tilesPerPixel, 0, heightmap.width - 1), fullPz);
+                        float hW = SampleSmoothedHeight(heightmap, Mathf.Clamp(fullPx - tilesPerPixel, 0, heightmap.width - 1), fullPz);
+                        float hN = SampleSmoothedHeight(heightmap, fullPx, Mathf.Clamp(fullPz + tilesPerPixel, 0, heightmap.height - 1));
+                        float hS = SampleSmoothedHeight(heightmap, fullPx, Mathf.Clamp(fullPz - tilesPerPixel, 0, heightmap.height - 1));
+                        float slopeMagnitude = Mathf.Sqrt(((hE - hW) * (hE - hW)) + ((hN - hS) * (hN - hS)));
+                        terrainClassExpanded[idx] = (slopeMagnitude > 0.022f) ? 2 : 1;
+                    }
+                }
+            }
+
+            OverworldTerrainTexturing.TileAtlasBuild atlasBuild = OverworldTerrainTexturing.BuildChunkTransitionAtlas(
+                terrainClassExpanded,
+                texWidth,
+                texHeight,
                 overworld.TransitionTilesFolder,
+                waterBase,
                 grassBase,
                 stoneBase,
-                out stats);
-            if (chunkTex != null)
+                out stats,
+                1);
+            if (atlasBuild.tileIdMap != null && atlasBuild.atlasTexture != null)
             {
-                chunkTex.name = $"OWChunkTex_{chunkCoord.x}_{chunkCoord.y}";
+                if (atlasBuild.clampMask != null)
+                {
+                    for (int tz = 0; tz < sampleHeight - 1; tz++)
+                    {
+                        for (int tx = 0; tx < sampleWidth - 1; tx++)
+                        {
+                            if (!atlasBuild.clampMask[(tz * (sampleWidth - 1)) + tx]) { continue; }
+                            int bl = (tz * sampleWidth) + tx;
+                            int br = bl + 1;
+                            int tl = bl + sampleWidth;
+                            int tr = tl + 1;
+                            vertices[bl].y = 0f;
+                            vertices[br].y = 0f;
+                            vertices[tl].y = 0f;
+                            vertices[tr].y = 0f;
+                        }
+                    }
+                    mesh.vertices = vertices;
+                    mesh.RecalculateNormals();
+                    mesh.RecalculateBounds();
+                }
+
+                atlasBuild.tileIdMap.name = $"OWChunkTileIds_{chunkCoord.x}_{chunkCoord.y}";
+                atlasBuild.atlasTexture.name = $"OWChunkAtlas_{chunkCoord.x}_{chunkCoord.y}";
                 OverworldChunkRuntimeTextures rt = go.GetComponent<OverworldChunkRuntimeTextures>();
                 if (rt == null) { rt = go.AddComponent<OverworldChunkRuntimeTextures>(); }
                 rt.EnsureMaterials(overworldGrassMat, overworldStoneMat);
-                rt.SetChunkTexture(chunkTex);
+                rt.SetTransitionAtlas(atlasBuild);
                 mr.materials = new Material[] { overworldWaterMat, rt.grassRuntimeMat, rt.stoneRuntimeMat };
             }
             else
@@ -1680,7 +1769,7 @@ public class GameWorldController : UWEBase
             sw.Stop();
             if (overworld.TransitionTexturingDiagnostics && (((chunkCoord.x + chunkCoord.y) % Mathf.Max(1, overworld.TransitionDiagLogEveryNChunks)) == 0))
             {
-                UnityEngine.Debug.Log($"OverworldTransitionTexture chunk={chunkCoord} ms={sw.ElapsedMilliseconds} tiles={stats.tileCount} transitions={stats.transitionTiles} fallback={stats.fallbackCenterTiles} missing={stats.missingTransitionFiles}");
+                UnityEngine.Debug.Log($"OverworldTransitionTexture chunk={chunkCoord} ms={sw.ElapsedMilliseconds} tiles={stats.tileCount} transitions={stats.transitionTiles} fallback={stats.fallbackCenterTiles} missing={stats.missingTransitionFiles} atlasTiles={stats.uniqueAtlasTiles}");
             }
         }
         else

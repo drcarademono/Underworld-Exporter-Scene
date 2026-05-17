@@ -10,85 +10,201 @@ public static class OverworldTerrainTexturing
         public int transitionTiles;
         public int fallbackCenterTiles;
         public int missingTransitionFiles;
+        public int uniqueAtlasTiles;
+    }
+
+    public struct TileAtlasBuild
+    {
+        public Texture2D tileIdMap;
+        public Texture2D atlasTexture;
+        public Texture2D waterMask;
+        public bool[] clampMask;
+        public int atlasCols;
+        public int atlasRows;
     }
 
     private static readonly Dictionary<string, Texture2D> cache = new Dictionary<string, Texture2D>();
-
-    public static Texture2D BuildChunkTransitionTexture(int[] terrainClassFull, int width, int height, int pixelsPerTile, string assetsRelativeFolder, Texture2D grassBase, Texture2D stoneBase, out BuildStats stats)
+    public static TileAtlasBuild BuildChunkTransitionAtlas(int[] terrainClassFull, int width, int height, string assetsRelativeFolder, Texture2D waterBase, Texture2D grassBase, Texture2D stoneBase, out BuildStats stats, int cropTiles = 0)
     {
         stats = new BuildStats();
-        if (terrainClassFull == null || width < 2 || height < 2) { return null; }
+        TileAtlasBuild build = new TileAtlasBuild();
+        if (terrainClassFull == null || width < 2 || height < 2) { return build; }
+
         int tileW = width - 1;
         int tileH = height - 1;
-        int outW = tileW * pixelsPerTile;
-        int outH = tileH * pixelsPerTile;
-        Texture2D output = new Texture2D(outW, outH, TextureFormat.RGBA32, false);
-        output.filterMode = FilterMode.Point;
-        output.wrapMode = TextureWrapMode.Clamp;
+        int outTileW = tileW - (cropTiles * 2);
+        int outTileH = tileH - (cropTiles * 2);
+        if (outTileW <= 0 || outTileH <= 0) { return build; }
+        byte[] ids = new byte[outTileW * outTileH];
+        byte[] waterFlags = new byte[outTileW * outTileH];
+        bool[] clampFlags = new bool[outTileW * outTileH];
+        Dictionary<string, byte> atlasLookup = new Dictionary<string, byte>();
+        List<Texture2D> atlasTiles = new List<Texture2D>();
 
-        for (int ty = 0; ty < tileH; ty++)
+        for (int ty = cropTiles; ty < tileH - cropTiles; ty++)
         {
-            for (int tx = 0; tx < tileW; tx++)
+            for (int tx = cropTiles; tx < tileW - cropTiles; tx++)
             {
                 stats.tileCount++;
-                int center = terrainClassFull[(ty * width) + tx];
+                int center = GetTileClass(terrainClassFull, width, height, tx, ty);
+                if (center == 0) { waterFlags[((ty - cropTiles) * outTileW) + (tx - cropTiles)] = 255; }
                 int target = GetTransitionTarget(terrainClassFull, width, height, tx, ty, center);
                 int mask = BuildMask(terrainClassFull, width, height, tx, ty, target);
+                if (center == 0 || target == 0)
+                {
+                    clampFlags[((ty - cropTiles) * outTileW) + (tx - cropTiles)] = true;
+                }
 
                 Texture2D tile = null;
+                string key;
                 if (target != center)
                 {
+                    key = $"tr_{ClassName(center)}_to_{ClassName(target)}_m{mask:D2}.png";
                     tile = LoadTransitionTile(ClassName(center), ClassName(target), mask, assetsRelativeFolder);
                     if (tile != null) { stats.transitionTiles++; }
                     else { stats.missingTransitionFiles++; }
                 }
+                else
+                {
+                    key = (center == 0) ? "base_water" : (center == 2 ? "base_stone" : "base_grass");
+                }
 
                 if (tile == null)
                 {
-                    tile = (center == 2) ? stoneBase : grassBase;
+                    tile = (center == 0) ? waterBase : ((center == 2) ? stoneBase : grassBase);
                     stats.fallbackCenterTiles++;
                 }
 
-                if (tile != null)
+                if (tile == null) { continue; }
+                if (!atlasLookup.TryGetValue(key, out byte id))
                 {
-                    BlitNearest(tile, output, tx * pixelsPerTile, ty * pixelsPerTile, pixelsPerTile, pixelsPerTile);
+                    id = (byte)Mathf.Clamp(atlasTiles.Count, 0, 255);
+                    atlasLookup[key] = id;
+                    atlasTiles.Add(tile);
                 }
+                ids[((ty - cropTiles) * outTileW) + (tx - cropTiles)] = id;
             }
         }
-        output.Apply(false, false);
-        return output;
+
+        stats.uniqueAtlasTiles = atlasTiles.Count;
+        build.tileIdMap = new Texture2D(outTileW, outTileH, TextureFormat.Alpha8, false);
+        build.tileIdMap.filterMode = FilterMode.Point;
+        build.tileIdMap.wrapMode = TextureWrapMode.Clamp;
+        Color32[] mapPixels = new Color32[ids.Length];
+        for (int i = 0; i < ids.Length; i++) mapPixels[i] = new Color32(0, 0, 0, ids[i]);
+        build.tileIdMap.SetPixels32(mapPixels);
+        build.tileIdMap.Apply(false, false);
+
+        build.waterMask = new Texture2D(outTileW, outTileH, TextureFormat.Alpha8, false);
+        build.waterMask.filterMode = FilterMode.Point;
+        build.waterMask.wrapMode = TextureWrapMode.Clamp;
+        Color32[] waterPixels = new Color32[waterFlags.Length];
+        for (int i = 0; i < waterFlags.Length; i++) waterPixels[i] = new Color32(0, 0, 0, waterFlags[i]);
+        build.waterMask.SetPixels32(waterPixels);
+        build.waterMask.Apply(false, false);
+
+        int atlasCols = Mathf.Clamp(Mathf.CeilToInt(Mathf.Sqrt(Mathf.Max(1, atlasTiles.Count))), 1, 16);
+        int atlasRows = Mathf.CeilToInt(atlasTiles.Count / (float)atlasCols);
+        int tileSize = (atlasTiles.Count > 0) ? atlasTiles[0].width : 16;
+        build.atlasTexture = new Texture2D(atlasCols * tileSize, atlasRows * tileSize, TextureFormat.RGBA32, false);
+        build.atlasTexture.filterMode = FilterMode.Point;
+        build.atlasTexture.wrapMode = TextureWrapMode.Clamp;
+        Color32[] atlasPixels = new Color32[build.atlasTexture.width * build.atlasTexture.height];
+
+        for (int i = 0; i < atlasTiles.Count; i++)
+        {
+            Texture2D tile = atlasTiles[i];
+            Color32[] src = tile.GetPixels32();
+            int ox = (i % atlasCols) * tileSize;
+            int oy = (i / atlasCols) * tileSize;
+            for (int y = 0; y < tileSize; y++)
+                for (int x = 0; x < tileSize; x++)
+                    atlasPixels[(oy + y) * build.atlasTexture.width + (ox + x)] = src[y * tile.width + x];
+        }
+
+        build.atlasTexture.SetPixels32(atlasPixels);
+        build.atlasTexture.Apply(false, false);
+        build.atlasCols = atlasCols;
+        build.atlasRows = atlasRows;
+        build.clampMask = clampFlags;
+        return build;
     }
 
-    private static int GetTransitionTarget(int[] data, int w, int h, int x, int y, int c)
+    private static int GetTransitionTarget(int[] data, int w, int h, int tx, int ty, int center)
     {
-        int best = c;
-        TryPromote(data, w, h, x, y + 1, ref best, c);
-        TryPromote(data, w, h, x + 1, y, ref best, c);
-        TryPromote(data, w, h, x, y - 1, ref best, c);
-        TryPromote(data, w, h, x - 1, y, ref best, c);
-        return best;
+        int best = center;
+
+        // Land tiles transition "up" to higher-priority neighbors (e.g. stone->water).
+        if (center != 0)
+        {
+            TryPromoteTile(data, w, h, tx, ty + 1, ref best, center);
+            TryPromoteTile(data, w, h, tx + 1, ty, ref best, center);
+            TryPromoteTile(data, w, h, tx, ty - 1, ref best, center);
+            TryPromoteTile(data, w, h, tx - 1, ty, ref best, center);
+            return best;
+        }
+
+        // Water tiles need the inverse at chunk boundaries: transition to strongest non-water neighbor
+        // so water-side transition tiles can be emitted when the opposite shore tile is in another chunk.
+        int bestNonWater = -1;
+        TryPromoteWaterSide(data, w, h, tx, ty + 1, ref bestNonWater);
+        TryPromoteWaterSide(data, w, h, tx + 1, ty, ref bestNonWater);
+        TryPromoteWaterSide(data, w, h, tx, ty - 1, ref bestNonWater);
+        TryPromoteWaterSide(data, w, h, tx - 1, ty, ref bestNonWater);
+        return (bestNonWater >= 0) ? bestNonWater : center;
     }
 
-    private static void TryPromote(int[] d, int w, int h, int x, int y, ref int best, int c)
+    private static void TryPromoteTile(int[] d, int w, int h, int tx, int ty, ref int best, int center)
     {
-        if (x < 0 || y < 0 || x >= w || y >= h) return;
-        int v = d[y * w + x];
-        if (Priority(v) > Priority(best) && Priority(v) > Priority(c)) best = v;
+        int v = GetTileClass(d, w, h, tx, ty);
+        if (v < 0) return;
+        if (Priority(v) > Priority(best) && Priority(v) > Priority(center)) best = v;
+    }
+
+    private static void TryPromoteWaterSide(int[] d, int w, int h, int tx, int ty, ref int bestNonWater)
+    {
+        int v = GetTileClass(d, w, h, tx, ty);
+        if (v <= 0) return;
+        if (bestNonWater < 0 || Priority(v) > Priority(bestNonWater)) bestNonWater = v;
     }
 
     private static int Priority(int c) { if (c == 0) return 3; if (c == 2) return 2; return 1; }
 
-    private static int BuildMask(int[] d, int w, int h, int x, int y, int target)
+    private static int BuildMask(int[] d, int w, int h, int tx, int ty, int target)
     {
         int m = 0;
-        if (Get(d, w, h, x, y + 1) == target) m |= 1;
-        if (Get(d, w, h, x + 1, y) == target) m |= 2;
-        if (Get(d, w, h, x, y - 1) == target) m |= 4;
-        if (Get(d, w, h, x - 1, y) == target) m |= 8;
+        if (GetTileClass(d, w, h, tx, ty + 1) == target) m |= 1;
+        if (GetTileClass(d, w, h, tx + 1, ty) == target) m |= 2;
+        if (GetTileClass(d, w, h, tx, ty - 1) == target) m |= 4;
+        if (GetTileClass(d, w, h, tx - 1, ty) == target) m |= 8;
         return m;
     }
 
-    private static int Get(int[] d, int w, int h, int x, int y) { if (x < 0 || y < 0 || x >= w || y >= h) return -1; return d[y * w + x]; }
+    private static int GetTileClass(int[] d, int w, int h, int tx, int ty)
+    {
+        if (tx < 0 || ty < 0 || tx >= w - 1 || ty >= h - 1) return -1;
+        int bl = d[ty * w + tx];
+        int br = d[ty * w + (tx + 1)];
+        int tl = d[(ty + 1) * w + tx];
+        int tr = d[(ty + 1) * w + (tx + 1)];
+
+        int water = 0, grass = 0, stone = 0;
+        CountClass(bl, ref water, ref grass, ref stone);
+        CountClass(br, ref water, ref grass, ref stone);
+        CountClass(tl, ref water, ref grass, ref stone);
+        CountClass(tr, ref water, ref grass, ref stone);
+
+        if (water >= 3) return 0;
+        if (stone > grass) return 2;
+        return 1;
+    }
+
+    private static void CountClass(int c, ref int water, ref int grass, ref int stone)
+    {
+        if (c == 0) water++;
+        else if (c == 2) stone++;
+        else grass++;
+    }
     private static string ClassName(int c) { if (c == 0) return "water"; if (c == 2) return "stone"; return "grass"; }
 
     private static Texture2D LoadTransitionTile(string from, string to, int mask, string folder)
@@ -107,19 +223,4 @@ public static class OverworldTerrainTexturing
         return tex;
     }
 
-    private static void BlitNearest(Texture2D src, Texture2D dst, int dx, int dy, int w, int h)
-    {
-        Color32[] srcPixels = src.GetPixels32();
-        int sw = src.width;
-        int sh = src.height;
-        for (int y = 0; y < h; y++)
-        {
-            int sy = Mathf.Clamp(Mathf.FloorToInt((y / (float)h) * sh), 0, sh - 1);
-            for (int x = 0; x < w; x++)
-            {
-                int sx = Mathf.Clamp(Mathf.FloorToInt((x / (float)w) * sw), 0, sw - 1);
-                dst.SetPixel(dx + x, dy + y, srcPixels[(sy * sw) + sx]);
-            }
-        }
-    }
 }
