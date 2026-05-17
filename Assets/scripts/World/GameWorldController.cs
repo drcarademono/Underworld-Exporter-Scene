@@ -208,6 +208,7 @@ public class GameWorldController : UWEBase
     private Dictionary<Vector2Int, GameObject> loadedOverworldChunks = new Dictionary<Vector2Int, GameObject>();
     private HashSet<Vector2Int> lowDetailOverworldChunks = new HashSet<Vector2Int>();
     private HashSet<Vector2Int> noNatureOverworldChunks = new HashSet<Vector2Int>();
+    private Dictionary<Vector2Int, int> loadedOverworldChunkSampleSteps = new Dictionary<Vector2Int, int>();
     private Texture2D[] overworldWaterFrames = null;
     private int overworldWaterFrameIndex = 0;
     private float overworldWaterAnimTimer = 0f;
@@ -1020,6 +1021,7 @@ public class GameWorldController : UWEBase
 
         OverworldTerrainRoot = new GameObject("OverworldTerrainRoot");
         loadedOverworldChunks.Clear();
+        loadedOverworldChunkSampleSteps.Clear();
         lowDetailOverworldChunks.Clear();
         noNatureOverworldChunks.Clear();
 
@@ -1088,6 +1090,7 @@ public class GameWorldController : UWEBase
             if (startChunk != null)
             {
                 loadedOverworldChunks[lastPlayerChunk] = startChunk;
+                loadedOverworldChunkSampleSteps[lastPlayerChunk] = 1;
                 lowDetailOverworldChunks.Remove(lastPlayerChunk);
                 noNatureOverworldChunks.Remove(lastPlayerChunk);
             }
@@ -1362,6 +1365,7 @@ public class GameWorldController : UWEBase
                         }
                     }
                     loadedOverworldChunks[req.chunkCoord] = chunk;
+                    loadedOverworldChunkSampleSteps[req.chunkCoord] = Mathf.Max(1, req.sampleStep);
                     if (req.lowDetail) { lowDetailOverworldChunks.Add(req.chunkCoord); } else { lowDetailOverworldChunks.Remove(req.chunkCoord); }
                     if (req.noNature) { noNatureOverworldChunks.Add(req.chunkCoord); } else { noNatureOverworldChunks.Remove(req.chunkCoord); }
                 }
@@ -1376,6 +1380,7 @@ public class GameWorldController : UWEBase
         if (!loadedOverworldChunks.ContainsKey(coord)) { return; }
         GameObject go = loadedOverworldChunks[coord];
         loadedOverworldChunks.Remove(coord);
+        loadedOverworldChunkSampleSteps.Remove(coord);
         pendingOverworldChunkRequests.Remove(coord);
         if (go == null) { return; }
         ReleaseOverworldRuntimeMaterials(go);
@@ -1655,6 +1660,7 @@ public class GameWorldController : UWEBase
                 AddTriangleToClass(bl, tl, tr, tri1Class, water, grass, stone);
             }
         }
+        StitchChunkBorderToCoarserNeighbors(chunkCoord, baseSampleStep, vertices, sampleWidth, sampleHeight);
         mesh.vertices = vertices;
         mesh.subMeshCount = 3;
         mesh.SetTriangles(water, 0);
@@ -1749,6 +1755,7 @@ public class GameWorldController : UWEBase
                             vertices[tr].y = 0f;
                         }
                     }
+                    StitchChunkBorderToCoarserNeighbors(chunkCoord, baseSampleStep, vertices, sampleWidth, sampleHeight);
                     mesh.vertices = vertices;
                     mesh.RecalculateNormals();
                     mesh.RecalculateBounds();
@@ -1786,10 +1793,6 @@ public class GameWorldController : UWEBase
             batch.Initialize(vertices, grass.ToArray(), natureFlats, overworld.WaterSurfaceEpsilon, chunkCoord);
         }
 
-        if (geometrySampleStep > 1)
-        {
-            AddDistantChunkSkirt(go.transform, vertices, terrainClassByVertex, sampleWidth, sampleHeight, Mathf.Max(2f, geometrySampleStep * overworld.TileWorldSize * 0.35f) * 5f, overworld.TileWorldSize);
-        }
         if (withCollision)
         {
             GameObject waterContact = new GameObject("WaterContact");
@@ -1818,6 +1821,73 @@ public class GameWorldController : UWEBase
 
         return go;
     }
+
+    private int GetChunkRequestedOrLoadedSampleStep(Vector2Int chunkCoord, int fallback = 1)
+    {
+        if (pendingOverworldChunkRequests.TryGetValue(chunkCoord, out OverworldChunkBuildRequest pending))
+        {
+            return Mathf.Max(1, pending.sampleStep);
+        }
+        if (loadedOverworldChunkSampleSteps.TryGetValue(chunkCoord, out int loadedStep))
+        {
+            return Mathf.Max(1, loadedStep);
+        }
+        return Mathf.Max(1, fallback);
+    }
+
+    private void StitchChunkBorderToCoarserNeighbors(Vector2Int chunkCoord, int thisSampleStep, Vector3[] vertices, int sampleWidth, int sampleHeight)
+    {
+        if (vertices == null || vertices.Length == 0) { return; }
+        if (sampleWidth < 2 || sampleHeight < 2) { return; }
+
+        void StitchEdge(Vector2Int neighborCoord, bool horizontal, bool atStartEdge)
+        {
+            int neighborStep = GetChunkRequestedOrLoadedSampleStep(neighborCoord, thisSampleStep);
+            if (neighborStep <= thisSampleStep) { return; }
+
+            int ratio = Mathf.Max(1, neighborStep / Mathf.Max(1, thisSampleStep));
+            if (ratio <= 1) { return; }
+
+            if (horizontal)
+            {
+                int z = atStartEdge ? 0 : (sampleHeight - 1);
+                for (int x = 0; x < sampleWidth; x++)
+                {
+                    int coarseX0 = (x / ratio) * ratio;
+                    int coarseX1 = Mathf.Min(coarseX0 + ratio, sampleWidth - 1);
+                    if (coarseX1 == coarseX0) { continue; }
+                    float t = (x - coarseX0) / (float)(coarseX1 - coarseX0);
+                    int i = (z * sampleWidth) + x;
+                    int i0 = (z * sampleWidth) + coarseX0;
+                    int i1 = (z * sampleWidth) + coarseX1;
+                    float y = Mathf.Lerp(vertices[i0].y, vertices[i1].y, t);
+                    vertices[i].y = y;
+                }
+            }
+            else
+            {
+                int x = atStartEdge ? 0 : (sampleWidth - 1);
+                for (int z = 0; z < sampleHeight; z++)
+                {
+                    int coarseZ0 = (z / ratio) * ratio;
+                    int coarseZ1 = Mathf.Min(coarseZ0 + ratio, sampleHeight - 1);
+                    if (coarseZ1 == coarseZ0) { continue; }
+                    float t = (z - coarseZ0) / (float)(coarseZ1 - coarseZ0);
+                    int i = (z * sampleWidth) + x;
+                    int i0 = (coarseZ0 * sampleWidth) + x;
+                    int i1 = (coarseZ1 * sampleWidth) + x;
+                    float y = Mathf.Lerp(vertices[i0].y, vertices[i1].y, t);
+                    vertices[i].y = y;
+                }
+            }
+        }
+
+        StitchEdge(new Vector2Int(chunkCoord.x, chunkCoord.y - 1), horizontal: true, atStartEdge: true);
+        StitchEdge(new Vector2Int(chunkCoord.x, chunkCoord.y + 1), horizontal: true, atStartEdge: false);
+        StitchEdge(new Vector2Int(chunkCoord.x - 1, chunkCoord.y), horizontal: false, atStartEdge: true);
+        StitchEdge(new Vector2Int(chunkCoord.x + 1, chunkCoord.y), horizontal: false, atStartEdge: false);
+    }
+
 
     private void AddDistantChunkSkirt(Transform parent, Vector3[] vertices, int[] terrainClassByVertex, int sampleWidth, int sampleHeight, float skirtDepth, float tileWorldSize)
     {
