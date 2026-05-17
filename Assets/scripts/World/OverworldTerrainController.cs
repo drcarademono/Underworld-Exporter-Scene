@@ -20,6 +20,12 @@ public class OverworldTerrainController : MonoBehaviour
     public bool LoadWholeMapAtStartup = false;
     public bool LoadDistantChunks = true;
     [Range(2, 12)] public int DistantChunkStep = 6;
+    
+    [Header("LOD Skirt Lighting")]
+    public bool SkirtUseUpwardNormals = true;
+    [Range(0f, 1f)] public float SkirtUpwardNormalBlend = 0.5f;
+    public bool SkirtCastShadows = false;
+    public bool SkirtReceiveShadows = false;
 
 
     [Header("Overworld Time")]
@@ -66,4 +72,3 @@ public class OverworldTerrainController : MonoBehaviour
     public bool TransitionTexturingDiagnostics = true;
     [Range(1, 200)] public int TransitionDiagLogEveryNChunks = 8;
 }
-
