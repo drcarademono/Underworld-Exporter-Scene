@@ -1835,6 +1835,19 @@ public class GameWorldController : UWEBase
         return Mathf.Max(1, fallback);
     }
 
+    private int GetExpectedChunkSampleStep(Vector2Int chunkCoord, OverworldTerrainController overworld)
+    {
+        if (overworld == null) { return 1; }
+        int activeRadius = Mathf.Max(0, overworld.ActiveChunkRadius);
+        int transitionRadius = activeRadius + 1;
+        int dx = Mathf.Abs(chunkCoord.x - lastPlayerChunk.x);
+        int dy = Mathf.Abs(chunkCoord.y - lastPlayerChunk.y);
+        bool inActive = (dx <= activeRadius) && (dy <= activeRadius);
+        if (inActive) { return 1; }
+        bool inTransitionBand = (dx <= transitionRadius) && (dy <= transitionRadius);
+        return inTransitionBand ? 1 : Mathf.Max(2, overworld.DistantChunkStep);
+    }
+
     private void StitchChunkBorderToCoarserNeighbors(
         Vector2Int chunkCoord,
         int thisSampleStep,
@@ -1854,6 +1867,8 @@ public class GameWorldController : UWEBase
         void StitchEdge(Vector2Int neighborCoord, bool horizontal, bool atStartEdge)
         {
             int neighborStep = GetChunkRequestedOrLoadedSampleStep(neighborCoord, thisSampleStep);
+            int expectedNeighborStep = GetExpectedChunkSampleStep(neighborCoord, overworld);
+            neighborStep = Mathf.Max(neighborStep, expectedNeighborStep);
             if (neighborStep <= thisSampleStep) { return; }
 
             int ratio = Mathf.Max(1, neighborStep / Mathf.Max(1, thisSampleStep));
