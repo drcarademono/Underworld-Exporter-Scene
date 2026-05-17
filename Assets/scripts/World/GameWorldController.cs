@@ -208,6 +208,8 @@ public class GameWorldController : UWEBase
     private Dictionary<Vector2Int, GameObject> loadedOverworldChunks = new Dictionary<Vector2Int, GameObject>();
     private HashSet<Vector2Int> lowDetailOverworldChunks = new HashSet<Vector2Int>();
     private HashSet<Vector2Int> noNatureOverworldChunks = new HashSet<Vector2Int>();
+    private Dictionary<Vector2Int, int> loadedOverworldChunkSampleSteps = new Dictionary<Vector2Int, int>();
+    private Dictionary<Vector2Int, int> loadedOverworldChunkGeometrySteps = new Dictionary<Vector2Int, int>();
     private Texture2D[] overworldWaterFrames = null;
     private int overworldWaterFrameIndex = 0;
     private float overworldWaterAnimTimer = 0f;
@@ -1019,6 +1021,8 @@ public class GameWorldController : UWEBase
 
         OverworldTerrainRoot = new GameObject("OverworldTerrainRoot");
         loadedOverworldChunks.Clear();
+        loadedOverworldChunkSampleSteps.Clear();
+        loadedOverworldChunkGeometrySteps.Clear();
         lowDetailOverworldChunks.Clear();
         noNatureOverworldChunks.Clear();
 
@@ -1087,6 +1091,8 @@ public class GameWorldController : UWEBase
             if (startChunk != null)
             {
                 loadedOverworldChunks[lastPlayerChunk] = startChunk;
+                loadedOverworldChunkSampleSteps[lastPlayerChunk] = 1;
+                loadedOverworldChunkGeometrySteps[lastPlayerChunk] = Mathf.Max(1, overworld.TerrainDecimationStep);
                 lowDetailOverworldChunks.Remove(lastPlayerChunk);
                 noNatureOverworldChunks.Remove(lastPlayerChunk);
             }
@@ -1361,6 +1367,8 @@ public class GameWorldController : UWEBase
                         }
                     }
                     loadedOverworldChunks[req.chunkCoord] = chunk;
+                    loadedOverworldChunkSampleSteps[req.chunkCoord] = Mathf.Max(1, req.sampleStep);
+                    loadedOverworldChunkGeometrySteps[req.chunkCoord] = Mathf.Max(1, req.sampleStep) * Mathf.Max(1, overworld.TerrainDecimationStep);
                     if (req.lowDetail) { lowDetailOverworldChunks.Add(req.chunkCoord); } else { lowDetailOverworldChunks.Remove(req.chunkCoord); }
                     if (req.noNature) { noNatureOverworldChunks.Add(req.chunkCoord); } else { noNatureOverworldChunks.Remove(req.chunkCoord); }
                 }
@@ -1375,6 +1383,8 @@ public class GameWorldController : UWEBase
         if (!loadedOverworldChunks.ContainsKey(coord)) { return; }
         GameObject go = loadedOverworldChunks[coord];
         loadedOverworldChunks.Remove(coord);
+        loadedOverworldChunkSampleSteps.Remove(coord);
+        loadedOverworldChunkGeometrySteps.Remove(coord);
         pendingOverworldChunkRequests.Remove(coord);
         if (go == null) { return; }
         ReleaseOverworldRuntimeMaterials(go);
@@ -1546,6 +1556,10 @@ public class GameWorldController : UWEBase
         List<int> water = new List<int>();
         List<int> grass = new List<int>();
         List<int> stone = new List<int>();
+        bool[] forceWaterVertex = new bool[vertices.Length];
+        // Stitch first, then allow downstream water-clamp classification pass
+        // to be the final authority on forcing water surfaces to y=0.
+        StitchChunkBorderToCoarserNeighbors(chunkCoord, baseSampleStep, vertices, sampleWidth, sampleHeight, startX, startY, meshSampleStep, tilesPerPixel, heightmap, overworld);
         for (int z = 0; z < sampleHeight - 1; z++)
         {
             for (int x = 0; x < sampleWidth - 1; x++)
@@ -1642,18 +1656,27 @@ public class GameWorldController : UWEBase
                     vertices[bl].y = 0f;
                     vertices[tr].y = 0f;
                     vertices[br].y = 0f;
+                    forceWaterVertex[bl] = true;
+                    forceWaterVertex[tr] = true;
+                    forceWaterVertex[br] = true;
                 }
                 if (clampQuadToWaterPlane || (tri1Class == 0))
                 {
                     vertices[bl].y = 0f;
                     vertices[tl].y = 0f;
                     vertices[tr].y = 0f;
+                    forceWaterVertex[bl] = true;
+                    forceWaterVertex[tl] = true;
+                    forceWaterVertex[tr] = true;
                 }
 
                 AddTriangleToClass(bl, tr, br, tri0Class, water, grass, stone);
                 AddTriangleToClass(bl, tl, tr, tri1Class, water, grass, stone);
             }
         }
+        // Final edge reconciliation pass after local clamp logic:
+        // only lowers edge heights (never raises), so clamped water stays clamped.
+        LowerChunkBorderToCoarserNeighbors(chunkCoord, baseSampleStep, vertices, forceWaterVertex, sampleWidth, sampleHeight, startX, startY, meshSampleStep, tilesPerPixel, heightmap, overworld);
         mesh.vertices = vertices;
         mesh.subMeshCount = 3;
         mesh.SetTriangles(water, 0);
@@ -1746,8 +1769,13 @@ public class GameWorldController : UWEBase
                             vertices[br].y = 0f;
                             vertices[tl].y = 0f;
                             vertices[tr].y = 0f;
+                            forceWaterVertex[bl] = true;
+                            forceWaterVertex[br] = true;
+                            forceWaterVertex[tl] = true;
+                            forceWaterVertex[tr] = true;
                         }
                     }
+                    LowerChunkBorderToCoarserNeighbors(chunkCoord, baseSampleStep, vertices, forceWaterVertex, sampleWidth, sampleHeight, startX, startY, meshSampleStep, tilesPerPixel, heightmap, overworld);
                     mesh.vertices = vertices;
                     mesh.RecalculateNormals();
                     mesh.RecalculateBounds();
@@ -1785,10 +1813,6 @@ public class GameWorldController : UWEBase
             batch.Initialize(vertices, grass.ToArray(), natureFlats, overworld.WaterSurfaceEpsilon, chunkCoord);
         }
 
-        if (geometrySampleStep > 1)
-        {
-            AddDistantChunkSkirt(go.transform, vertices, terrainClassByVertex, sampleWidth, sampleHeight, Mathf.Max(2f, geometrySampleStep * overworld.TileWorldSize * 0.35f) * 5f, overworld.TileWorldSize);
-        }
         if (withCollision)
         {
             GameObject waterContact = new GameObject("WaterContact");
@@ -1817,6 +1841,235 @@ public class GameWorldController : UWEBase
 
         return go;
     }
+
+    private int GetChunkRequestedOrLoadedSampleStep(Vector2Int chunkCoord, int fallback = 1)
+    {
+        if (pendingOverworldChunkRequests.TryGetValue(chunkCoord, out OverworldChunkBuildRequest pending))
+        {
+            return Mathf.Max(1, pending.sampleStep);
+        }
+        if (loadedOverworldChunkSampleSteps.TryGetValue(chunkCoord, out int loadedStep))
+        {
+            return Mathf.Max(1, loadedStep);
+        }
+        return Mathf.Max(1, fallback);
+    }
+
+    private int GetExpectedChunkSampleStep(Vector2Int chunkCoord, OverworldTerrainController overworld)
+    {
+        if (overworld == null) { return 1; }
+        int activeRadius = Mathf.Max(0, overworld.ActiveChunkRadius);
+        int transitionRadius = activeRadius + 1;
+        int dx = Mathf.Abs(chunkCoord.x - lastPlayerChunk.x);
+        int dy = Mathf.Abs(chunkCoord.y - lastPlayerChunk.y);
+        bool inActive = (dx <= activeRadius) && (dy <= activeRadius);
+        if (inActive) { return 1; }
+        bool inTransitionBand = (dx <= transitionRadius) && (dy <= transitionRadius);
+        return inTransitionBand ? 1 : Mathf.Max(2, overworld.DistantChunkStep);
+    }
+
+    private int GetChunkRequestedOrLoadedGeometryStep(Vector2Int chunkCoord, int fallback, OverworldTerrainController overworld)
+    {
+        int decimation = Mathf.Max(1, (overworld != null) ? overworld.TerrainDecimationStep : 1);
+        if (pendingOverworldChunkRequests.TryGetValue(chunkCoord, out OverworldChunkBuildRequest pending))
+        {
+            return Mathf.Max(1, pending.sampleStep) * decimation;
+        }
+        if (loadedOverworldChunkGeometrySteps.TryGetValue(chunkCoord, out int loadedGeom))
+        {
+            return Mathf.Max(1, loadedGeom);
+        }
+        int expectedSample = GetExpectedChunkSampleStep(chunkCoord, overworld);
+        return Mathf.Max(1, expectedSample) * decimation;
+    }
+
+    private bool TrySampleLoadedChunkBorderHeight(Vector2Int neighborCoord, int worldSampleX, int worldSampleZ, int coarseStep, out float sampledY)
+    {
+        sampledY = 0f;
+        if (!loadedOverworldChunks.TryGetValue(neighborCoord, out GameObject neighborGo) || neighborGo == null) { return false; }
+        MeshFilter mf = neighborGo.GetComponent<MeshFilter>();
+        if (mf == null || mf.sharedMesh == null) { return false; }
+        Vector3[] nverts = mf.sharedMesh.vertices;
+        if (nverts == null || nverts.Length == 0) { return false; }
+
+        int nsx = Mathf.RoundToInt(worldSampleX / Mathf.Max(0.0001f, coarseStep));
+        int nsz = Mathf.RoundToInt(worldSampleZ / Mathf.Max(0.0001f, coarseStep));
+        int nwidth = Mathf.RoundToInt(Mathf.Sqrt(nverts.Length));
+        if (nwidth <= 1) { return false; }
+        int nheight = nverts.Length / nwidth;
+        if ((nwidth * nheight) != nverts.Length || nheight <= 1) { return false; }
+        int ix = Mathf.Clamp(nsx, 0, nwidth - 1);
+        int iz = Mathf.Clamp(nsz, 0, nheight - 1);
+        int idx = (iz * nwidth) + ix;
+        if (idx < 0 || idx >= nverts.Length) { return false; }
+        sampledY = nverts[idx].y;
+        return true;
+    }
+
+    private void StitchChunkBorderToCoarserNeighbors(
+        Vector2Int chunkCoord,
+        int thisSampleStep,
+        Vector3[] vertices,
+        int sampleWidth,
+        int sampleHeight,
+        int startX,
+        int startY,
+        int meshSampleStep,
+        int tilesPerPixel,
+        Texture2D heightmap,
+        OverworldTerrainController overworld)
+    {
+        if (vertices == null || vertices.Length == 0) { return; }
+        if (sampleWidth < 2 || sampleHeight < 2) { return; }
+
+        void StitchEdge(Vector2Int neighborCoord, bool horizontal, bool atStartEdge)
+        {
+            int thisGeometryStep = Mathf.Max(1, thisSampleStep * Mathf.Max(1, (overworld != null) ? overworld.TerrainDecimationStep : 1));
+            int neighborGeometryStep = GetChunkRequestedOrLoadedGeometryStep(neighborCoord, thisGeometryStep, overworld);
+            if (neighborGeometryStep <= thisGeometryStep) { return; }
+
+            int ratio = Mathf.Max(1, neighborGeometryStep / Mathf.Max(1, thisGeometryStep));
+            if (ratio <= 1) { return; }
+            int coarseStep = Mathf.Max(thisGeometryStep, neighborGeometryStep);
+
+            if (horizontal)
+            {
+                int z = atStartEdge ? 0 : (sampleHeight - 1);
+                for (int x = 0; x < sampleWidth; x++)
+                {
+                    int globalX = startX + (x * meshSampleStep);
+                    int globalZ = startY + (z * meshSampleStep);
+                    int coarseGX0 = Mathf.FloorToInt(globalX / (float)coarseStep) * coarseStep;
+                    int coarseGX1 = coarseGX0 + coarseStep;
+                    if (coarseGX1 == coarseGX0) { continue; }
+                    float t = (globalX - coarseGX0) / (float)(coarseGX1 - coarseGX0);
+                    int i = (z * sampleWidth) + x;
+                    float y0 = SampleTerrainHeightAt(coarseGX0, globalZ, tilesPerPixel, heightmap, overworld);
+                    float y1 = SampleTerrainHeightAt(coarseGX1, globalZ, tilesPerPixel, heightmap, overworld);
+                    if (TrySampleLoadedChunkBorderHeight(neighborCoord, coarseGX0, globalZ, coarseStep, out float ny0)) { y0 = ny0; }
+                    if (TrySampleLoadedChunkBorderHeight(neighborCoord, coarseGX1, globalZ, coarseStep, out float ny1)) { y1 = ny1; }
+                    float y = Mathf.Lerp(y0, y1, t);
+                    if (y < 0f) { y = 0f; }
+                    vertices[i].y = y;
+                }
+            }
+            else
+            {
+                int x = atStartEdge ? 0 : (sampleWidth - 1);
+                for (int z = 0; z < sampleHeight; z++)
+                {
+                    int globalX = startX + (x * meshSampleStep);
+                    int globalZ = startY + (z * meshSampleStep);
+                    int coarseGZ0 = Mathf.FloorToInt(globalZ / (float)coarseStep) * coarseStep;
+                    int coarseGZ1 = coarseGZ0 + coarseStep;
+                    if (coarseGZ1 == coarseGZ0) { continue; }
+                    float t = (globalZ - coarseGZ0) / (float)(coarseGZ1 - coarseGZ0);
+                    int i = (z * sampleWidth) + x;
+                    float y0 = SampleTerrainHeightAt(globalX, coarseGZ0, tilesPerPixel, heightmap, overworld);
+                    float y1 = SampleTerrainHeightAt(globalX, coarseGZ1, tilesPerPixel, heightmap, overworld);
+                    if (TrySampleLoadedChunkBorderHeight(neighborCoord, globalX, coarseGZ0, coarseStep, out float ny0)) { y0 = ny0; }
+                    if (TrySampleLoadedChunkBorderHeight(neighborCoord, globalX, coarseGZ1, coarseStep, out float ny1)) { y1 = ny1; }
+                    float y = Mathf.Lerp(y0, y1, t);
+                    if (y < 0f) { y = 0f; }
+                    vertices[i].y = y;
+                }
+            }
+        }
+
+        StitchEdge(new Vector2Int(chunkCoord.x, chunkCoord.y - 1), horizontal: true, atStartEdge: true);
+        StitchEdge(new Vector2Int(chunkCoord.x, chunkCoord.y + 1), horizontal: true, atStartEdge: false);
+        StitchEdge(new Vector2Int(chunkCoord.x - 1, chunkCoord.y), horizontal: false, atStartEdge: true);
+        StitchEdge(new Vector2Int(chunkCoord.x + 1, chunkCoord.y), horizontal: false, atStartEdge: false);
+    }
+
+    private void LowerChunkBorderToCoarserNeighbors(
+        Vector2Int chunkCoord,
+        int thisSampleStep,
+        Vector3[] vertices,
+        bool[] forceWaterVertex,
+        int sampleWidth,
+        int sampleHeight,
+        int startX,
+        int startY,
+        int meshSampleStep,
+        int tilesPerPixel,
+        Texture2D heightmap,
+        OverworldTerrainController overworld)
+    {
+        if (vertices == null || vertices.Length == 0) { return; }
+        if (sampleWidth < 2 || sampleHeight < 2) { return; }
+
+        void LowerEdge(Vector2Int neighborCoord, bool horizontal, bool atStartEdge)
+        {
+            int thisGeometryStep = Mathf.Max(1, thisSampleStep * Mathf.Max(1, (overworld != null) ? overworld.TerrainDecimationStep : 1));
+            int neighborGeometryStep = GetChunkRequestedOrLoadedGeometryStep(neighborCoord, thisGeometryStep, overworld);
+            if (neighborGeometryStep == thisGeometryStep) { return; }
+            int coarseStep = Mathf.Max(thisGeometryStep, neighborGeometryStep);
+
+            if (horizontal)
+            {
+                int z = atStartEdge ? 0 : (sampleHeight - 1);
+                for (int x = 0; x < sampleWidth; x++)
+                {
+                    int globalX = startX + (x * meshSampleStep);
+                    int globalZ = startY + (z * meshSampleStep);
+                    int coarseGX0 = Mathf.FloorToInt(globalX / (float)coarseStep) * coarseStep;
+                    int coarseGX1 = coarseGX0 + coarseStep;
+                    float t = (coarseGX1 == coarseGX0) ? 0f : (globalX - coarseGX0) / (float)(coarseGX1 - coarseGX0);
+                    float y0 = SampleTerrainHeightAt(coarseGX0, globalZ, tilesPerPixel, heightmap, overworld);
+                    float y1 = SampleTerrainHeightAt(coarseGX1, globalZ, tilesPerPixel, heightmap, overworld);
+                    bool anchor0Water = y0 <= overworld.WaterSurfaceEpsilon;
+                    bool anchor1Water = y1 <= overworld.WaterSurfaceEpsilon;
+                    if (anchor0Water) { y0 = 0f; }
+                    if (anchor1Water) { y1 = 0f; }
+                    float targetY = Mathf.Lerp(y0, y1, t);
+                    // Mixed-LOD shoreline safety: if either coarse anchor resolves to water,
+                    // keep the full stitched border segment clamped to water plane.
+                    // This matches low-detail clamp behavior and prevents residual cracks.
+                    if (anchor0Water || anchor1Water) { targetY = 0f; }
+                    int i = (z * sampleWidth) + x;
+                    // Keep explicit local water clamps authoritative.
+                    if ((forceWaterVertex != null) && forceWaterVertex[i]) { targetY = 0f; }
+                    else if (vertices[i].y <= overworld.WaterSurfaceEpsilon) { targetY = 0f; }
+                    // Use deterministic target assignment so both sides of mixed-LOD boundaries
+                    // resolve to the same shared-edge profile regardless of build order.
+                    vertices[i].y = targetY;
+                }
+            }
+            else
+            {
+                int x = atStartEdge ? 0 : (sampleWidth - 1);
+                for (int z = 0; z < sampleHeight; z++)
+                {
+                    int globalX = startX + (x * meshSampleStep);
+                    int globalZ = startY + (z * meshSampleStep);
+                    int coarseGZ0 = Mathf.FloorToInt(globalZ / (float)coarseStep) * coarseStep;
+                    int coarseGZ1 = coarseGZ0 + coarseStep;
+                    float t = (coarseGZ1 == coarseGZ0) ? 0f : (globalZ - coarseGZ0) / (float)(coarseGZ1 - coarseGZ0);
+                    float y0 = SampleTerrainHeightAt(globalX, coarseGZ0, tilesPerPixel, heightmap, overworld);
+                    float y1 = SampleTerrainHeightAt(globalX, coarseGZ1, tilesPerPixel, heightmap, overworld);
+                    bool anchor0Water = y0 <= overworld.WaterSurfaceEpsilon;
+                    bool anchor1Water = y1 <= overworld.WaterSurfaceEpsilon;
+                    if (anchor0Water) { y0 = 0f; }
+                    if (anchor1Water) { y1 = 0f; }
+                    float targetY = Mathf.Lerp(y0, y1, t);
+                    // Mixed-LOD shoreline safety: if either coarse anchor resolves to water,
+                    // keep the full stitched border segment clamped to water plane.
+                    if (anchor0Water || anchor1Water) { targetY = 0f; }
+                    int i = (z * sampleWidth) + x;
+                    if ((forceWaterVertex != null) && forceWaterVertex[i]) { targetY = 0f; }
+                    else if (vertices[i].y <= overworld.WaterSurfaceEpsilon) { targetY = 0f; }
+                    vertices[i].y = targetY;
+                }
+            }
+        }
+
+        LowerEdge(new Vector2Int(chunkCoord.x, chunkCoord.y - 1), horizontal: true, atStartEdge: true);
+        LowerEdge(new Vector2Int(chunkCoord.x, chunkCoord.y + 1), horizontal: true, atStartEdge: false);
+        LowerEdge(new Vector2Int(chunkCoord.x - 1, chunkCoord.y), horizontal: false, atStartEdge: true);
+        LowerEdge(new Vector2Int(chunkCoord.x + 1, chunkCoord.y), horizontal: false, atStartEdge: false);
+    }
+
 
     private void AddDistantChunkSkirt(Transform parent, Vector3[] vertices, int[] terrainClassByVertex, int sampleWidth, int sampleHeight, float skirtDepth, float tileWorldSize)
     {
