@@ -6,6 +6,7 @@ using UnityEngine;
 
 public class OverworldTransitionTileGeneratorWindow : EditorWindow
 {
+    private const string PrefPrefix = "UW.OverworldTransitionTileGen.";
     [Serializable]
     private class TerrainTextureEntry
     {
@@ -121,6 +122,16 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         {
             GenerateAll();
         }
+    }
+
+    private void OnEnable()
+    {
+        LoadPrefs();
+    }
+
+    private void OnDisable()
+    {
+        SavePrefs();
     }
 
     private void PullFromController()
@@ -435,5 +446,39 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
             }
             current = next;
         }
+    }
+
+    private void LoadPrefs()
+    {
+        tileSize = EditorPrefs.GetInt(PrefPrefix + nameof(tileSize), tileSize);
+        variantsPerMask = EditorPrefs.GetInt(PrefPrefix + nameof(variantsPerMask), variantsPerMask);
+        seed = EditorPrefs.GetInt(PrefPrefix + nameof(seed), seed);
+        blendMode = (BlendMode)EditorPrefs.GetInt(PrefPrefix + nameof(blendMode), (int)blendMode);
+        ditherThresholdBias = EditorPrefs.GetInt(PrefPrefix + nameof(ditherThresholdBias), ditherThresholdBias);
+        perlinScale = EditorPrefs.GetFloat(PrefPrefix + nameof(perlinScale), perlinScale);
+        perlinStrength = EditorPrefs.GetFloat(PrefPrefix + nameof(perlinStrength), perlinStrength);
+        borderWidth = EditorPrefs.GetFloat(PrefPrefix + nameof(borderWidth), borderWidth);
+        borderStochasticity = EditorPrefs.GetFloat(PrefPrefix + nameof(borderStochasticity), borderStochasticity);
+        centerFillBoost = EditorPrefs.GetFloat(PrefPrefix + nameof(centerFillBoost), centerFillBoost);
+        m15CenterFillBoost = EditorPrefs.GetFloat(PrefPrefix + nameof(m15CenterFillBoost), m15CenterFillBoost);
+        elbowRoundness = EditorPrefs.GetFloat(PrefPrefix + nameof(elbowRoundness), elbowRoundness);
+        outputFolder = EditorPrefs.GetString(PrefPrefix + nameof(outputFolder), outputFolder);
+    }
+
+    private void SavePrefs()
+    {
+        EditorPrefs.SetInt(PrefPrefix + nameof(tileSize), tileSize);
+        EditorPrefs.SetInt(PrefPrefix + nameof(variantsPerMask), variantsPerMask);
+        EditorPrefs.SetInt(PrefPrefix + nameof(seed), seed);
+        EditorPrefs.SetInt(PrefPrefix + nameof(blendMode), (int)blendMode);
+        EditorPrefs.SetInt(PrefPrefix + nameof(ditherThresholdBias), ditherThresholdBias);
+        EditorPrefs.SetFloat(PrefPrefix + nameof(perlinScale), perlinScale);
+        EditorPrefs.SetFloat(PrefPrefix + nameof(perlinStrength), perlinStrength);
+        EditorPrefs.SetFloat(PrefPrefix + nameof(borderWidth), borderWidth);
+        EditorPrefs.SetFloat(PrefPrefix + nameof(borderStochasticity), borderStochasticity);
+        EditorPrefs.SetFloat(PrefPrefix + nameof(centerFillBoost), centerFillBoost);
+        EditorPrefs.SetFloat(PrefPrefix + nameof(m15CenterFillBoost), m15CenterFillBoost);
+        EditorPrefs.SetFloat(PrefPrefix + nameof(elbowRoundness), elbowRoundness);
+        EditorPrefs.SetString(PrefPrefix + nameof(outputFolder), outputFolder ?? "Assets/Generated/OverworldTransitions");
     }
 }
