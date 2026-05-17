@@ -1612,23 +1612,31 @@ public class GameWorldController : UWEBase
                 }
 
                 bool clampQuadToWaterPlane = false;
+                bool quadHasAnyWaterSample = (tri0Water > 0) || (tri1Water > 0);
+                bool tri0HasWaterSample = tri0Water > 0;
+                bool tri1HasWaterSample = tri1Water > 0;
 
-                // Resolve mixed shoreline quads without splitting one tile into water+land triangles.
-                // If exactly one triangle resolves to water, keep both triangles in a non-water class so
-                // transition atlas tiles can render shoreline transitions, but still clamp geometry flat.
-                if ((tri0Class == 0) != (tri1Class == 0))
+                // Any quad that participates in water (full water or shoreline transition) must be flat.
+                if (quadHasAnyWaterSample)
+                {
+                    clampQuadToWaterPlane = true;
+                }
+
+                // Resolve tile-level classing:
+                // - both triangles with water samples => full water tile
+                // - only one triangle with water samples => shoreline transition tile (non-water class)
+                if (tri0HasWaterSample && tri1HasWaterSample)
+                {
+                    tri0Class = 0;
+                    tri1Class = 0;
+                }
+                else if (tri0HasWaterSample != tri1HasWaterSample)
                 {
                     int quadGrass = tri0Grass + tri1Grass;
                     int quadStone = tri0Stone + tri1Stone;
                     int shorelineClass = (quadStone > quadGrass) ? 2 : 1;
                     tri0Class = shorelineClass;
                     tri1Class = shorelineClass;
-                    clampQuadToWaterPlane = true;
-                }
-                else if ((tri0Class == 0) && (tri1Class == 0))
-                {
-                    // True full-water quad.
-                    clampQuadToWaterPlane = true;
                 }
 
                 bool onChunkBorder = (x == 0) || (z == 0) || (x == sampleWidth - 2) || (z == sampleHeight - 2);
