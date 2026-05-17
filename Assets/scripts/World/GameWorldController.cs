@@ -1668,6 +1668,9 @@ public class GameWorldController : UWEBase
                 AddTriangleToClass(bl, tl, tr, tri1Class, water, grass, stone);
             }
         }
+        // Final edge reconciliation pass after local clamp logic:
+        // only lowers edge heights (never raises), so clamped water stays clamped.
+        LowerChunkBorderToCoarserNeighbors(chunkCoord, baseSampleStep, vertices, sampleWidth, sampleHeight, startX, startY, meshSampleStep, tilesPerPixel, heightmap, overworld);
         mesh.vertices = vertices;
         mesh.subMeshCount = 3;
         mesh.SetTriangles(water, 0);
@@ -1762,6 +1765,7 @@ public class GameWorldController : UWEBase
                             vertices[tr].y = 0f;
                         }
                     }
+                    LowerChunkBorderToCoarserNeighbors(chunkCoord, baseSampleStep, vertices, sampleWidth, sampleHeight, startX, startY, meshSampleStep, tilesPerPixel, heightmap, overworld);
                     mesh.vertices = vertices;
                     mesh.RecalculateNormals();
                     mesh.RecalculateBounds();
@@ -1939,6 +1943,75 @@ public class GameWorldController : UWEBase
         StitchEdge(new Vector2Int(chunkCoord.x, chunkCoord.y + 1), horizontal: true, atStartEdge: false);
         StitchEdge(new Vector2Int(chunkCoord.x - 1, chunkCoord.y), horizontal: false, atStartEdge: true);
         StitchEdge(new Vector2Int(chunkCoord.x + 1, chunkCoord.y), horizontal: false, atStartEdge: false);
+    }
+
+    private void LowerChunkBorderToCoarserNeighbors(
+        Vector2Int chunkCoord,
+        int thisSampleStep,
+        Vector3[] vertices,
+        int sampleWidth,
+        int sampleHeight,
+        int startX,
+        int startY,
+        int meshSampleStep,
+        int tilesPerPixel,
+        Texture2D heightmap,
+        OverworldTerrainController overworld)
+    {
+        if (vertices == null || vertices.Length == 0) { return; }
+        if (sampleWidth < 2 || sampleHeight < 2) { return; }
+
+        void LowerEdge(Vector2Int neighborCoord, bool horizontal, bool atStartEdge)
+        {
+            int thisGeometryStep = Mathf.Max(1, thisSampleStep * Mathf.Max(1, (overworld != null) ? overworld.TerrainDecimationStep : 1));
+            int neighborGeometryStep = GetChunkRequestedOrLoadedGeometryStep(neighborCoord, thisGeometryStep, overworld);
+            if (neighborGeometryStep <= thisGeometryStep) { return; }
+            int coarseStep = Mathf.Max(thisGeometryStep, neighborGeometryStep);
+
+            if (horizontal)
+            {
+                int z = atStartEdge ? 0 : (sampleHeight - 1);
+                for (int x = 0; x < sampleWidth; x++)
+                {
+                    int globalX = startX + (x * meshSampleStep);
+                    int globalZ = startY + (z * meshSampleStep);
+                    int coarseGX0 = Mathf.FloorToInt(globalX / (float)coarseStep) * coarseStep;
+                    int coarseGX1 = coarseGX0 + coarseStep;
+                    float t = (coarseGX1 == coarseGX0) ? 0f : (globalX - coarseGX0) / (float)(coarseGX1 - coarseGX0);
+                    float y0 = SampleTerrainHeightAt(coarseGX0, globalZ, tilesPerPixel, heightmap, overworld);
+                    float y1 = SampleTerrainHeightAt(coarseGX1, globalZ, tilesPerPixel, heightmap, overworld);
+                    if (y0 <= overworld.WaterSurfaceEpsilon) { y0 = 0f; }
+                    if (y1 <= overworld.WaterSurfaceEpsilon) { y1 = 0f; }
+                    float targetY = Mathf.Lerp(y0, y1, t);
+                    int i = (z * sampleWidth) + x;
+                    vertices[i].y = Mathf.Min(vertices[i].y, targetY);
+                }
+            }
+            else
+            {
+                int x = atStartEdge ? 0 : (sampleWidth - 1);
+                for (int z = 0; z < sampleHeight; z++)
+                {
+                    int globalX = startX + (x * meshSampleStep);
+                    int globalZ = startY + (z * meshSampleStep);
+                    int coarseGZ0 = Mathf.FloorToInt(globalZ / (float)coarseStep) * coarseStep;
+                    int coarseGZ1 = coarseGZ0 + coarseStep;
+                    float t = (coarseGZ1 == coarseGZ0) ? 0f : (globalZ - coarseGZ0) / (float)(coarseGZ1 - coarseGZ0);
+                    float y0 = SampleTerrainHeightAt(globalX, coarseGZ0, tilesPerPixel, heightmap, overworld);
+                    float y1 = SampleTerrainHeightAt(globalX, coarseGZ1, tilesPerPixel, heightmap, overworld);
+                    if (y0 <= overworld.WaterSurfaceEpsilon) { y0 = 0f; }
+                    if (y1 <= overworld.WaterSurfaceEpsilon) { y1 = 0f; }
+                    float targetY = Mathf.Lerp(y0, y1, t);
+                    int i = (z * sampleWidth) + x;
+                    vertices[i].y = Mathf.Min(vertices[i].y, targetY);
+                }
+            }
+        }
+
+        LowerEdge(new Vector2Int(chunkCoord.x, chunkCoord.y - 1), horizontal: true, atStartEdge: true);
+        LowerEdge(new Vector2Int(chunkCoord.x, chunkCoord.y + 1), horizontal: true, atStartEdge: false);
+        LowerEdge(new Vector2Int(chunkCoord.x - 1, chunkCoord.y), horizontal: false, atStartEdge: true);
+        LowerEdge(new Vector2Int(chunkCoord.x + 1, chunkCoord.y), horizontal: false, atStartEdge: false);
     }
 
 
