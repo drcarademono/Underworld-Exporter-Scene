@@ -243,6 +243,10 @@ public class GameWorldController : UWEBase
 
     [Header("Overworld Controller")]
     public OverworldTerrainController OverworldController;
+    [Header("Overworld LOD Skirt Lighting")]
+    public bool OverworldSkirtUseUpwardNormals = true;
+    public bool OverworldSkirtCastShadows = false;
+    public bool OverworldSkirtReceiveShadows = false;
 
     public bool StartInOverworld
     {
@@ -1828,7 +1832,7 @@ public class GameWorldController : UWEBase
         List<int> grassTris = new List<int>();
         List<int> stoneTris = new List<int>();
 
-        void AddEdge(int a, int b, Vector3 outward)
+        void AddEdge(int a, int b)
         {
             int baseIndex = skirtVerts.Count;
             Vector3 va = vertices[a];
@@ -1868,10 +1872,10 @@ public class GameWorldController : UWEBase
             target.Add(baseIndex + 1); target.Add(baseIndex + 3); target.Add(baseIndex + 2);
         }
 
-        for (int x = 0; x < sampleWidth - 1; x++) { AddEdge(x, x + 1, Vector3.back); } // north edge
-        for (int x = 0; x < sampleWidth - 1; x++) { int z = sampleHeight - 1; AddEdge(z * sampleWidth + x + 1, z * sampleWidth + x, Vector3.forward); } // south edge
-        for (int z = 0; z < sampleHeight - 1; z++) { AddEdge((z + 1) * sampleWidth, z * sampleWidth, Vector3.left); } // west edge
-        for (int z = 0; z < sampleHeight - 1; z++) { int x = sampleWidth - 1; AddEdge(z * sampleWidth + x, (z + 1) * sampleWidth + x, Vector3.right); } // east edge
+        for (int x = 0; x < sampleWidth - 1; x++) { AddEdge(x, x + 1); } // north edge
+        for (int x = 0; x < sampleWidth - 1; x++) { int z = sampleHeight - 1; AddEdge(z * sampleWidth + x + 1, z * sampleWidth + x); } // south edge
+        for (int z = 0; z < sampleHeight - 1; z++) { AddEdge((z + 1) * sampleWidth, z * sampleWidth); } // west edge
+        for (int z = 0; z < sampleHeight - 1; z++) { int x = sampleWidth - 1; AddEdge(z * sampleWidth + x, (z + 1) * sampleWidth + x); } // east edge
 
         if (skirtVerts.Count == 0) { return; }
         Mesh skirtMesh = new Mesh();
@@ -1882,14 +1886,20 @@ public class GameWorldController : UWEBase
         skirtMesh.SetTriangles(waterTris, 0);
         skirtMesh.SetTriangles(grassTris, 1);
         skirtMesh.SetTriangles(stoneTris, 2);
-        // Mitigate dark seam shadows on vertical skirts by biasing normals upward.
-        // This keeps the skirt visually close to the top terrain lighting while still sealing LOD gaps.
-        Vector3[] skirtNormals = new Vector3[skirtVerts.Count];
-        for (int i = 0; i < skirtNormals.Length; i++)
+        if (OverworldSkirtUseUpwardNormals)
         {
-            skirtNormals[i] = Vector3.up;
+            // Mitigate dark seam shading by biasing normals upward.
+            Vector3[] skirtNormals = new Vector3[skirtVerts.Count];
+            for (int i = 0; i < skirtNormals.Length; i++)
+            {
+                skirtNormals[i] = Vector3.up;
+            }
+            skirtMesh.normals = skirtNormals;
         }
-        skirtMesh.normals = skirtNormals;
+        else
+        {
+            skirtMesh.RecalculateNormals();
+        }
         skirtMesh.RecalculateBounds();
 
         GameObject skirt = new GameObject("ChunkSkirt");
@@ -1898,8 +1908,10 @@ public class GameWorldController : UWEBase
         MeshRenderer mr = skirt.AddComponent<MeshRenderer>();
         mf.sharedMesh = skirtMesh;
         mr.sharedMaterials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
-        mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        mr.receiveShadows = false;
+        mr.shadowCastingMode = OverworldSkirtCastShadows
+            ? UnityEngine.Rendering.ShadowCastingMode.On
+            : UnityEngine.Rendering.ShadowCastingMode.Off;
+        mr.receiveShadows = OverworldSkirtReceiveShadows;
     }
 
 
