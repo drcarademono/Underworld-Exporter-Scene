@@ -58,6 +58,11 @@ public class OverworldTerrainController : MonoBehaviour
     [Range(0f, 20f)] public float SnowNoiseScale = 5f;
     [Range(0f, 20f)] public float SnowNoiseAmplitude = 3f;
     public bool RenderSnowUsingStoneLayer = true;
+    [Header("Stone Classification")]
+    [Range(0f, 120f)] public float StoneLineAltitude = 20f;
+    [Range(0f, 30f)] public float StoneTransitionWidth = 6f;
+    [Range(0f, 20f)] public float StoneNoiseScale = 5f;
+    [Range(0f, 20f)] public float StoneNoiseAmplitude = 2f;
     public int GrassTextureIndex = 181;
     public int StoneTextureIndex = 253;
     public int DirtTextureIndex = 182;

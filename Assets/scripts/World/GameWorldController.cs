@@ -1929,16 +1929,27 @@ public class GameWorldController : UWEBase
         return blendNoise <= t;
     }
 
+    private static bool IsStoneAtHeight(float worldHeight, int sampleX, int sampleZ, OverworldTerrainController overworld)
+    {
+        float scale = Mathf.Max(0.001f, overworld.StoneNoiseScale);
+        float noise = (Mathf.PerlinNoise((sampleX + 147.271f) / scale, (sampleZ + 693.487f) / scale) * 2f) - 1f;
+        float noisyStoneLine = overworld.StoneLineAltitude + (noise * overworld.StoneNoiseAmplitude);
+        float halfWidth = Mathf.Max(0f, overworld.StoneTransitionWidth * 0.5f);
+
+        if (worldHeight >= noisyStoneLine + halfWidth) { return true; }
+        if (worldHeight <= noisyStoneLine - halfWidth) { return false; }
+
+        float t = Mathf.InverseLerp(noisyStoneLine - halfWidth, noisyStoneLine + halfWidth, worldHeight);
+        float blendNoise = Mathf.PerlinNoise((sampleX + 823.619f) / scale, (sampleZ + 219.043f) / scale);
+        return blendNoise <= t;
+    }
+
     private int ClassifyOverworldTerrainSample(float worldHeight, int sampleX, int sampleZ, int px, int pz, int tilesPerPixel, Texture2D heightmap, OverworldTerrainController overworld)
     {
         if (worldHeight <= overworld.WaterSurfaceEpsilon) { return 0; }
         if (IsSnowAtHeight(worldHeight, sampleX, sampleZ, overworld)) { return 3; }
-        float hE = SampleSmoothedHeight(heightmap, Mathf.Clamp(px + tilesPerPixel, 0, heightmap.width - 1), pz);
-        float hW = SampleSmoothedHeight(heightmap, Mathf.Clamp(px - tilesPerPixel, 0, heightmap.width - 1), pz);
-        float hN = SampleSmoothedHeight(heightmap, px, Mathf.Clamp(pz + tilesPerPixel, 0, heightmap.height - 1));
-        float hS = SampleSmoothedHeight(heightmap, px, Mathf.Clamp(pz - tilesPerPixel, 0, heightmap.height - 1));
-        float slopeMagnitude = Mathf.Sqrt(((hE - hW) * (hE - hW)) + ((hN - hS) * (hN - hS)));
-        return (slopeMagnitude > 0.022f) ? 2 : 1;
+        if (IsStoneAtHeight(worldHeight, sampleX, sampleZ, overworld)) { return 2; }
+        return 1;
     }
 
     private float SampleTerrainHeightAt(int sampleX, int sampleZ, int tilesPerPixel, Texture2D heightmap, OverworldTerrainController overworld)
