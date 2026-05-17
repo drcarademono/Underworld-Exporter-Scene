@@ -1660,7 +1660,7 @@ public class GameWorldController : UWEBase
                 AddTriangleToClass(bl, tl, tr, tri1Class, water, grass, stone);
             }
         }
-        StitchChunkBorderToCoarserNeighbors(chunkCoord, baseSampleStep, vertices, sampleWidth, sampleHeight);
+        StitchChunkBorderToCoarserNeighbors(chunkCoord, baseSampleStep, vertices, sampleWidth, sampleHeight, startX, startY, meshSampleStep, tilesPerPixel, heightmap, overworld);
         mesh.vertices = vertices;
         mesh.subMeshCount = 3;
         mesh.SetTriangles(water, 0);
@@ -1755,7 +1755,7 @@ public class GameWorldController : UWEBase
                             vertices[tr].y = 0f;
                         }
                     }
-                    StitchChunkBorderToCoarserNeighbors(chunkCoord, baseSampleStep, vertices, sampleWidth, sampleHeight);
+                    StitchChunkBorderToCoarserNeighbors(chunkCoord, baseSampleStep, vertices, sampleWidth, sampleHeight, startX, startY, meshSampleStep, tilesPerPixel, heightmap, overworld);
                     mesh.vertices = vertices;
                     mesh.RecalculateNormals();
                     mesh.RecalculateBounds();
@@ -1835,7 +1835,18 @@ public class GameWorldController : UWEBase
         return Mathf.Max(1, fallback);
     }
 
-    private void StitchChunkBorderToCoarserNeighbors(Vector2Int chunkCoord, int thisSampleStep, Vector3[] vertices, int sampleWidth, int sampleHeight)
+    private void StitchChunkBorderToCoarserNeighbors(
+        Vector2Int chunkCoord,
+        int thisSampleStep,
+        Vector3[] vertices,
+        int sampleWidth,
+        int sampleHeight,
+        int startX,
+        int startY,
+        int meshSampleStep,
+        int tilesPerPixel,
+        Texture2D heightmap,
+        OverworldTerrainController overworld)
     {
         if (vertices == null || vertices.Length == 0) { return; }
         if (sampleWidth < 2 || sampleHeight < 2) { return; }
@@ -1847,20 +1858,24 @@ public class GameWorldController : UWEBase
 
             int ratio = Mathf.Max(1, neighborStep / Mathf.Max(1, thisSampleStep));
             if (ratio <= 1) { return; }
+            int coarseStep = Mathf.Max(thisSampleStep, neighborStep);
 
             if (horizontal)
             {
                 int z = atStartEdge ? 0 : (sampleHeight - 1);
                 for (int x = 0; x < sampleWidth; x++)
                 {
-                    int coarseX0 = (x / ratio) * ratio;
-                    int coarseX1 = Mathf.Min(coarseX0 + ratio, sampleWidth - 1);
-                    if (coarseX1 == coarseX0) { continue; }
-                    float t = (x - coarseX0) / (float)(coarseX1 - coarseX0);
+                    int globalX = startX + (x * meshSampleStep);
+                    int globalZ = startY + (z * meshSampleStep);
+                    int coarseGX0 = Mathf.FloorToInt(globalX / (float)coarseStep) * coarseStep;
+                    int coarseGX1 = coarseGX0 + coarseStep;
+                    if (coarseGX1 == coarseGX0) { continue; }
+                    float t = (globalX - coarseGX0) / (float)(coarseGX1 - coarseGX0);
                     int i = (z * sampleWidth) + x;
-                    int i0 = (z * sampleWidth) + coarseX0;
-                    int i1 = (z * sampleWidth) + coarseX1;
-                    float y = Mathf.Lerp(vertices[i0].y, vertices[i1].y, t);
+                    float y0 = SampleTerrainHeightAt(coarseGX0, globalZ, tilesPerPixel, heightmap, overworld);
+                    float y1 = SampleTerrainHeightAt(coarseGX1, globalZ, tilesPerPixel, heightmap, overworld);
+                    float y = Mathf.Lerp(y0, y1, t);
+                    if (y < 0f) { y = 0f; }
                     vertices[i].y = y;
                 }
             }
@@ -1869,14 +1884,17 @@ public class GameWorldController : UWEBase
                 int x = atStartEdge ? 0 : (sampleWidth - 1);
                 for (int z = 0; z < sampleHeight; z++)
                 {
-                    int coarseZ0 = (z / ratio) * ratio;
-                    int coarseZ1 = Mathf.Min(coarseZ0 + ratio, sampleHeight - 1);
-                    if (coarseZ1 == coarseZ0) { continue; }
-                    float t = (z - coarseZ0) / (float)(coarseZ1 - coarseZ0);
+                    int globalX = startX + (x * meshSampleStep);
+                    int globalZ = startY + (z * meshSampleStep);
+                    int coarseGZ0 = Mathf.FloorToInt(globalZ / (float)coarseStep) * coarseStep;
+                    int coarseGZ1 = coarseGZ0 + coarseStep;
+                    if (coarseGZ1 == coarseGZ0) { continue; }
+                    float t = (globalZ - coarseGZ0) / (float)(coarseGZ1 - coarseGZ0);
                     int i = (z * sampleWidth) + x;
-                    int i0 = (coarseZ0 * sampleWidth) + x;
-                    int i1 = (coarseZ1 * sampleWidth) + x;
-                    float y = Mathf.Lerp(vertices[i0].y, vertices[i1].y, t);
+                    float y0 = SampleTerrainHeightAt(globalX, coarseGZ0, tilesPerPixel, heightmap, overworld);
+                    float y1 = SampleTerrainHeightAt(globalX, coarseGZ1, tilesPerPixel, heightmap, overworld);
+                    float y = Mathf.Lerp(y0, y1, t);
+                    if (y < 0f) { y = 0f; }
                     vertices[i].y = y;
                 }
             }
