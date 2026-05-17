@@ -367,6 +367,14 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         // So we shrink cardinal target bands toward edges as boost increases.
         float baseHalf = Mathf.Clamp(0.5f - effectiveCenterFillBoost, 0.05f, 0.5f);
 
+        // For m15 (all sides active), use a circular center island mask to avoid lumpy square-ish shapes.
+        if (mask == 15)
+        {
+            float islandRadius = Mathf.Clamp(effectiveCenterFillBoost * 1.15f, 0.04f, 0.45f);
+            float distToCenter = Vector2.Distance(new Vector2(fx, fy), new Vector2(0.5f, 0.5f));
+            return distToCenter - islandRadius; // target outside the island circle
+        }
+
         float dN = n ? (fy - (1f - baseHalf)) : float.NegativeInfinity;
         float dE = e ? (fx - (1f - baseHalf)) : float.NegativeInfinity;
         float dS = s ? (baseHalf - fy) : float.NegativeInfinity;
