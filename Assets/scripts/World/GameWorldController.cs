@@ -1414,6 +1414,7 @@ public class GameWorldController : UWEBase
         Vector2[] uvs = new Vector2[sampleWidth * sampleHeight];
         int[] triangles = new int[(sampleWidth - 1) * (sampleHeight - 1) * 6];
         int[] terrainClassByVertex = new int[sampleWidth * sampleHeight]; //0=water,1=grass,2=stone
+        bool[] quadWaterForTransitions = new bool[Mathf.Max(0, (sampleWidth - 1) * (sampleHeight - 1))];
 
         int fullSampleWidth = ((endX - startX) / baseSampleStep) + 1;
         int fullSampleHeight = ((endY - startY) / baseSampleStep) + 1;
@@ -1673,6 +1674,8 @@ public class GameWorldController : UWEBase
                     vertices[tr].y = 0f;
                 }
 
+                quadWaterForTransitions[(z * (sampleWidth - 1)) + x] = clampQuadToWaterPlane || (tri0Class == 0) || (tri1Class == 0);
+
                 AddTriangleToClass(bl, tr, br, tri0Class, water, grass, stone);
                 AddTriangleToClass(bl, tl, tr, tri1Class, water, grass, stone);
             }
@@ -1710,8 +1713,25 @@ public class GameWorldController : UWEBase
             Texture2D grassBase = (overworldGrassMat != null) ? (overworldGrassMat.mainTexture as Texture2D) : null;
             Texture2D stoneBase = (overworldStoneMat != null) ? (overworldStoneMat.mainTexture as Texture2D) : null;
             OverworldTerrainTexturing.BuildStats stats;
+            int[] terrainClassForTransitions = (int[])terrainClassFull.Clone();
+            for (int tz = 0; tz < sampleHeight - 1; tz++)
+            {
+                for (int tx = 0; tx < sampleWidth - 1; tx++)
+                {
+                    if (!quadWaterForTransitions[(tz * (sampleWidth - 1)) + tx]) { continue; }
+                    int qx0 = Mathf.Clamp((tx * meshSampleStep) / baseSampleStep, 0, fullSampleWidth - 1);
+                    int qz0 = Mathf.Clamp((tz * meshSampleStep) / baseSampleStep, 0, fullSampleHeight - 1);
+                    int qx1 = Mathf.Clamp(((tx + 1) * meshSampleStep) / baseSampleStep, 0, fullSampleWidth - 1);
+                    int qz1 = Mathf.Clamp(((tz + 1) * meshSampleStep) / baseSampleStep, 0, fullSampleHeight - 1);
+                    terrainClassForTransitions[(qz0 * fullSampleWidth) + qx0] = 0;
+                    terrainClassForTransitions[(qz0 * fullSampleWidth) + qx1] = 0;
+                    terrainClassForTransitions[(qz1 * fullSampleWidth) + qx0] = 0;
+                    terrainClassForTransitions[(qz1 * fullSampleWidth) + qx1] = 0;
+                }
+            }
+
             OverworldTerrainTexturing.TileAtlasBuild atlasBuild = OverworldTerrainTexturing.BuildChunkTransitionAtlas(
-                terrainClassFull,
+                terrainClassForTransitions,
                 fullSampleWidth,
                 fullSampleHeight,
                 overworld.TransitionTilesFolder,
