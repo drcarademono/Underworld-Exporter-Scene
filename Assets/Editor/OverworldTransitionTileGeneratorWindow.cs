@@ -35,7 +35,7 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
     private float borderWidth = 0.12f;
     private float borderStochasticity = 0.35f;
     private float centerFillBoost = 0.08f;
-    private const float m15CenterFillBoost = 0.08f;
+    private float m15CenterFillBoost = 0.08f;
     private float elbowRoundness = 0.16f;
     private string outputFolder = "Assets/Generated/OverworldTransitions";
 
@@ -92,6 +92,7 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
             borderWidth = EditorGUILayout.Slider("Border Width", borderWidth, 0.02f, 0.45f);
             borderStochasticity = EditorGUILayout.Slider("Border Stochasticity", borderStochasticity, 0f, 1f);
             centerFillBoost = EditorGUILayout.Slider("Center Fill Boost", centerFillBoost, 0f, 0.35f);
+            m15CenterFillBoost = EditorGUILayout.Slider("M15 Center Fill Boost", m15CenterFillBoost, 0f, 0.35f);
             elbowRoundness = EditorGUILayout.Slider("Elbow Roundness", elbowRoundness, 0f, 0.35f);
         }
 
@@ -359,9 +360,8 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         bool s = (mask & 4) != 0;
         bool w = (mask & 8) != 0;
 
-        // For m15 ("island" shape), force a non-zero center fill boost so islands remain visible
-        // even when global centerFillBoost is set to 0 for other masks.
-        float effectiveCenterFillBoost = (mask == 15) ? Mathf.Max(centerFillBoost, m15CenterFillBoost) : centerFillBoost;
+        // For m15 ("island" shape), use dedicated boost so island size is controllable independently.
+        float effectiveCenterFillBoost = (mask == 15) ? m15CenterFillBoost : centerFillBoost;
 
         // Positive boost should enlarge the center patch/stripe of the non-target texture.
         // So we shrink cardinal target bands toward edges as boost increases.
