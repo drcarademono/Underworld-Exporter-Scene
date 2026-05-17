@@ -1948,7 +1948,16 @@ public class GameWorldController : UWEBase
     {
         if (worldHeight <= overworld.WaterSurfaceEpsilon) { return 0; }
         if (IsSnowAtHeight(worldHeight, sampleX, sampleZ, overworld)) { return 3; }
-        if (IsStoneAtHeight(worldHeight, sampleX, sampleZ, overworld)) { return 2; }
+        // Preserve original stone patterning (slope-based) below the stone line,
+        // while allowing stone line to add/force more stone at higher altitude.
+        float hE = SampleSmoothedHeight(heightmap, Mathf.Clamp(px + tilesPerPixel, 0, heightmap.width - 1), pz);
+        float hW = SampleSmoothedHeight(heightmap, Mathf.Clamp(px - tilesPerPixel, 0, heightmap.width - 1), pz);
+        float hN = SampleSmoothedHeight(heightmap, px, Mathf.Clamp(pz + tilesPerPixel, 0, heightmap.height - 1));
+        float hS = SampleSmoothedHeight(heightmap, px, Mathf.Clamp(pz - tilesPerPixel, 0, heightmap.height - 1));
+        float slopeMagnitude = Mathf.Sqrt(((hE - hW) * (hE - hW)) + ((hN - hS) * (hN - hS)));
+        bool baseStone = slopeMagnitude > 0.022f;
+
+        if (baseStone || IsStoneAtHeight(worldHeight, sampleX, sampleZ, overworld)) { return 2; }
         return 1;
     }
 
