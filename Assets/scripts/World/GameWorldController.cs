@@ -209,6 +209,7 @@ public class GameWorldController : UWEBase
     private HashSet<Vector2Int> lowDetailOverworldChunks = new HashSet<Vector2Int>();
     private HashSet<Vector2Int> noNatureOverworldChunks = new HashSet<Vector2Int>();
     private Dictionary<Vector2Int, int> loadedOverworldChunkSampleSteps = new Dictionary<Vector2Int, int>();
+    private Dictionary<Vector2Int, int> loadedOverworldChunkGeometrySteps = new Dictionary<Vector2Int, int>();
     private Texture2D[] overworldWaterFrames = null;
     private int overworldWaterFrameIndex = 0;
     private float overworldWaterAnimTimer = 0f;
@@ -1022,6 +1023,7 @@ public class GameWorldController : UWEBase
         OverworldTerrainRoot = new GameObject("OverworldTerrainRoot");
         loadedOverworldChunks.Clear();
         loadedOverworldChunkSampleSteps.Clear();
+        loadedOverworldChunkGeometrySteps.Clear();
         lowDetailOverworldChunks.Clear();
         noNatureOverworldChunks.Clear();
 
@@ -1091,6 +1093,7 @@ public class GameWorldController : UWEBase
             {
                 loadedOverworldChunks[lastPlayerChunk] = startChunk;
                 loadedOverworldChunkSampleSteps[lastPlayerChunk] = 1;
+                loadedOverworldChunkGeometrySteps[lastPlayerChunk] = Mathf.Max(1, overworld.TerrainDecimationStep);
                 lowDetailOverworldChunks.Remove(lastPlayerChunk);
                 noNatureOverworldChunks.Remove(lastPlayerChunk);
             }
@@ -1366,6 +1369,7 @@ public class GameWorldController : UWEBase
                     }
                     loadedOverworldChunks[req.chunkCoord] = chunk;
                     loadedOverworldChunkSampleSteps[req.chunkCoord] = Mathf.Max(1, req.sampleStep);
+                    loadedOverworldChunkGeometrySteps[req.chunkCoord] = Mathf.Max(1, req.sampleStep) * Mathf.Max(1, overworld.TerrainDecimationStep);
                     if (req.lowDetail) { lowDetailOverworldChunks.Add(req.chunkCoord); } else { lowDetailOverworldChunks.Remove(req.chunkCoord); }
                     if (req.noNature) { noNatureOverworldChunks.Add(req.chunkCoord); } else { noNatureOverworldChunks.Remove(req.chunkCoord); }
                 }
@@ -1381,6 +1385,7 @@ public class GameWorldController : UWEBase
         GameObject go = loadedOverworldChunks[coord];
         loadedOverworldChunks.Remove(coord);
         loadedOverworldChunkSampleSteps.Remove(coord);
+        loadedOverworldChunkGeometrySteps.Remove(coord);
         pendingOverworldChunkRequests.Remove(coord);
         if (go == null) { return; }
         ReleaseOverworldRuntimeMaterials(go);
@@ -1848,6 +1853,21 @@ public class GameWorldController : UWEBase
         return inTransitionBand ? 1 : Mathf.Max(2, overworld.DistantChunkStep);
     }
 
+    private int GetChunkRequestedOrLoadedGeometryStep(Vector2Int chunkCoord, int fallback, OverworldTerrainController overworld)
+    {
+        int decimation = Mathf.Max(1, (overworld != null) ? overworld.TerrainDecimationStep : 1);
+        if (pendingOverworldChunkRequests.TryGetValue(chunkCoord, out OverworldChunkBuildRequest pending))
+        {
+            return Mathf.Max(1, pending.sampleStep) * decimation;
+        }
+        if (loadedOverworldChunkGeometrySteps.TryGetValue(chunkCoord, out int loadedGeom))
+        {
+            return Mathf.Max(1, loadedGeom);
+        }
+        int expectedSample = GetExpectedChunkSampleStep(chunkCoord, overworld);
+        return Mathf.Max(1, expectedSample) * decimation;
+    }
+
     private void StitchChunkBorderToCoarserNeighbors(
         Vector2Int chunkCoord,
         int thisSampleStep,
@@ -1866,14 +1886,13 @@ public class GameWorldController : UWEBase
 
         void StitchEdge(Vector2Int neighborCoord, bool horizontal, bool atStartEdge)
         {
-            int neighborStep = GetChunkRequestedOrLoadedSampleStep(neighborCoord, thisSampleStep);
-            int expectedNeighborStep = GetExpectedChunkSampleStep(neighborCoord, overworld);
-            neighborStep = Mathf.Max(neighborStep, expectedNeighborStep);
-            if (neighborStep <= thisSampleStep) { return; }
+            int thisGeometryStep = Mathf.Max(1, thisSampleStep * Mathf.Max(1, (overworld != null) ? overworld.TerrainDecimationStep : 1));
+            int neighborGeometryStep = GetChunkRequestedOrLoadedGeometryStep(neighborCoord, thisGeometryStep, overworld);
+            if (neighborGeometryStep <= thisGeometryStep) { return; }
 
-            int ratio = Mathf.Max(1, neighborStep / Mathf.Max(1, thisSampleStep));
+            int ratio = Mathf.Max(1, neighborGeometryStep / Mathf.Max(1, thisGeometryStep));
             if (ratio <= 1) { return; }
-            int coarseStep = Mathf.Max(thisSampleStep, neighborStep);
+            int coarseStep = Mathf.Max(thisGeometryStep, neighborGeometryStep);
 
             if (horizontal)
             {
