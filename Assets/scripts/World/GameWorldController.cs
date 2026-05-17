@@ -1414,7 +1414,6 @@ public class GameWorldController : UWEBase
         Vector2[] uvs = new Vector2[sampleWidth * sampleHeight];
         int[] triangles = new int[(sampleWidth - 1) * (sampleHeight - 1) * 6];
         int[] terrainClassByVertex = new int[sampleWidth * sampleHeight]; //0=water,1=grass,2=stone
-        bool[] quadWaterForTransitions = new bool[Mathf.Max(0, (sampleWidth - 1) * (sampleHeight - 1))];
 
         int fullSampleWidth = ((endX - startX) / baseSampleStep) + 1;
         int fullSampleHeight = ((endY - startY) / baseSampleStep) + 1;
@@ -1593,58 +1592,32 @@ public class GameWorldController : UWEBase
                 int tri0Class = DominantClass(tri0Water, tri0Grass, tri0Stone);
                 int tri1Class = DominantClass(tri1Water, tri1Grass, tri1Stone);
 
-                // Keep geometry/water classification in sync with transition texturing source classes.
+                // First-principles quad classification from corner classes.
                 bool cornerBLWater = terrainClassByVertex[bl] == 0;
                 bool cornerBRWater = terrainClassByVertex[br] == 0;
                 bool cornerTLWater = terrainClassByVertex[tl] == 0;
                 bool cornerTRWater = terrainClassByVertex[tr] == 0;
                 int cornerWaterCount = (cornerBLWater ? 1 : 0) + (cornerBRWater ? 1 : 0) + (cornerTLWater ? 1 : 0) + (cornerTRWater ? 1 : 0);
 
-                // Shoreline guard: only force water when both sampling and geometry strongly indicate water.
-                int tri0LowVerts = 0;
-                if (vertices[bl].y <= overworld.WaterSurfaceEpsilon) tri0LowVerts++;
-                if (vertices[tr].y <= overworld.WaterSurfaceEpsilon) tri0LowVerts++;
-                if (vertices[br].y <= overworld.WaterSurfaceEpsilon) tri0LowVerts++;
-                if ((tri0Water > 0) && (tri0LowVerts >= 2))
-                {
-                    tri0Class = 0;
-                }
-
-                int tri1LowVerts = 0;
-                if (vertices[bl].y <= overworld.WaterSurfaceEpsilon) tri1LowVerts++;
-                if (vertices[tl].y <= overworld.WaterSurfaceEpsilon) tri1LowVerts++;
-                if (vertices[tr].y <= overworld.WaterSurfaceEpsilon) tri1LowVerts++;
-                if ((tri1Water > 0) && (tri1LowVerts >= 2))
-                {
-                    tri1Class = 0;
-                }
-
                 bool clampQuadToWaterPlane = false;
-                bool quadHasAnyWaterSample = (tri0Water > 0) || (tri1Water > 0) || (cornerWaterCount > 0);
-                bool tri0HasWaterSample = (tri0Water > 0) || cornerBLWater || cornerBRWater || cornerTRWater;
-                bool tri1HasWaterSample = (tri1Water > 0) || cornerBLWater || cornerTLWater || cornerTRWater;
 
-                // Any quad participating in water or water transitions must be flat.
-                if (quadHasAnyWaterSample)
+                if (cornerWaterCount == 4)
                 {
+                    // Full water tile.
+                    tri0Class = 0;
+                    tri1Class = 0;
                     clampQuadToWaterPlane = true;
                 }
-
-                // Tile-level water decision:
-                // - 2+ water corners means full water tile.
-                // - mixed water stays shoreline transition class (non-water) for texture transitions.
-                if (cornerWaterCount >= 2 || (tri0HasWaterSample && tri1HasWaterSample))
+                else if (cornerWaterCount > 0)
                 {
-                    tri0Class = 0;
-                    tri1Class = 0;
-                }
-                else if (tri0HasWaterSample != tri1HasWaterSample || cornerWaterCount == 1)
-                {
+                    // Shoreline transition tile: keep it in land class for transition texturing,
+                    // but flatten to water plane so shoreline is never sloped.
                     int quadGrass = tri0Grass + tri1Grass;
                     int quadStone = tri0Stone + tri1Stone;
                     int shorelineClass = (quadStone >= quadGrass) ? 2 : 1;
                     tri0Class = shorelineClass;
                     tri1Class = shorelineClass;
+                    clampQuadToWaterPlane = true;
                 }
 
                 bool onChunkBorder = (x == 0) || (z == 0) || (x == sampleWidth - 2) || (z == sampleHeight - 2);
@@ -1673,8 +1646,6 @@ public class GameWorldController : UWEBase
                     vertices[tl].y = 0f;
                     vertices[tr].y = 0f;
                 }
-
-                quadWaterForTransitions[(z * (sampleWidth - 1)) + x] = clampQuadToWaterPlane || (tri0Class == 0) || (tri1Class == 0);
 
                 AddTriangleToClass(bl, tr, br, tri0Class, water, grass, stone);
                 AddTriangleToClass(bl, tl, tr, tri1Class, water, grass, stone);
@@ -1713,25 +1684,8 @@ public class GameWorldController : UWEBase
             Texture2D grassBase = (overworldGrassMat != null) ? (overworldGrassMat.mainTexture as Texture2D) : null;
             Texture2D stoneBase = (overworldStoneMat != null) ? (overworldStoneMat.mainTexture as Texture2D) : null;
             OverworldTerrainTexturing.BuildStats stats;
-            int[] terrainClassForTransitions = (int[])terrainClassFull.Clone();
-            for (int tz = 0; tz < sampleHeight - 1; tz++)
-            {
-                for (int tx = 0; tx < sampleWidth - 1; tx++)
-                {
-                    if (!quadWaterForTransitions[(tz * (sampleWidth - 1)) + tx]) { continue; }
-                    int qx0 = Mathf.Clamp((tx * meshSampleStep) / baseSampleStep, 0, fullSampleWidth - 1);
-                    int qz0 = Mathf.Clamp((tz * meshSampleStep) / baseSampleStep, 0, fullSampleHeight - 1);
-                    int qx1 = Mathf.Clamp(((tx + 1) * meshSampleStep) / baseSampleStep, 0, fullSampleWidth - 1);
-                    int qz1 = Mathf.Clamp(((tz + 1) * meshSampleStep) / baseSampleStep, 0, fullSampleHeight - 1);
-                    terrainClassForTransitions[(qz0 * fullSampleWidth) + qx0] = 0;
-                    terrainClassForTransitions[(qz0 * fullSampleWidth) + qx1] = 0;
-                    terrainClassForTransitions[(qz1 * fullSampleWidth) + qx0] = 0;
-                    terrainClassForTransitions[(qz1 * fullSampleWidth) + qx1] = 0;
-                }
-            }
-
             OverworldTerrainTexturing.TileAtlasBuild atlasBuild = OverworldTerrainTexturing.BuildChunkTransitionAtlas(
-                terrainClassForTransitions,
+                terrainClassFull,
                 fullSampleWidth,
                 fullSampleHeight,
                 overworld.TransitionTilesFolder,
