@@ -37,6 +37,7 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
     private float borderStochasticity = 0.35f;
     private float centerFillBoost = 0.08f;
     private float m15CenterFillBoost = 0.08f;
+    private float m15Roughness = 0.08f;
     private float elbowRoundness = 0.16f;
     private string outputFolder = "Assets/Generated/OverworldTransitions";
 
@@ -94,6 +95,7 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
             borderStochasticity = EditorGUILayout.Slider("Border Stochasticity", borderStochasticity, 0f, 1f);
             centerFillBoost = EditorGUILayout.Slider("Center Fill Boost", centerFillBoost, 0f, 0.35f);
             m15CenterFillBoost = EditorGUILayout.Slider("M15 Center Fill Boost", m15CenterFillBoost, 0f, 0.35f);
+            m15Roughness = EditorGUILayout.Slider("M15 Roughness", m15Roughness, 0f, 0.35f);
             elbowRoundness = EditorGUILayout.Slider("Elbow Roundness", elbowRoundness, 0f, 0.35f);
         }
 
@@ -382,6 +384,10 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         if (mask == 15)
         {
             float islandRadius = Mathf.Clamp(effectiveCenterFillBoost * 1.15f, 0.04f, 0.45f);
+            float roughNoise = Mathf.PerlinNoise((fx * tileSize / Mathf.Max(0.001f, perlinScale)) + (seed * 0.007f), (fy * tileSize / Mathf.Max(0.001f, perlinScale)) + (seed * 0.011f));
+            float roughSigned = (roughNoise * 2f) - 1f;
+            islandRadius += roughSigned * m15Roughness * 0.15f;
+            islandRadius = Mathf.Clamp(islandRadius, 0.02f, 0.48f);
             float distToCenter = Vector2.Distance(new Vector2(fx, fy), new Vector2(0.5f, 0.5f));
             return distToCenter - islandRadius; // target outside the island circle
         }
@@ -461,6 +467,7 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         borderStochasticity = EditorPrefs.GetFloat(PrefPrefix + nameof(borderStochasticity), borderStochasticity);
         centerFillBoost = EditorPrefs.GetFloat(PrefPrefix + nameof(centerFillBoost), centerFillBoost);
         m15CenterFillBoost = EditorPrefs.GetFloat(PrefPrefix + nameof(m15CenterFillBoost), m15CenterFillBoost);
+        m15Roughness = EditorPrefs.GetFloat(PrefPrefix + nameof(m15Roughness), m15Roughness);
         elbowRoundness = EditorPrefs.GetFloat(PrefPrefix + nameof(elbowRoundness), elbowRoundness);
         outputFolder = EditorPrefs.GetString(PrefPrefix + nameof(outputFolder), outputFolder);
     }
@@ -478,6 +485,7 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         EditorPrefs.SetFloat(PrefPrefix + nameof(borderStochasticity), borderStochasticity);
         EditorPrefs.SetFloat(PrefPrefix + nameof(centerFillBoost), centerFillBoost);
         EditorPrefs.SetFloat(PrefPrefix + nameof(m15CenterFillBoost), m15CenterFillBoost);
+        EditorPrefs.SetFloat(PrefPrefix + nameof(m15Roughness), m15Roughness);
         EditorPrefs.SetFloat(PrefPrefix + nameof(elbowRoundness), elbowRoundness);
         EditorPrefs.SetString(PrefPrefix + nameof(outputFolder), outputFolder ?? "Assets/Generated/OverworldTransitions");
     }
