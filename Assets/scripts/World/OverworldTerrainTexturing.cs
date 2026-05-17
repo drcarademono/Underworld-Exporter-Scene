@@ -133,11 +133,25 @@ public static class OverworldTerrainTexturing
     private static int GetTransitionTarget(int[] data, int w, int h, int tx, int ty, int center)
     {
         int best = center;
-        TryPromoteTile(data, w, h, tx, ty + 1, ref best, center);
-        TryPromoteTile(data, w, h, tx + 1, ty, ref best, center);
-        TryPromoteTile(data, w, h, tx, ty - 1, ref best, center);
-        TryPromoteTile(data, w, h, tx - 1, ty, ref best, center);
-        return best;
+
+        // Land tiles transition "up" to higher-priority neighbors (e.g. stone->water).
+        if (center != 0)
+        {
+            TryPromoteTile(data, w, h, tx, ty + 1, ref best, center);
+            TryPromoteTile(data, w, h, tx + 1, ty, ref best, center);
+            TryPromoteTile(data, w, h, tx, ty - 1, ref best, center);
+            TryPromoteTile(data, w, h, tx - 1, ty, ref best, center);
+            return best;
+        }
+
+        // Water tiles need the inverse at chunk boundaries: transition to strongest non-water neighbor
+        // so water-side transition tiles can be emitted when the opposite shore tile is in another chunk.
+        int bestNonWater = -1;
+        TryPromoteWaterSide(data, w, h, tx, ty + 1, ref bestNonWater);
+        TryPromoteWaterSide(data, w, h, tx + 1, ty, ref bestNonWater);
+        TryPromoteWaterSide(data, w, h, tx, ty - 1, ref bestNonWater);
+        TryPromoteWaterSide(data, w, h, tx - 1, ty, ref bestNonWater);
+        return (bestNonWater >= 0) ? bestNonWater : center;
     }
 
     private static void TryPromoteTile(int[] d, int w, int h, int tx, int ty, ref int best, int center)
@@ -145,6 +159,13 @@ public static class OverworldTerrainTexturing
         int v = GetTileClass(d, w, h, tx, ty);
         if (v < 0) return;
         if (Priority(v) > Priority(best) && Priority(v) > Priority(center)) best = v;
+    }
+
+    private static void TryPromoteWaterSide(int[] d, int w, int h, int tx, int ty, ref int bestNonWater)
+    {
+        int v = GetTileClass(d, w, h, tx, ty);
+        if (v <= 0) return;
+        if (bestNonWater < 0 || Priority(v) > Priority(bestNonWater)) bestNonWater = v;
     }
 
     private static int Priority(int c) { if (c == 0) return 3; if (c == 2) return 2; return 1; }
