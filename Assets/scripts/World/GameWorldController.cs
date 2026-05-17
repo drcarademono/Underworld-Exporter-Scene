@@ -1611,6 +1611,14 @@ public class GameWorldController : UWEBase
                     tri1Class = 0;
                 }
 
+                // Water is a quad-level decision: if either triangle of this tile resolves to water,
+                // force both triangles to water so a single tile cannot be split between water and land.
+                if ((tri0Class == 0) || (tri1Class == 0))
+                {
+                    tri0Class = 0;
+                    tri1Class = 0;
+                }
+
                 bool onChunkBorder = (x == 0) || (z == 0) || (x == sampleWidth - 2) || (z == sampleHeight - 2);
                 if (onChunkBorder)
                 {
