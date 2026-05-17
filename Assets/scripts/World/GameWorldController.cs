@@ -1681,6 +1681,11 @@ public class GameWorldController : UWEBase
             Texture2D waterBase = (overworldWaterMat != null) ? (overworldWaterMat.mainTexture as Texture2D) : null;
             Texture2D grassBase = (overworldGrassMat != null) ? (overworldGrassMat.mainTexture as Texture2D) : null;
             Texture2D stoneBase = (overworldStoneMat != null) ? (overworldStoneMat.mainTexture as Texture2D) : null;
+            Texture2D snowBase = (overworldSnowMat != null) ? (overworldSnowMat.mainTexture as Texture2D) : null;
+            Texture2D dirtBase = (overworld.DirtMaterialOverride != null) ? (overworld.DirtMaterialOverride.mainTexture as Texture2D) : MaybeEnableOverworldMipmaps(LoadUW2TerrainTexture(overworld.DirtTextureIndex), overworld);
+            Texture2D swampBase = (overworld.SwampMaterialOverride != null) ? (overworld.SwampMaterialOverride.mainTexture as Texture2D) : MaybeEnableOverworldMipmaps(LoadUW2TerrainTexture(overworld.SwampTextureIndex), overworld);
+            Texture2D sandBase = (overworld.SandMaterialOverride != null) ? (overworld.SandMaterialOverride.mainTexture as Texture2D) : MaybeEnableOverworldMipmaps(LoadUW2TerrainTexture(overworld.SandTextureIndex), overworld);
+            Texture2D lavaBase = (overworld.LavaMaterialOverride != null) ? (overworld.LavaMaterialOverride.mainTexture as Texture2D) : MaybeEnableOverworldMipmaps(LoadUW2TerrainTexture(overworld.LavaTextureIndex), overworld);
             OverworldTerrainTexturing.BuildStats stats;
             int texWidth = fullSampleWidth + 2;
             int texHeight = fullSampleHeight + 2;
@@ -1712,7 +1717,11 @@ public class GameWorldController : UWEBase
                 waterBase,
                 grassBase,
                 stoneBase,
-                (overworld.SnowMaterialOverride != null) ? (overworld.SnowMaterialOverride.mainTexture as Texture2D) : MaybeEnableOverworldMipmaps(LoadUW2TerrainTexture(overworld.SnowTextureIndex), overworld),
+                snowBase,
+                dirtBase,
+                swampBase,
+                sandBase,
+                lavaBase,
                 out stats,
                 1);
             if (atlasBuild.tileIdMap != null && atlasBuild.atlasTexture != null)
@@ -1943,11 +1952,28 @@ public class GameWorldController : UWEBase
         float blendNoise = Mathf.PerlinNoise((sampleX + 823.619f) / scale, (sampleZ + 219.043f) / scale);
         return blendNoise <= t;
     }
+    private static bool IsBandAtHeight(float worldHeight, int sampleX, int sampleZ, float line, float width, float scale, float amplitude, float sx, float sz, float bx, float bz)
+    {
+        float s = Mathf.Max(0.001f, scale);
+        float noise = (Mathf.PerlinNoise((sampleX + sx) / s, (sampleZ + sz) / s) * 2f) - 1f;
+        float noisyLine = line + (noise * amplitude);
+        float halfWidth = Mathf.Max(0f, width * 0.5f);
+        if (worldHeight >= noisyLine + halfWidth) { return true; }
+        if (worldHeight <= noisyLine - halfWidth) { return false; }
+        float t = Mathf.InverseLerp(noisyLine - halfWidth, noisyLine + halfWidth, worldHeight);
+        float blendNoise = Mathf.PerlinNoise((sampleX + bx) / s, (sampleZ + bz) / s);
+        return blendNoise <= t;
+    }
 
     private int ClassifyOverworldTerrainSample(float worldHeight, int sampleX, int sampleZ, int px, int pz, int tilesPerPixel, Texture2D heightmap, OverworldTerrainController overworld)
     {
         if (worldHeight <= overworld.WaterSurfaceEpsilon) { return 0; }
         if (IsSnowAtHeight(worldHeight, sampleX, sampleZ, overworld)) { return 3; }
+        if (IsBandAtHeight(worldHeight, sampleX, sampleZ, overworld.LavaLineAltitude, overworld.LavaTransitionWidth, overworld.LavaNoiseScale, overworld.LavaNoiseAmplitude, 77.3f, 901.2f, 39.2f, 667.7f)) { return 7; }
+        if (IsStoneAtHeight(worldHeight, sampleX, sampleZ, overworld)) { return 2; }
+        if (IsBandAtHeight(worldHeight, sampleX, sampleZ, overworld.SwampLineAltitude, overworld.SwampTransitionWidth, overworld.SwampNoiseScale, overworld.SwampNoiseAmplitude, 288.1f, 413.4f, 91.8f, 144.3f)) { return 5; }
+        if (IsBandAtHeight(worldHeight, sampleX, sampleZ, overworld.DirtLineAltitude, overworld.DirtTransitionWidth, overworld.DirtNoiseScale, overworld.DirtNoiseAmplitude, 521.6f, 233.0f, 303.7f, 707.9f)) { return 4; }
+        if (IsBandAtHeight(worldHeight, sampleX, sampleZ, overworld.SandLineAltitude, overworld.SandTransitionWidth, overworld.SandNoiseScale, overworld.SandNoiseAmplitude, 633.4f, 845.9f, 411.4f, 129.4f)) { return 6; }
         // Preserve original stone patterning (slope-based) below the stone line,
         // while allowing stone line to add/force more stone at higher altitude.
         float hE = SampleSmoothedHeight(heightmap, Mathf.Clamp(px + tilesPerPixel, 0, heightmap.width - 1), pz);
@@ -1957,7 +1983,7 @@ public class GameWorldController : UWEBase
         float slopeMagnitude = Mathf.Sqrt(((hE - hW) * (hE - hW)) + ((hN - hS) * (hN - hS)));
         bool baseStone = slopeMagnitude > 0.022f;
 
-        if (baseStone || IsStoneAtHeight(worldHeight, sampleX, sampleZ, overworld)) { return 2; }
+        if (baseStone) { return 2; }
         return 1;
     }
 
