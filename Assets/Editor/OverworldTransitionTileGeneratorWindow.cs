@@ -34,6 +34,9 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         {15,  7, 13,  5 }
     };
 
+
+    private static readonly Dictionary<int, int> rawMaskToBlobIndex = BuildRawMaskToBlobIndex();
+
     [MenuItem("Tools/UW/Overworld Transition Tile Generator")]
     public static void ShowWindow()
     {
@@ -43,8 +46,8 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
 
     private void OnGUI()
     {
-        EditorGUILayout.LabelField("Overworld 16-Mask Transition Tile Generator", EditorStyles.boldLabel);
-        EditorGUILayout.HelpBox("Generates m00..m15 transition tiles with naming convention tr_<from>_to_<to>_mXX[_vN].", MessageType.Info);
+        EditorGUILayout.LabelField("Overworld 47-Tile Blob Transition Generator", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox("Generates b00..b46 blob transition tiles with naming convention tr_<from>_to_<to>_bXX[_vN].", MessageType.Info);
 
         controller = (OverworldTerrainController)EditorGUILayout.ObjectField("Controller", controller, typeof(OverworldTerrainController), true);
 
@@ -176,7 +179,7 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         Texture2D srcA = ResampleNearest(fromTex, tileSize, tileSize);
         Texture2D srcB = ResampleNearest(toTex, tileSize, tileSize);
 
-        for (int mask = 0; mask < 16; mask++)
+        for (int mask = 0; mask < 47; mask++)
         {
             for (int v = 0; v < variantsPerMask; v++)
             {
@@ -205,7 +208,7 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
 
                 string maskName = mask.ToString("D2");
                 string variantSuffix = variantsPerMask > 1 ? "_v" + (v + 1) : string.Empty;
-                string fileName = $"tr_{fromName}_to_{toName}_m{maskName}{variantSuffix}.png";
+                string fileName = $"tr_{fromName}_to_{toName}_b{maskName}{variantSuffix}.png";
                 string path = Path.Combine(outputFolder, fileName).Replace("\\", "/");
                 File.WriteAllBytes(path, outTex.EncodeToPNG());
             }
@@ -280,39 +283,59 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
     {
         float fx = (x + 0.5f) / size;
         float fy = (y + 0.5f) / size;
-        return TargetShapeDistance(mask, fx, fy) >= 0f;
+        int raw = BuildRawMaskForPixel(fx, fy);
+        int valid = EnforceCornerRules(raw);
+        return rawMaskToBlobIndex.TryGetValue(valid, out int idx) && idx == mask;
     }
+
+    private static Dictionary<int, int> BuildRawMaskToBlobIndex()
+    {
+        Dictionary<int, int> map = new Dictionary<int, int>();
+        for (int raw = 0; raw < 256; raw++)
+        {
+            int valid = EnforceCornerRules(raw);
+            if (!map.ContainsKey(valid)) { map[valid] = map.Count; }
+        }
+        return map;
+    }
+
+    private static int BuildRawMaskForPixel(float fx, float fy)
+    {
+        int m = 0;
+        if (fy >= 0.5f) m |= 1 << 0;
+        if (fx >= 0.5f && fy >= 0.5f) m |= 1 << 1;
+        if (fx >= 0.5f) m |= 1 << 2;
+        if (fx >= 0.5f && fy < 0.5f) m |= 1 << 3;
+        if (fy < 0.5f) m |= 1 << 4;
+        if (fx < 0.5f && fy < 0.5f) m |= 1 << 5;
+        if (fx < 0.5f) m |= 1 << 6;
+        if (fx < 0.5f && fy >= 0.5f) m |= 1 << 7;
+        return m;
+    }
+
+    private static int EnforceCornerRules(int m)
+    {
+        bool n = (m & (1 << 0)) != 0;
+        bool e = (m & (1 << 2)) != 0;
+        bool s = (m & (1 << 4)) != 0;
+        bool w = (m & (1 << 6)) != 0;
+
+        int outMask = m;
+        if (!(n && e)) outMask &= ~(1 << 1);
+        if (!(e && s)) outMask &= ~(1 << 3);
+        if (!(s && w)) outMask &= ~(1 << 5);
+        if (!(w && n)) outMask &= ~(1 << 7);
+        return outMask;
+    }
+
+
 
     private float TargetShapeDistance(int mask, float fx, float fy)
     {
-        bool n = (mask & 1) != 0;
-        bool e = (mask & 2) != 0;
-        bool s = (mask & 4) != 0;
-        bool w = (mask & 8) != 0;
-
-        // Positive boost should enlarge the center patch/stripe of the non-target texture.
-        // So we shrink cardinal target bands toward edges as boost increases.
-        float baseHalf = Mathf.Clamp(0.5f - centerFillBoost, 0.05f, 0.5f);
-
-        float dN = n ? (fy - (1f - baseHalf)) : float.NegativeInfinity;
-        float dE = e ? (fx - (1f - baseHalf)) : float.NegativeInfinity;
-        float dS = s ? (baseHalf - fy) : float.NegativeInfinity;
-        float dW = w ? (baseHalf - fx) : float.NegativeInfinity;
-        float d = Mathf.Max(Mathf.Max(dN, dE), Mathf.Max(dS, dW));
-
-        if ((n && e) || (e && s) || (s && w) || (w && n))
-        {
-            float cx = e ? (1f - baseHalf) : baseHalf;
-            float cy = n ? (1f - baseHalf) : baseHalf;
-            if (e && s) { cy = baseHalf; }
-            if (w && s) { cx = baseHalf; cy = baseHalf; }
-            if (w && n) { cx = baseHalf; }
-
-            float radial = elbowRoundness - Vector2.Distance(new Vector2(fx, fy), new Vector2(cx, cy));
-            d = Mathf.Max(d, radial);
-        }
-
-        return d;
+        int raw = BuildRawMaskForPixel(fx, fy);
+        int valid = EnforceCornerRules(raw);
+        bool inside = rawMaskToBlobIndex.TryGetValue(valid, out int idx) && idx == mask;
+        return inside ? 0.1f : -0.1f;
     }
 
     private static Texture2D ResampleNearest(Texture2D src, int width, int height)

@@ -49,7 +49,7 @@ public static class OverworldTerrainTexturing
                 int center = GetTileClass(terrainClassFull, width, height, tx, ty);
                 if (center == 0) { waterFlags[((ty - cropTiles) * outTileW) + (tx - cropTiles)] = 255; }
                 int target = GetTransitionTarget(terrainClassFull, width, height, tx, ty, center);
-                int mask = BuildMask(terrainClassFull, width, height, tx, ty, target);
+                int mask = BuildBlobIndex(terrainClassFull, width, height, tx, ty, target);
                 if (center == 0 || target == 0)
                 {
                     clampFlags[((ty - cropTiles) * outTileW) + (tx - cropTiles)] = true;
@@ -59,7 +59,7 @@ public static class OverworldTerrainTexturing
                 string key;
                 if (target != center)
                 {
-                    key = $"tr_{ClassName(center)}_to_{ClassName(target)}_m{mask:D2}.png";
+                    key = $"tr_{ClassName(center)}_to_{ClassName(target)}_b{mask:D2}.png";
                     tile = LoadTransitionTile(ClassName(center), ClassName(target), mask, assetsRelativeFolder);
                     if (tile != null) { stats.transitionTiles++; }
                     else { stats.missingTransitionFiles++; }
@@ -170,15 +170,66 @@ public static class OverworldTerrainTexturing
 
     private static int Priority(int c) { if (c == 0) return 3; if (c == 2) return 2; return 1; }
 
-    private static int BuildMask(int[] d, int w, int h, int tx, int ty, int target)
+    private static readonly Dictionary<int, int> blobMaskToIndex = BuildBlobMaskToIndex();
+
+    private static int BuildBlobIndex(int[] d, int w, int h, int tx, int ty, int target)
     {
-        int m = 0;
-        if (GetTileClass(d, w, h, tx, ty + 1) == target) m |= 1;
-        if (GetTileClass(d, w, h, tx + 1, ty) == target) m |= 2;
-        if (GetTileClass(d, w, h, tx, ty - 1) == target) m |= 4;
-        if (GetTileClass(d, w, h, tx - 1, ty) == target) m |= 8;
-        return m;
+        bool n = GetTileClass(d, w, h, tx, ty + 1) == target;
+        bool e = GetTileClass(d, w, h, tx + 1, ty) == target;
+        bool s = GetTileClass(d, w, h, tx, ty - 1) == target;
+        bool west = GetTileClass(d, w, h, tx - 1, ty) == target;
+
+        bool ne = n && e && GetTileClass(d, w, h, tx + 1, ty + 1) == target;
+        bool se = s && e && GetTileClass(d, w, h, tx + 1, ty - 1) == target;
+        bool sw = s && west && GetTileClass(d, w, h, tx - 1, ty - 1) == target;
+        bool nw = n && west && GetTileClass(d, w, h, tx - 1, ty + 1) == target;
+
+        int raw = 0;
+        if (n) raw |= 1 << 0;
+        if (ne) raw |= 1 << 1;
+        if (e) raw |= 1 << 2;
+        if (se) raw |= 1 << 3;
+        if (s) raw |= 1 << 4;
+        if (sw) raw |= 1 << 5;
+        if (west) raw |= 1 << 6;
+        if (nw) raw |= 1 << 7;
+
+        if (blobMaskToIndex.TryGetValue(raw, out int idx)) { return idx; }
+        return 0;
     }
+
+    private static Dictionary<int, int> BuildBlobMaskToIndex()
+    {
+        Dictionary<int, int> rawToCanonical = new Dictionary<int, int>();
+        Dictionary<int, int> canonicalToIndex = new Dictionary<int, int>();
+        for (int raw = 0; raw < 256; raw++)
+        {
+            int validMask = EnforceCornerRules(raw);
+            if (!canonicalToIndex.ContainsKey(validMask))
+            {
+                canonicalToIndex[validMask] = canonicalToIndex.Count;
+            }
+            rawToCanonical[raw] = canonicalToIndex[validMask];
+        }
+
+        return rawToCanonical;
+    }
+
+    private static int EnforceCornerRules(int m)
+    {
+        bool n = (m & (1 << 0)) != 0;
+        bool e = (m & (1 << 2)) != 0;
+        bool s = (m & (1 << 4)) != 0;
+        bool w = (m & (1 << 6)) != 0;
+
+        int outMask = m;
+        if (!(n && e)) outMask &= ~(1 << 1);
+        if (!(e && s)) outMask &= ~(1 << 3);
+        if (!(s && w)) outMask &= ~(1 << 5);
+        if (!(w && n)) outMask &= ~(1 << 7);
+        return outMask;
+    }
+
 
     private static int GetTileClass(int[] d, int w, int h, int tx, int ty)
     {
@@ -209,11 +260,16 @@ public static class OverworldTerrainTexturing
 
     private static Texture2D LoadTransitionTile(string from, string to, int mask, string folder)
     {
-        string file = $"tr_{from}_to_{to}_m{mask:D2}.png";
+        string file = $"tr_{from}_to_{to}_b{mask:D2}.png";
         string key = folder + "/" + file;
         if (cache.TryGetValue(key, out var t)) { return t; }
         string full = Path.Combine(Application.dataPath, folder.Replace("Assets/", ""), file);
-        if (!File.Exists(full)) { cache[key] = null; return null; }
+        if (!File.Exists(full))
+        {
+            string legacyFile = $"tr_{from}_to_{to}_m{mask:D2}.png";
+            full = Path.Combine(Application.dataPath, folder.Replace("Assets/", ""), legacyFile);
+            if (!File.Exists(full)) { cache[key] = null; return null; }
+        }
         byte[] bytes = File.ReadAllBytes(full);
         Texture2D tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
         tex.LoadImage(bytes, false);
