@@ -1610,11 +1610,16 @@ public class GameWorldController : UWEBase
                 }
                 else if (cornerWaterCount > 0)
                 {
-                    // Shoreline transition tile: keep it in land class for transition texturing,
-                    // but flatten to water plane so shoreline is never sloped.
-                    int quadGrass = tri0Grass + tri1Grass;
-                    int quadStone = tri0Stone + tri1Stone;
-                    int shorelineClass = (quadStone >= quadGrass) ? 2 : 1;
+                    // Shoreline transition tile: choose shoreline land class from non-water corners,
+                    // not broad triangle counts, to avoid grass islands inside stone-water shorelines.
+                    int shorelineClass = 1;
+                    bool hasStoneLandCorner = false;
+                    if (!cornerBLWater && terrainClassByVertex[bl] == 2) hasStoneLandCorner = true;
+                    if (!cornerBRWater && terrainClassByVertex[br] == 2) hasStoneLandCorner = true;
+                    if (!cornerTLWater && terrainClassByVertex[tl] == 2) hasStoneLandCorner = true;
+                    if (!cornerTRWater && terrainClassByVertex[tr] == 2) hasStoneLandCorner = true;
+                    if (hasStoneLandCorner) shorelineClass = 2;
+
                     tri0Class = shorelineClass;
                     tri1Class = shorelineClass;
                     clampQuadToWaterPlane = true;
