@@ -1965,7 +1965,7 @@ public class GameWorldController : UWEBase
         {
             int thisGeometryStep = Mathf.Max(1, thisSampleStep * Mathf.Max(1, (overworld != null) ? overworld.TerrainDecimationStep : 1));
             int neighborGeometryStep = GetChunkRequestedOrLoadedGeometryStep(neighborCoord, thisGeometryStep, overworld);
-            if (neighborGeometryStep <= thisGeometryStep) { return; }
+            if (neighborGeometryStep == thisGeometryStep) { return; }
             int coarseStep = Mathf.Max(thisGeometryStep, neighborGeometryStep);
 
             if (horizontal)
@@ -1990,7 +1990,11 @@ public class GameWorldController : UWEBase
                     // This matches low-detail clamp behavior and prevents residual cracks.
                     if (anchor0Water || anchor1Water) { targetY = 0f; }
                     int i = (z * sampleWidth) + x;
-                    vertices[i].y = Mathf.Min(vertices[i].y, targetY);
+                    // Keep explicit local water clamps authoritative.
+                    if (vertices[i].y <= overworld.WaterSurfaceEpsilon) { targetY = 0f; }
+                    // Use deterministic target assignment so both sides of mixed-LOD boundaries
+                    // resolve to the same shared-edge profile regardless of build order.
+                    vertices[i].y = targetY;
                 }
             }
             else
@@ -2014,7 +2018,8 @@ public class GameWorldController : UWEBase
                     // keep the full stitched border segment clamped to water plane.
                     if (anchor0Water || anchor1Water) { targetY = 0f; }
                     int i = (z * sampleWidth) + x;
-                    vertices[i].y = Mathf.Min(vertices[i].y, targetY);
+                    if (vertices[i].y <= overworld.WaterSurfaceEpsilon) { targetY = 0f; }
+                    vertices[i].y = targetY;
                 }
             }
         }
