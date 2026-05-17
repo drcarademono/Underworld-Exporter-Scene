@@ -1036,7 +1036,9 @@ public class GameWorldController : UWEBase
 
         overworldWaterMat = BuildOverworldSurfaceMaterial(overworld.WaterTextureIndex, null, new Color(0.15f, 0.28f, 0.35f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
         overworldGrassMat = BuildOverworldSurfaceMaterial(overworld.GrassTextureIndex, overworld.GrassMaterialOverride, new Color(0.22f, 0.58f, 0.22f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
-        overworldStoneMat = BuildOverworldSurfaceMaterial(overworld.StoneTextureIndex, overworld.StoneMaterialOverride, new Color(0.45f, 0.45f, 0.45f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
+        int highLandTextureIndex = overworld.RenderSnowUsingStoneLayer ? overworld.SnowTextureIndex : overworld.StoneTextureIndex;
+        Material highLandOverride = overworld.RenderSnowUsingStoneLayer ? overworld.SnowMaterialOverride : overworld.StoneMaterialOverride;
+        overworldStoneMat = BuildOverworldSurfaceMaterial(highLandTextureIndex, highLandOverride, new Color(0.45f, 0.45f, 0.45f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
         if (overworld.AnimateWater)
         {
             int frameCount = Mathf.Max(1, (overworld.WaterTextureAnimEndIndex - overworld.WaterTextureIndex) + 1);
