@@ -263,6 +263,7 @@ public class PlayerInventory : UWEBase
     //For calculating light levels
     public Light lt;
     private LightSource ls;
+    private float defaultPlayerLightIntensity = -1f;
 
     public Container playerContainer;
     public short ContainerOffset = 0;//For scrolling the inventory.
@@ -369,6 +370,10 @@ public class PlayerInventory : UWEBase
         {
             lt = this.gameObject.GetComponentInChildren<Light>();
         }
+        if ((lt != null) && (defaultPlayerLightIntensity < 0f))
+        {
+            defaultPlayerLightIntensity = lt.intensity;
+        }
         ls = null;
         float MaxBrightness = LightSource.MagicBrightness;
         //Start with magically generated light.
@@ -410,6 +415,7 @@ public class PlayerInventory : UWEBase
             }
         }
         lt.range = LightSource.BaseBrightness + MaxBrightness;
+        ApplyOverworldDaylightSuppression(MaxBrightness);
         if (MaxBrightness > 0)
         {
             playerUW.LightActive = true;
@@ -418,6 +424,57 @@ public class PlayerInventory : UWEBase
         {
             playerUW.LightActive = false;
         }
+    }
+
+    private void ApplyOverworldDaylightSuppression(float maxBrightness)
+    {
+        if (lt == null) { return; }
+
+        float baselineIntensity = (defaultPlayerLightIntensity > 0f) ? defaultPlayerLightIntensity : lt.intensity;
+        float targetIntensity = baselineIntensity;
+        bool suppressForDaylight = (_RES == GAME_UW2)
+            && (GameWorldController.instance != null)
+            && (GameWorldController.instance.StartInOverworld)
+            && (maxBrightness <= 0f);
+
+        if (suppressForDaylight)
+        {
+            Light sun = GetDominantDirectionalLight();
+            if (sun != null)
+            {
+                float maxSunIntensity = 1f;
+                OverworldSkyController skyController = Object.FindObjectOfType<OverworldSkyController>();
+                if ((skyController != null) && (skyController.MaxSunlightIntensity > 0.0001f))
+                {
+                    maxSunIntensity = skyController.MaxSunlightIntensity;
+                }
+                float daylightFactor = Mathf.Clamp01(sun.intensity / Mathf.Max(0.0001f, maxSunIntensity));
+                targetIntensity = baselineIntensity * (1f - daylightFactor);
+            }
+        }
+
+        lt.intensity = targetIntensity;
+    }
+
+    private Light GetDominantDirectionalLight()
+    {
+        Light[] lights = Object.FindObjectsOfType<Light>();
+        Light best = null;
+        float bestIntensity = float.MinValue;
+        for (int i = 0; i < lights.Length; i++)
+        {
+            Light candidate = lights[i];
+            if ((candidate == null) || !candidate.enabled || (candidate.type != LightType.Directional))
+            {
+                continue;
+            }
+            if (candidate.intensity > bestIntensity)
+            {
+                best = candidate;
+                bestIntensity = candidate.intensity;
+            }
+        }
+        return best;
     }
 
     /*	void DisplayGameObject(string objName, UISprite Label, bool isEquipped, ref bool hasChanged)
