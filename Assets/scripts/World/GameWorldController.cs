@@ -217,6 +217,8 @@ public class GameWorldController : UWEBase
     private int overworldTerrainMapWidth = 0;
     private int overworldTerrainMapHeight = 0;
     private Texture2D cachedOverworldHeightmap = null;
+    private Texture2D cachedNatureClimateMap = null;
+    private string cachedNatureClimateMapPath = string.Empty;
     private readonly Queue<OverworldChunkBuildRequest> overworldChunkBuildQueue = new Queue<OverworldChunkBuildRequest>();
     private readonly HashSet<Vector2Int> queuedOverworldChunks = new HashSet<Vector2Int>();
     private readonly Dictionary<Vector2Int, OverworldChunkBuildRequest> pendingOverworldChunkRequests = new Dictionary<Vector2Int, OverworldChunkBuildRequest>();
@@ -1971,6 +1973,7 @@ public class GameWorldController : UWEBase
         if (IsSnowAtHeight(worldHeight, sampleX, sampleZ, overworld)) { return 3; }
         if (IsBandAtHeight(worldHeight, sampleX, sampleZ, overworld.LavaLineAltitude, overworld.LavaTransitionWidth, overworld.LavaNoiseScale, overworld.LavaNoiseAmplitude, 77.3f, 901.2f, 39.2f, 667.7f)) { return 7; }
         if (IsStoneAtHeight(worldHeight, sampleX, sampleZ, overworld)) { return 2; }
+        if (IsDesertClimateAtSample(sampleX, sampleZ)) { return 6; } // Desert climate uses sand as base terrain.
         if (IsBandAtHeight(worldHeight, sampleX, sampleZ, overworld.SwampLineAltitude, overworld.SwampTransitionWidth, overworld.SwampNoiseScale, overworld.SwampNoiseAmplitude, 288.1f, 413.4f, 91.8f, 144.3f)) { return 5; }
         if (IsBandAtHeight(worldHeight, sampleX, sampleZ, overworld.DirtLineAltitude, overworld.DirtTransitionWidth, overworld.DirtNoiseScale, overworld.DirtNoiseAmplitude, 521.6f, 233.0f, 303.7f, 707.9f)) { return 4; }
         if (IsBandAtHeight(worldHeight, sampleX, sampleZ, overworld.SandLineAltitude, overworld.SandTransitionWidth, overworld.SandNoiseScale, overworld.SandNoiseAmplitude, 633.4f, 845.9f, 411.4f, 129.4f)) { return 6; }
@@ -1985,6 +1988,50 @@ public class GameWorldController : UWEBase
 
         if (baseStone) { return 2; }
         return 1;
+    }
+
+    private bool IsDesertClimateAtSample(int sampleX, int sampleZ)
+    {
+        OverworldNatureFlatsController flats = GetOverworldNatureFlatsController();
+        if (flats == null) { return false; }
+        Texture2D climateMap = GetNatureClimateMap(flats);
+        if (climateMap == null) { return false; }
+
+        float worldW = Mathf.Max(1f, flats.NatureMapWorldWidth);
+        float worldH = Mathf.Max(1f, flats.NatureMapWorldHeight);
+        float tileWorldSize = Mathf.Max(0.01f, GetOverworldController().TileWorldSize);
+        float worldX = sampleX * tileWorldSize;
+        float worldZ = sampleZ * tileWorldSize;
+        float u = Mathf.Clamp01(worldX / worldW);
+        float v = Mathf.Clamp01(worldZ / worldH);
+        int px = Mathf.Clamp(Mathf.RoundToInt(u * (climateMap.width - 1)), 0, climateMap.width - 1);
+        int py = Mathf.Clamp(Mathf.RoundToInt(v * (climateMap.height - 1)), 0, climateMap.height - 1);
+        Color32 c = climateMap.GetPixel(px, py);
+        return (c.r == flats.DesertColor.r) && (c.g == flats.DesertColor.g) && (c.b == flats.DesertColor.b);
+    }
+
+    private Texture2D GetNatureClimateMap(OverworldNatureFlatsController flats)
+    {
+        string requestedPath = NormalizeResourcesPath(flats.NatureClimateMapResourcePath);
+        if (cachedNatureClimateMap != null && string.Equals(cachedNatureClimateMapPath, requestedPath, StringComparison.Ordinal))
+        {
+            return cachedNatureClimateMap;
+        }
+        cachedNatureClimateMapPath = requestedPath;
+        cachedNatureClimateMap = string.IsNullOrEmpty(requestedPath) ? null : Resources.Load<Texture2D>(requestedPath);
+        return cachedNatureClimateMap;
+    }
+
+    private static string NormalizeResourcesPath(string path)
+    {
+        if (string.IsNullOrEmpty(path)) { return string.Empty; }
+        string p = path.Replace("\\", "/");
+        int idx = p.IndexOf("Resources/", StringComparison.OrdinalIgnoreCase);
+        if (idx >= 0) { p = p.Substring(idx + "Resources/".Length); }
+        if (p.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase)) { p = p.Substring("Assets/".Length); }
+        int dot = p.LastIndexOf('.');
+        if (dot > 0) { p = p.Substring(0, dot); }
+        return p.TrimStart('/');
     }
 
     private float SampleTerrainHeightAt(int sampleX, int sampleZ, int tilesPerPixel, Texture2D heightmap, OverworldTerrainController overworld)
