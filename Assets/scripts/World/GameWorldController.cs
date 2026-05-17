@@ -1835,10 +1835,10 @@ public class GameWorldController : UWEBase
             Vector3 vb = vertices[b];
             skirtVerts.Add(va);
             skirtVerts.Add(vb);
-            // 60-degree skirt from horizontal: steeper downward.
-            Vector3 angledOffset = (outward * 0.5f * skirtDepth) + (Vector3.down * 0.8660254f * skirtDepth);
-            skirtVerts.Add(va + angledOffset);
-            skirtVerts.Add(vb + angledOffset);
+            // Vertical skirt (90 degrees down from the terrain edge).
+            Vector3 verticalOffset = Vector3.down * skirtDepth;
+            skirtVerts.Add(va + verticalOffset);
+            skirtVerts.Add(vb + verticalOffset);
             int ax = a % sampleWidth; int az = a / sampleWidth;
             int bx = b % sampleWidth; int bz = b / sampleWidth;
             // Skirt UVs need to match terrain material texel density; terrain is effectively 64x larger in UV world scale.
@@ -1882,7 +1882,14 @@ public class GameWorldController : UWEBase
         skirtMesh.SetTriangles(waterTris, 0);
         skirtMesh.SetTriangles(grassTris, 1);
         skirtMesh.SetTriangles(stoneTris, 2);
-        skirtMesh.RecalculateNormals();
+        // Mitigate dark seam shadows on vertical skirts by biasing normals upward.
+        // This keeps the skirt visually close to the top terrain lighting while still sealing LOD gaps.
+        Vector3[] skirtNormals = new Vector3[skirtVerts.Count];
+        for (int i = 0; i < skirtNormals.Length; i++)
+        {
+            skirtNormals[i] = Vector3.up;
+        }
+        skirtMesh.normals = skirtNormals;
         skirtMesh.RecalculateBounds();
 
         GameObject skirt = new GameObject("ChunkSkirt");
@@ -1891,6 +1898,8 @@ public class GameWorldController : UWEBase
         MeshRenderer mr = skirt.AddComponent<MeshRenderer>();
         mf.sharedMesh = skirtMesh;
         mr.sharedMaterials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
+        mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        mr.receiveShadows = false;
     }
 
 
