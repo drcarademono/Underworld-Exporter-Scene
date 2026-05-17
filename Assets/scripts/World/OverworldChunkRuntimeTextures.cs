@@ -1,18 +1,33 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public class OverworldChunkRuntimeTextures : MonoBehaviour
 {
-    public Material grassRuntimeMat;
-    public Material stoneRuntimeMat;
+    public Material[] landRuntimeMats;
     public Texture2D tileIdMap;
     public Texture2D atlasTexture;
     public Texture2D waterMask;
     private static Shader transitionShader;
 
-    public void EnsureMaterials(Material grassBase, Material stoneBase)
+    public void EnsureMaterials(params Material[] landBaseMaterials)
     {
-        if (grassRuntimeMat == null && grassBase != null) { grassRuntimeMat = new Material(grassBase); }
-        if (stoneRuntimeMat == null && stoneBase != null) { stoneRuntimeMat = new Material(stoneBase); }
+        if (landBaseMaterials == null || landBaseMaterials.Length == 0)
+        {
+            landRuntimeMats = null;
+            return;
+        }
+        if (landRuntimeMats == null || landRuntimeMats.Length != landBaseMaterials.Length)
+        {
+            ReleaseRuntimeMaterials();
+            landRuntimeMats = new Material[landBaseMaterials.Length];
+        }
+        for (int i = 0; i < landBaseMaterials.Length; i++)
+        {
+            if (landRuntimeMats[i] == null && landBaseMaterials[i] != null)
+            {
+                landRuntimeMats[i] = new Material(landBaseMaterials[i]);
+            }
+        }
     }
 
     public void SetTransitionAtlas(OverworldTerrainTexturing.TileAtlasBuild build)
@@ -27,21 +42,16 @@ public class OverworldChunkRuntimeTextures : MonoBehaviour
         if (transitionShader == null) { transitionShader = Shader.Find("Custom/OverworldTransitionAtlas"); }
         if (transitionShader == null) { return; }
 
-        if (grassRuntimeMat != null)
+        if (landRuntimeMats == null) { return; }
+        for (int i = 0; i < landRuntimeMats.Length; i++)
         {
-            grassRuntimeMat.shader = transitionShader;
-            grassRuntimeMat.SetTexture("_TileIdMap", tileIdMap);
-            grassRuntimeMat.SetTexture("_TileAtlas", atlasTexture);
-            grassRuntimeMat.SetVector("_AtlasGrid", new Vector4(build.atlasCols, build.atlasRows, 0f, 0f));
-            grassRuntimeMat.SetTexture("_WaterMask", waterMask);
-        }
-        if (stoneRuntimeMat != null)
-        {
-            stoneRuntimeMat.shader = transitionShader;
-            stoneRuntimeMat.SetTexture("_TileIdMap", tileIdMap);
-            stoneRuntimeMat.SetTexture("_TileAtlas", atlasTexture);
-            stoneRuntimeMat.SetVector("_AtlasGrid", new Vector4(build.atlasCols, build.atlasRows, 0f, 0f));
-            stoneRuntimeMat.SetTexture("_WaterMask", waterMask);
+            Material mat = landRuntimeMats[i];
+            if (mat == null) { continue; }
+            mat.shader = transitionShader;
+            mat.SetTexture("_TileIdMap", tileIdMap);
+            mat.SetTexture("_TileAtlas", atlasTexture);
+            mat.SetVector("_AtlasGrid", new Vector4(build.atlasCols, build.atlasRows, 0f, 0f));
+            mat.SetTexture("_WaterMask", waterMask);
         }
     }
 
@@ -50,7 +60,16 @@ public class OverworldChunkRuntimeTextures : MonoBehaviour
         if (tileIdMap != null) { Object.Destroy(tileIdMap); tileIdMap = null; }
         if (atlasTexture != null) { Object.Destroy(atlasTexture); atlasTexture = null; }
         if (waterMask != null) { Object.Destroy(waterMask); waterMask = null; }
-        if (grassRuntimeMat != null) { Object.Destroy(grassRuntimeMat); grassRuntimeMat = null; }
-        if (stoneRuntimeMat != null) { Object.Destroy(stoneRuntimeMat); stoneRuntimeMat = null; }
+        ReleaseRuntimeMaterials();
+    }
+
+    private void ReleaseRuntimeMaterials()
+    {
+        if (landRuntimeMats == null) { return; }
+        for (int i = 0; i < landRuntimeMats.Length; i++)
+        {
+            if (landRuntimeMats[i] != null) { Object.Destroy(landRuntimeMats[i]); }
+            landRuntimeMats[i] = null;
+        }
     }
 }

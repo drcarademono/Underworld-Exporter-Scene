@@ -1760,9 +1760,17 @@ public class GameWorldController : UWEBase
                 atlasBuild.atlasTexture.name = $"OWChunkAtlas_{chunkCoord.x}_{chunkCoord.y}";
                 OverworldChunkRuntimeTextures rt = go.GetComponent<OverworldChunkRuntimeTextures>();
                 if (rt == null) { rt = go.AddComponent<OverworldChunkRuntimeTextures>(); }
-                rt.EnsureMaterials(overworldGrassMat, overworldStoneMat);
+                rt.EnsureMaterials(overworldGrassMat, overworldStoneMat, overworldSnowMat, overworldSandMat);
                 rt.SetTransitionAtlas(atlasBuild);
-                mr.materials = new Material[] { overworldWaterMat, rt.grassRuntimeMat, rt.stoneRuntimeMat, rt.stoneRuntimeMat, rt.grassRuntimeMat };
+                Material[] landMats = rt.landRuntimeMats;
+                mr.materials = new Material[]
+                {
+                    overworldWaterMat,
+                    (landMats != null && landMats.Length > 0) ? landMats[0] : overworldGrassMat, // grass
+                    (landMats != null && landMats.Length > 1) ? landMats[1] : overworldStoneMat, // stone
+                    (landMats != null && landMats.Length > 2) ? landMats[2] : overworldSnowMat,  // snow
+                    (landMats != null && landMats.Length > 3) ? landMats[3] : overworldSandMat,  // sand
+                };
             }
             else
             {
