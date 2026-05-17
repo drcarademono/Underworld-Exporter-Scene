@@ -1686,6 +1686,7 @@ public class GameWorldController : UWEBase
         if (overworld.UseTransitionTileTexturing && withCollision && (sampleStep <= 1))
         {
             System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+            Texture2D waterBase = (overworldWaterMat != null) ? (overworldWaterMat.mainTexture as Texture2D) : null;
             Texture2D grassBase = (overworldGrassMat != null) ? (overworldGrassMat.mainTexture as Texture2D) : null;
             Texture2D stoneBase = (overworldStoneMat != null) ? (overworldStoneMat.mainTexture as Texture2D) : null;
             OverworldTerrainTexturing.BuildStats stats;
@@ -1694,6 +1695,7 @@ public class GameWorldController : UWEBase
                 fullSampleWidth,
                 fullSampleHeight,
                 overworld.TransitionTilesFolder,
+                waterBase,
                 grassBase,
                 stoneBase,
                 out stats);

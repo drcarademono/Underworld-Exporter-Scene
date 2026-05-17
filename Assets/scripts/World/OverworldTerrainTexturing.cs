@@ -23,7 +23,7 @@ public static class OverworldTerrainTexturing
     }
 
     private static readonly Dictionary<string, Texture2D> cache = new Dictionary<string, Texture2D>();
-    public static TileAtlasBuild BuildChunkTransitionAtlas(int[] terrainClassFull, int width, int height, string assetsRelativeFolder, Texture2D grassBase, Texture2D stoneBase, out BuildStats stats)
+    public static TileAtlasBuild BuildChunkTransitionAtlas(int[] terrainClassFull, int width, int height, string assetsRelativeFolder, Texture2D waterBase, Texture2D grassBase, Texture2D stoneBase, out BuildStats stats)
     {
         stats = new BuildStats();
         TileAtlasBuild build = new TileAtlasBuild();
@@ -57,12 +57,12 @@ public static class OverworldTerrainTexturing
                 }
                 else
                 {
-                    key = center == 2 ? "base_stone" : "base_grass";
+                    key = (center == 0) ? "base_water" : (center == 2 ? "base_stone" : "base_grass");
                 }
 
                 if (tile == null)
                 {
-                    tile = (center == 2) ? stoneBase : grassBase;
+                    tile = (center == 0) ? waterBase : ((center == 2) ? stoneBase : grassBase);
                     stats.fallbackCenterTiles++;
                 }
 
