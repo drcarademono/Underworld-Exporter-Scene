@@ -1601,7 +1601,7 @@ public class GameWorldController : UWEBase
 
                 bool clampQuadToWaterPlane = false;
 
-                if (cornerWaterCount == 4)
+                if (cornerWaterCount >= 3)
                 {
                     // Full water tile.
                     tri0Class = 0;
