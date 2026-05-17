@@ -1628,13 +1628,12 @@ public class GameWorldController : UWEBase
                 bool onChunkBorder = (x == 0) || (z == 0) || (x == sampleWidth - 2) || (z == sampleHeight - 2);
                 if (onChunkBorder)
                 {
-                    // Handle water-at-chunk-edge edge case: if border quad has any water samples,
-                    // force both triangles to water so adjoining chunks don't leave sloped/cracked seams.
-                    bool hasAnyWaterSample = (tri0Water > 0) || (tri1Water > 0);
+                    // Keep shoreline transitions visible at chunk edges.
+                    // Border quads with water should be clamped flat, but not forcibly reclassified to full water,
+                    // otherwise transition tiles cannot render on the land/transition materials.
+                    bool hasAnyWaterSample = (tri0Water > 0) || (tri1Water > 0) || (cornerWaterCount > 0);
                     if (hasAnyWaterSample)
                     {
-                        tri0Class = 0;
-                        tri1Class = 0;
                         clampQuadToWaterPlane = true;
                     }
                 }
