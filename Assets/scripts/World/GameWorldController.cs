@@ -1589,16 +1589,24 @@ public class GameWorldController : UWEBase
                     }
                 }
 
-                int tri0Class = (tri0Water > 0) ? 0 : DominantClass(tri0Water, tri0Grass, tri0Stone);
-                int tri1Class = (tri1Water > 0) ? 0 : DominantClass(tri1Water, tri1Grass, tri1Stone);
+                int tri0Class = DominantClass(tri0Water, tri0Grass, tri0Stone);
+                int tri1Class = DominantClass(tri1Water, tri1Grass, tri1Stone);
 
-                // Enforce shoreline consistency against actual mesh heights.
-                // If any vertex of a triangle is at/below water plane, classify that triangle as water.
-                if ((vertices[bl].y <= overworld.WaterSurfaceEpsilon) || (vertices[tr].y <= overworld.WaterSurfaceEpsilon) || (vertices[br].y <= overworld.WaterSurfaceEpsilon))
+                // Shoreline guard: only force water when both sampling and geometry strongly indicate water.
+                int tri0LowVerts = 0;
+                if (vertices[bl].y <= overworld.WaterSurfaceEpsilon) tri0LowVerts++;
+                if (vertices[tr].y <= overworld.WaterSurfaceEpsilon) tri0LowVerts++;
+                if (vertices[br].y <= overworld.WaterSurfaceEpsilon) tri0LowVerts++;
+                if ((tri0Water > 0) && (tri0LowVerts >= 2))
                 {
                     tri0Class = 0;
                 }
-                if ((vertices[bl].y <= overworld.WaterSurfaceEpsilon) || (vertices[tl].y <= overworld.WaterSurfaceEpsilon) || (vertices[tr].y <= overworld.WaterSurfaceEpsilon))
+
+                int tri1LowVerts = 0;
+                if (vertices[bl].y <= overworld.WaterSurfaceEpsilon) tri1LowVerts++;
+                if (vertices[tl].y <= overworld.WaterSurfaceEpsilon) tri1LowVerts++;
+                if (vertices[tr].y <= overworld.WaterSurfaceEpsilon) tri1LowVerts++;
+                if ((tri1Water > 0) && (tri1LowVerts >= 2))
                 {
                     tri1Class = 0;
                 }
