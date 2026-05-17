@@ -1592,6 +1592,13 @@ public class GameWorldController : UWEBase
                 int tri0Class = DominantClass(tri0Water, tri0Grass, tri0Stone);
                 int tri1Class = DominantClass(tri1Water, tri1Grass, tri1Stone);
 
+                // Keep geometry/water classification in sync with transition texturing source classes.
+                bool cornerBLWater = terrainClassByVertex[bl] == 0;
+                bool cornerBRWater = terrainClassByVertex[br] == 0;
+                bool cornerTLWater = terrainClassByVertex[tl] == 0;
+                bool cornerTRWater = terrainClassByVertex[tr] == 0;
+                int cornerWaterCount = (cornerBLWater ? 1 : 0) + (cornerBRWater ? 1 : 0) + (cornerTLWater ? 1 : 0) + (cornerTRWater ? 1 : 0);
+
                 // Shoreline guard: only force water when both sampling and geometry strongly indicate water.
                 int tri0LowVerts = 0;
                 if (vertices[bl].y <= overworld.WaterSurfaceEpsilon) tri0LowVerts++;
@@ -1612,29 +1619,29 @@ public class GameWorldController : UWEBase
                 }
 
                 bool clampQuadToWaterPlane = false;
-                bool quadHasAnyWaterSample = (tri0Water > 0) || (tri1Water > 0);
-                bool tri0HasWaterSample = tri0Water > 0;
-                bool tri1HasWaterSample = tri1Water > 0;
+                bool quadHasAnyWaterSample = (tri0Water > 0) || (tri1Water > 0) || (cornerWaterCount > 0);
+                bool tri0HasWaterSample = (tri0Water > 0) || cornerBLWater || cornerBRWater || cornerTRWater;
+                bool tri1HasWaterSample = (tri1Water > 0) || cornerBLWater || cornerTLWater || cornerTRWater;
 
-                // Any quad that participates in water (full water or shoreline transition) must be flat.
+                // Any quad participating in water or water transitions must be flat.
                 if (quadHasAnyWaterSample)
                 {
                     clampQuadToWaterPlane = true;
                 }
 
-                // Resolve tile-level classing:
-                // - both triangles with water samples => full water tile
-                // - only one triangle with water samples => shoreline transition tile (non-water class)
-                if (tri0HasWaterSample && tri1HasWaterSample)
+                // Tile-level water decision:
+                // - 2+ water corners means full water tile.
+                // - mixed water stays shoreline transition class (non-water) for texture transitions.
+                if (cornerWaterCount >= 2 || (tri0HasWaterSample && tri1HasWaterSample))
                 {
                     tri0Class = 0;
                     tri1Class = 0;
                 }
-                else if (tri0HasWaterSample != tri1HasWaterSample)
+                else if (tri0HasWaterSample != tri1HasWaterSample || cornerWaterCount == 1)
                 {
                     int quadGrass = tri0Grass + tri1Grass;
                     int quadStone = tri0Stone + tri1Stone;
-                    int shorelineClass = (quadStone > quadGrass) ? 2 : 1;
+                    int shorelineClass = (quadStone >= quadGrass) ? 2 : 1;
                     tri0Class = shorelineClass;
                     tri1Class = shorelineClass;
                 }
