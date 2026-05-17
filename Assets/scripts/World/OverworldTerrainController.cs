@@ -23,6 +23,7 @@ public class OverworldTerrainController : MonoBehaviour
     
     [Header("LOD Skirt Lighting")]
     public bool SkirtUseUpwardNormals = true;
+    [Range(0f, 1f)] public float SkirtUpwardNormalBlend = 0.5f;
     public bool SkirtCastShadows = false;
     public bool SkirtReceiveShadows = false;
 

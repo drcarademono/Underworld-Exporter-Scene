@@ -1882,19 +1882,18 @@ public class GameWorldController : UWEBase
         skirtMesh.SetTriangles(grassTris, 1);
         skirtMesh.SetTriangles(stoneTris, 2);
         OverworldTerrainController overworld = GetOverworldController();
+        skirtMesh.RecalculateNormals();
         if (overworld.SkirtUseUpwardNormals)
         {
-            // Mitigate dark seam shading by biasing normals upward.
-            Vector3[] skirtNormals = new Vector3[skirtVerts.Count];
+            // Mitigate dark seam shading by blending computed normals toward upward normals.
+            // A blend of 0 keeps natural lighting; 1 fully forces upward normals.
+            Vector3[] skirtNormals = skirtMesh.normals;
+            float upBlend = Mathf.Clamp01(overworld.SkirtUpwardNormalBlend);
             for (int i = 0; i < skirtNormals.Length; i++)
             {
-                skirtNormals[i] = Vector3.up;
+                skirtNormals[i] = Vector3.Lerp(skirtNormals[i], Vector3.up, upBlend).normalized;
             }
             skirtMesh.normals = skirtNormals;
-        }
-        else
-        {
-            skirtMesh.RecalculateNormals();
         }
         skirtMesh.RecalculateBounds();
 
