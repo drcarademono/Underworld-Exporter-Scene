@@ -1701,6 +1701,28 @@ public class GameWorldController : UWEBase
                 out stats);
             if (atlasBuild.tileIdMap != null && atlasBuild.atlasTexture != null)
             {
+                if (atlasBuild.clampMask != null)
+                {
+                    for (int tz = 0; tz < sampleHeight - 1; tz++)
+                    {
+                        for (int tx = 0; tx < sampleWidth - 1; tx++)
+                        {
+                            if (!atlasBuild.clampMask[(tz * (sampleWidth - 1)) + tx]) { continue; }
+                            int bl = (tz * sampleWidth) + tx;
+                            int br = bl + 1;
+                            int tl = bl + sampleWidth;
+                            int tr = tl + 1;
+                            vertices[bl].y = 0f;
+                            vertices[br].y = 0f;
+                            vertices[tl].y = 0f;
+                            vertices[tr].y = 0f;
+                        }
+                    }
+                    mesh.vertices = vertices;
+                    mesh.RecalculateNormals();
+                    mesh.RecalculateBounds();
+                }
+
                 atlasBuild.tileIdMap.name = $"OWChunkTileIds_{chunkCoord.x}_{chunkCoord.y}";
                 atlasBuild.atlasTexture.name = $"OWChunkAtlas_{chunkCoord.x}_{chunkCoord.y}";
                 OverworldChunkRuntimeTextures rt = go.GetComponent<OverworldChunkRuntimeTextures>();

@@ -18,6 +18,7 @@ public static class OverworldTerrainTexturing
         public Texture2D tileIdMap;
         public Texture2D atlasTexture;
         public Texture2D waterMask;
+        public bool[] clampMask;
         public int atlasCols;
         public int atlasRows;
     }
@@ -33,6 +34,7 @@ public static class OverworldTerrainTexturing
         int tileH = height - 1;
         byte[] ids = new byte[tileW * tileH];
         byte[] waterFlags = new byte[tileW * tileH];
+        bool[] clampFlags = new bool[tileW * tileH];
         Dictionary<string, byte> atlasLookup = new Dictionary<string, byte>();
         List<Texture2D> atlasTiles = new List<Texture2D>();
 
@@ -45,6 +47,10 @@ public static class OverworldTerrainTexturing
                 if (center == 0) { waterFlags[(ty * tileW) + tx] = 255; }
                 int target = GetTransitionTarget(terrainClassFull, width, height, tx, ty, center);
                 int mask = BuildMask(terrainClassFull, width, height, tx, ty, target);
+                if (center == 0 || target == 0)
+                {
+                    clampFlags[(ty * tileW) + tx] = true;
+                }
 
                 Texture2D tile = null;
                 string key;
@@ -117,6 +123,7 @@ public static class OverworldTerrainTexturing
         build.atlasTexture.Apply(false, false);
         build.atlasCols = atlasCols;
         build.atlasRows = atlasRows;
+        build.clampMask = clampFlags;
         return build;
     }
 
