@@ -7,6 +7,7 @@ using UnityEngine;
 public class OverworldTransitionTileGeneratorWindow : EditorWindow
 {
     private const string PrefPrefix = "UW.OverworldTransitionTileGen.";
+    private bool prefsLoaded = false;
     [Serializable]
     private class TerrainTextureEntry
     {
@@ -58,6 +59,13 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
 
     private void OnGUI()
     {
+        if (!prefsLoaded)
+        {
+            LoadPrefs();
+            prefsLoaded = true;
+        }
+
+        EditorGUI.BeginChangeCheck();
         EditorGUILayout.LabelField("Overworld 16-Mask Transition Tile Generator", EditorStyles.boldLabel);
         EditorGUILayout.HelpBox("Generates m00..m15 transition tiles with naming convention tr_<from>_to_<to>_mXX[_vN].", MessageType.Info);
 
@@ -124,11 +132,17 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         {
             GenerateAll();
         }
+
+        if (EditorGUI.EndChangeCheck() && prefsLoaded)
+        {
+            SavePrefs();
+        }
     }
 
     private void OnEnable()
     {
         LoadPrefs();
+        prefsLoaded = true;
     }
 
     private void OnDisable()
