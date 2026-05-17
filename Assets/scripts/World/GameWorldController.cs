@@ -1557,6 +1557,7 @@ public class GameWorldController : UWEBase
         List<int> water = new List<int>();
         List<int> grass = new List<int>();
         List<int> stone = new List<int>();
+        bool[] forceWaterVertex = new bool[vertices.Length];
         // Stitch first, then allow downstream water-clamp classification pass
         // to be the final authority on forcing water surfaces to y=0.
         StitchChunkBorderToCoarserNeighbors(chunkCoord, baseSampleStep, vertices, sampleWidth, sampleHeight, startX, startY, meshSampleStep, tilesPerPixel, heightmap, overworld);
@@ -1656,12 +1657,18 @@ public class GameWorldController : UWEBase
                     vertices[bl].y = 0f;
                     vertices[tr].y = 0f;
                     vertices[br].y = 0f;
+                    forceWaterVertex[bl] = true;
+                    forceWaterVertex[tr] = true;
+                    forceWaterVertex[br] = true;
                 }
                 if (clampQuadToWaterPlane || (tri1Class == 0))
                 {
                     vertices[bl].y = 0f;
                     vertices[tl].y = 0f;
                     vertices[tr].y = 0f;
+                    forceWaterVertex[bl] = true;
+                    forceWaterVertex[tl] = true;
+                    forceWaterVertex[tr] = true;
                 }
 
                 AddTriangleToClass(bl, tr, br, tri0Class, water, grass, stone);
@@ -1670,7 +1677,7 @@ public class GameWorldController : UWEBase
         }
         // Final edge reconciliation pass after local clamp logic:
         // only lowers edge heights (never raises), so clamped water stays clamped.
-        LowerChunkBorderToCoarserNeighbors(chunkCoord, baseSampleStep, vertices, sampleWidth, sampleHeight, startX, startY, meshSampleStep, tilesPerPixel, heightmap, overworld);
+        LowerChunkBorderToCoarserNeighbors(chunkCoord, baseSampleStep, vertices, forceWaterVertex, sampleWidth, sampleHeight, startX, startY, meshSampleStep, tilesPerPixel, heightmap, overworld);
         mesh.vertices = vertices;
         mesh.subMeshCount = 3;
         mesh.SetTriangles(water, 0);
@@ -1763,9 +1770,13 @@ public class GameWorldController : UWEBase
                             vertices[br].y = 0f;
                             vertices[tl].y = 0f;
                             vertices[tr].y = 0f;
+                            forceWaterVertex[bl] = true;
+                            forceWaterVertex[br] = true;
+                            forceWaterVertex[tl] = true;
+                            forceWaterVertex[tr] = true;
                         }
                     }
-                    LowerChunkBorderToCoarserNeighbors(chunkCoord, baseSampleStep, vertices, sampleWidth, sampleHeight, startX, startY, meshSampleStep, tilesPerPixel, heightmap, overworld);
+                    LowerChunkBorderToCoarserNeighbors(chunkCoord, baseSampleStep, vertices, forceWaterVertex, sampleWidth, sampleHeight, startX, startY, meshSampleStep, tilesPerPixel, heightmap, overworld);
                     mesh.vertices = vertices;
                     mesh.RecalculateNormals();
                     mesh.RecalculateBounds();
@@ -1877,6 +1888,7 @@ public class GameWorldController : UWEBase
         Vector2Int chunkCoord,
         int thisSampleStep,
         Vector3[] vertices,
+        bool[] forceWaterVertex,
         int sampleWidth,
         int sampleHeight,
         int startX,
@@ -1991,7 +2003,8 @@ public class GameWorldController : UWEBase
                     if (anchor0Water || anchor1Water) { targetY = 0f; }
                     int i = (z * sampleWidth) + x;
                     // Keep explicit local water clamps authoritative.
-                    if (vertices[i].y <= overworld.WaterSurfaceEpsilon) { targetY = 0f; }
+                    if ((forceWaterVertex != null) && forceWaterVertex[i]) { targetY = 0f; }
+                    else if (vertices[i].y <= overworld.WaterSurfaceEpsilon) { targetY = 0f; }
                     // Use deterministic target assignment so both sides of mixed-LOD boundaries
                     // resolve to the same shared-edge profile regardless of build order.
                     vertices[i].y = targetY;
@@ -2018,7 +2031,8 @@ public class GameWorldController : UWEBase
                     // keep the full stitched border segment clamped to water plane.
                     if (anchor0Water || anchor1Water) { targetY = 0f; }
                     int i = (z * sampleWidth) + x;
-                    if (vertices[i].y <= overworld.WaterSurfaceEpsilon) { targetY = 0f; }
+                    if ((forceWaterVertex != null) && forceWaterVertex[i]) { targetY = 0f; }
+                    else if (vertices[i].y <= overworld.WaterSurfaceEpsilon) { targetY = 0f; }
                     vertices[i].y = targetY;
                 }
             }
