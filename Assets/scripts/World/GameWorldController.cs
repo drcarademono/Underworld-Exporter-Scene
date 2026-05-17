@@ -1884,6 +1884,29 @@ public class GameWorldController : UWEBase
         return Mathf.Max(1, expectedSample) * decimation;
     }
 
+    private bool TrySampleLoadedChunkBorderHeight(Vector2Int neighborCoord, int worldSampleX, int worldSampleZ, int coarseStep, out float sampledY)
+    {
+        sampledY = 0f;
+        if (!loadedOverworldChunks.TryGetValue(neighborCoord, out GameObject neighborGo) || neighborGo == null) { return false; }
+        MeshFilter mf = neighborGo.GetComponent<MeshFilter>();
+        if (mf == null || mf.sharedMesh == null) { return false; }
+        Vector3[] nverts = mf.sharedMesh.vertices;
+        if (nverts == null || nverts.Length == 0) { return false; }
+
+        int nsx = Mathf.RoundToInt(worldSampleX / Mathf.Max(0.0001f, coarseStep));
+        int nsz = Mathf.RoundToInt(worldSampleZ / Mathf.Max(0.0001f, coarseStep));
+        int nwidth = Mathf.RoundToInt(Mathf.Sqrt(nverts.Length));
+        if (nwidth <= 1) { return false; }
+        int nheight = nverts.Length / nwidth;
+        if ((nwidth * nheight) != nverts.Length || nheight <= 1) { return false; }
+        int ix = Mathf.Clamp(nsx, 0, nwidth - 1);
+        int iz = Mathf.Clamp(nsz, 0, nheight - 1);
+        int idx = (iz * nwidth) + ix;
+        if (idx < 0 || idx >= nverts.Length) { return false; }
+        sampledY = nverts[idx].y;
+        return true;
+    }
+
     private void StitchChunkBorderToCoarserNeighbors(
         Vector2Int chunkCoord,
         int thisSampleStep,
@@ -1924,6 +1947,8 @@ public class GameWorldController : UWEBase
                     int i = (z * sampleWidth) + x;
                     float y0 = SampleTerrainHeightAt(coarseGX0, globalZ, tilesPerPixel, heightmap, overworld);
                     float y1 = SampleTerrainHeightAt(coarseGX1, globalZ, tilesPerPixel, heightmap, overworld);
+                    if (TrySampleLoadedChunkBorderHeight(neighborCoord, coarseGX0, globalZ, coarseStep, out float ny0)) { y0 = ny0; }
+                    if (TrySampleLoadedChunkBorderHeight(neighborCoord, coarseGX1, globalZ, coarseStep, out float ny1)) { y1 = ny1; }
                     float y = Mathf.Lerp(y0, y1, t);
                     if (y < 0f) { y = 0f; }
                     vertices[i].y = y;
@@ -1943,6 +1968,8 @@ public class GameWorldController : UWEBase
                     int i = (z * sampleWidth) + x;
                     float y0 = SampleTerrainHeightAt(globalX, coarseGZ0, tilesPerPixel, heightmap, overworld);
                     float y1 = SampleTerrainHeightAt(globalX, coarseGZ1, tilesPerPixel, heightmap, overworld);
+                    if (TrySampleLoadedChunkBorderHeight(neighborCoord, globalX, coarseGZ0, coarseStep, out float ny0)) { y0 = ny0; }
+                    if (TrySampleLoadedChunkBorderHeight(neighborCoord, globalX, coarseGZ1, coarseStep, out float ny1)) { y1 = ny1; }
                     float y = Mathf.Lerp(y0, y1, t);
                     if (y < 0f) { y = 0f; }
                     vertices[i].y = y;
