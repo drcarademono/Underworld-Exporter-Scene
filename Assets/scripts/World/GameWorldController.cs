@@ -1412,7 +1412,7 @@ public class GameWorldController : UWEBase
         Vector3[] vertices = new Vector3[sampleWidth * sampleHeight];
         Vector2[] uvs = new Vector2[sampleWidth * sampleHeight];
         int[] triangles = new int[(sampleWidth - 1) * (sampleHeight - 1) * 6];
-        int[] terrainClassByVertex = new int[sampleWidth * sampleHeight]; //0=water,1=grass,2=stone
+        int[] terrainClassByVertex = new int[sampleWidth * sampleHeight]; //0=water,1=grass,2=stone/snow
 
         int fullSampleWidth = ((endX - startX) / baseSampleStep) + 1;
         int fullSampleHeight = ((endY - startY) / baseSampleStep) + 1;
@@ -1445,7 +1445,8 @@ public class GameWorldController : UWEBase
                     float hN = SampleSmoothedHeight(heightmap, fullPx, Mathf.Clamp(fullPz + tilesPerPixel, 0, heightmap.height - 1));
                     float hS = SampleSmoothedHeight(heightmap, fullPx, Mathf.Clamp(fullPz - tilesPerPixel, 0, heightmap.height - 1));
                     float slopeMagnitude = Mathf.Sqrt(((hE - hW) * (hE - hW)) + ((hN - hS) * (hN - hS)));
-                    terrainClassFull[fullIndex] = (slopeMagnitude > 0.022f) ? 2 : 1;
+                    bool isSnow = IsSnowAtHeight(fullY, fullGlobalX, fullGlobalZ, overworld);
+                    terrainClassFull[fullIndex] = (isSnow || slopeMagnitude > 0.022f) ? 2 : 1;
                 }
             }
         }
@@ -1922,6 +1923,21 @@ public class GameWorldController : UWEBase
         if ((waterCount >= grassCount) && (waterCount >= stoneCount)) { return 0; }
         if (stoneCount >= grassCount) { return 2; }
         return 1;
+    }
+
+    private static bool IsSnowAtHeight(float worldHeight, int sampleX, int sampleZ, OverworldTerrainController overworld)
+    {
+        float scale = Mathf.Max(0.001f, overworld.SnowNoiseScale);
+        float noise = (Mathf.PerlinNoise((sampleX + 311.113f) / scale, (sampleZ + 517.731f) / scale) * 2f) - 1f;
+        float noisySnowLine = overworld.SnowLineAltitude + (noise * overworld.SnowNoiseAmplitude);
+        float halfWidth = Mathf.Max(0f, overworld.SnowTransitionWidth * 0.5f);
+
+        if (worldHeight >= noisySnowLine + halfWidth) { return true; }
+        if (worldHeight <= noisySnowLine - halfWidth) { return false; }
+
+        float t = Mathf.InverseLerp(noisySnowLine - halfWidth, noisySnowLine + halfWidth, worldHeight);
+        float blendNoise = Mathf.PerlinNoise((sampleX + 911.921f) / scale, (sampleZ + 127.357f) / scale);
+        return blendNoise <= t;
     }
 
     private float SampleTerrainHeightAt(int sampleX, int sampleZ, int tilesPerPixel, Texture2D heightmap, OverworldTerrainController overworld)
