@@ -6,12 +6,24 @@ using UnityEngine;
 
 public class OverworldTransitionTileGeneratorWindow : EditorWindow
 {
+    [Serializable]
+    private class TerrainTextureEntry
+    {
+        public string name;
+        public Texture2D texture;
+    }
+
     private enum BlendMode { HardMask, OrderedDither, PerlinBorder }
 
     private OverworldTerrainController controller;
     private Texture2D grassTexture;
     private Texture2D stoneTexture;
     private Texture2D waterTexture;
+    private Texture2D dirtTexture;
+    private Texture2D sandTexture;
+    private Texture2D swampTexture;
+    private Texture2D snowTexture;
+    private Texture2D lavaTexture;
 
     private BlendMode blendMode = BlendMode.OrderedDither;
     private int tileSize = 64;
@@ -56,6 +68,11 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         grassTexture = (Texture2D)EditorGUILayout.ObjectField("Grass Texture", grassTexture, typeof(Texture2D), false);
         stoneTexture = (Texture2D)EditorGUILayout.ObjectField("Stone Texture", stoneTexture, typeof(Texture2D), false);
         waterTexture = (Texture2D)EditorGUILayout.ObjectField("Water Texture", waterTexture, typeof(Texture2D), false);
+        dirtTexture = (Texture2D)EditorGUILayout.ObjectField("Dirt Texture", dirtTexture, typeof(Texture2D), false);
+        sandTexture = (Texture2D)EditorGUILayout.ObjectField("Sand Texture", sandTexture, typeof(Texture2D), false);
+        swampTexture = (Texture2D)EditorGUILayout.ObjectField("Swamp Texture", swampTexture, typeof(Texture2D), false);
+        snowTexture = (Texture2D)EditorGUILayout.ObjectField("Snow Texture", snowTexture, typeof(Texture2D), false);
+        lavaTexture = (Texture2D)EditorGUILayout.ObjectField("Lava Texture", lavaTexture, typeof(Texture2D), false);
 
         blendMode = (BlendMode)EditorGUILayout.EnumPopup("Blend Mode", blendMode);
         tileSize = EditorGUILayout.IntSlider("Output Tile Size", tileSize, 16, 256);
@@ -98,7 +115,7 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         EditorGUILayout.EndHorizontal();
 
         EditorGUILayout.Space();
-        if (GUILayout.Button("Generate 3-family first-pass set (grass/water/stone)", GUILayout.Height(36)))
+        if (GUILayout.Button("Generate transition set for all assigned terrain textures", GUILayout.Height(36)))
         {
             GenerateAll();
         }
@@ -121,11 +138,36 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         {
             stoneTexture = controller.StoneMaterialOverride.mainTexture as Texture2D;
         }
+        if (controller.DirtMaterialOverride != null)
+        {
+            dirtTexture = controller.DirtMaterialOverride.mainTexture as Texture2D;
+        }
+        if (controller.SandMaterialOverride != null)
+        {
+            sandTexture = controller.SandMaterialOverride.mainTexture as Texture2D;
+        }
+        if (controller.SwampMaterialOverride != null)
+        {
+            swampTexture = controller.SwampMaterialOverride.mainTexture as Texture2D;
+        }
+        if (controller.SnowMaterialOverride != null)
+        {
+            snowTexture = controller.SnowMaterialOverride.mainTexture as Texture2D;
+        }
+        if (controller.LavaMaterialOverride != null)
+        {
+            lavaTexture = controller.LavaMaterialOverride.mainTexture as Texture2D;
+        }
 
         // Attempt to load UW2 terrain indices via private GameWorldController loader.
         TryPullViaGameWorldController(controller.GrassTextureIndex, ref grassTexture);
         TryPullViaGameWorldController(controller.StoneTextureIndex, ref stoneTexture);
         TryPullViaGameWorldController(controller.WaterTextureIndex, ref waterTexture);
+        TryPullViaGameWorldController(controller.DirtTextureIndex, ref dirtTexture);
+        TryPullViaGameWorldController(controller.SandTextureIndex, ref sandTexture);
+        TryPullViaGameWorldController(controller.SwampTextureIndex, ref swampTexture);
+        TryPullViaGameWorldController(controller.SnowTextureIndex, ref snowTexture);
+        TryPullViaGameWorldController(controller.LavaTextureIndex, ref lavaTexture);
 
         Debug.Log("TransitionTileGen: Pull complete. Verify texture slots before generating.");
     }
@@ -155,17 +197,23 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
 
     private void GenerateAll()
     {
-        if (grassTexture == null || stoneTexture == null || waterTexture == null)
+        var terrains = BuildAssignedTerrainList();
+        if (terrains.Count < 2)
         {
-            EditorUtility.DisplayDialog("Missing Textures", "Assign grass, stone, and water textures first.", "OK");
+            EditorUtility.DisplayDialog("Missing Textures", "Assign at least two terrain textures before generating.", "OK");
             return;
         }
 
         EnsureFolder(outputFolder);
 
-        GenerateFamily("grass", "water", grassTexture, waterTexture);
-        GenerateFamily("grass", "stone", grassTexture, stoneTexture);
-        GenerateFamily("stone", "water", stoneTexture, waterTexture);
+        for (int i = 0; i < terrains.Count - 1; i++)
+        {
+            for (int j = i + 1; j < terrains.Count; j++)
+            {
+                GenerateFamily(terrains[i].name, terrains[j].name, terrains[i].texture, terrains[j].texture);
+                GenerateFamily(terrains[j].name, terrains[i].name, terrains[j].texture, terrains[i].texture);
+            }
+        }
 
         AssetDatabase.Refresh();
         EditorUtility.DisplayDialog("Done", "Generated transition tiles in " + outputFolder, "OK");
@@ -210,6 +258,26 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
                 File.WriteAllBytes(path, outTex.EncodeToPNG());
             }
         }
+    }
+
+    private List<TerrainTextureEntry> BuildAssignedTerrainList()
+    {
+        var terrains = new List<TerrainTextureEntry>();
+        AddTerrainIfAssigned(terrains, "water", waterTexture);
+        AddTerrainIfAssigned(terrains, "grass", grassTexture);
+        AddTerrainIfAssigned(terrains, "stone", stoneTexture);
+        AddTerrainIfAssigned(terrains, "dirt", dirtTexture);
+        AddTerrainIfAssigned(terrains, "sand", sandTexture);
+        AddTerrainIfAssigned(terrains, "swamp", swampTexture);
+        AddTerrainIfAssigned(terrains, "snow", snowTexture);
+        AddTerrainIfAssigned(terrains, "lava", lavaTexture);
+        return terrains;
+    }
+
+    private static void AddTerrainIfAssigned(List<TerrainTextureEntry> terrains, string terrainName, Texture2D texture)
+    {
+        if (texture == null) { return; }
+        terrains.Add(new TerrainTextureEntry { name = terrainName, texture = texture });
     }
 
 

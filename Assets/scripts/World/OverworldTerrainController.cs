@@ -54,10 +54,20 @@ public class OverworldTerrainController : MonoBehaviour
     [Range(0f, 0.2f)] public float WaterSurfaceEpsilon = 0.02f;
     public int GrassTextureIndex = 181;
     public int StoneTextureIndex = 253;
+    public int DirtTextureIndex = 182;
+    public int SandTextureIndex = 183;
+    public int SwampTextureIndex = 251;
+    public int SnowTextureIndex = 248;
+    public int LavaTextureIndex = 252;
 
     [Header("Custom Material Overrides")]
     public Material GrassMaterialOverride;
     public Material StoneMaterialOverride;
+    public Material DirtMaterialOverride;
+    public Material SandMaterialOverride;
+    public Material SwampMaterialOverride;
+    public Material SnowMaterialOverride;
+    public Material LavaMaterialOverride;
 
 
     [Header("Texture Filtering")]
