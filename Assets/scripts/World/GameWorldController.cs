@@ -1690,15 +1690,47 @@ public class GameWorldController : UWEBase
             Texture2D grassBase = (overworldGrassMat != null) ? (overworldGrassMat.mainTexture as Texture2D) : null;
             Texture2D stoneBase = (overworldStoneMat != null) ? (overworldStoneMat.mainTexture as Texture2D) : null;
             OverworldTerrainTexturing.BuildStats stats;
+            int texWidth = fullSampleWidth + 2;
+            int texHeight = fullSampleHeight + 2;
+            int[] terrainClassExpanded = new int[texWidth * texHeight];
+            for (int ez = 0; ez < texHeight; ez++)
+            {
+                for (int ex = 0; ex < texWidth; ex++)
+                {
+                    int fullGlobalX = Mathf.Clamp(startX + ((ex - 1) * baseSampleStep), 0, totalSampleWidth - 1);
+                    int fullGlobalZ = Mathf.Clamp(startY + ((ez - 1) * baseSampleStep), 0, totalSampleHeight - 1);
+                    int fullPx = Mathf.Clamp(fullGlobalX * tilesPerPixel, 0, heightmap.width - 1);
+                    int fullPz = Mathf.Clamp(fullGlobalZ * tilesPerPixel, 0, heightmap.height - 1);
+                    float fullElevation = SampleSmoothedHeight(heightmap, fullPx, fullPz);
+                    float fullShapedElevation = Mathf.Pow(fullElevation, 1.65f);
+                    float fullNoise = (Mathf.PerlinNoise((fullGlobalX + 101.231f) * overworld.PerlinScale, (fullGlobalZ + 77.777f) * overworld.PerlinScale) * 2f) - 1f;
+                    float fullPerlinDisplacement = fullNoise * overworld.PerlinStrength * Mathf.Max(1f, overworld.HeightScale * 0.2f);
+                    float fullY = fullShapedElevation * overworld.HeightScale + fullPerlinDisplacement - overworld.SeaLevelOffset;
+                    if (fullY < 0f) { fullY = 0f; }
+                    int idx = ez * texWidth + ex;
+                    if (fullY <= overworld.WaterSurfaceEpsilon) terrainClassExpanded[idx] = 0;
+                    else
+                    {
+                        float hE = SampleSmoothedHeight(heightmap, Mathf.Clamp(fullPx + tilesPerPixel, 0, heightmap.width - 1), fullPz);
+                        float hW = SampleSmoothedHeight(heightmap, Mathf.Clamp(fullPx - tilesPerPixel, 0, heightmap.width - 1), fullPz);
+                        float hN = SampleSmoothedHeight(heightmap, fullPx, Mathf.Clamp(fullPz + tilesPerPixel, 0, heightmap.height - 1));
+                        float hS = SampleSmoothedHeight(heightmap, fullPx, Mathf.Clamp(fullPz - tilesPerPixel, 0, heightmap.height - 1));
+                        float slopeMagnitude = Mathf.Sqrt(((hE - hW) * (hE - hW)) + ((hN - hS) * (hN - hS)));
+                        terrainClassExpanded[idx] = (slopeMagnitude > 0.022f) ? 2 : 1;
+                    }
+                }
+            }
+
             OverworldTerrainTexturing.TileAtlasBuild atlasBuild = OverworldTerrainTexturing.BuildChunkTransitionAtlas(
-                terrainClassFull,
-                fullSampleWidth,
-                fullSampleHeight,
+                terrainClassExpanded,
+                texWidth,
+                texHeight,
                 overworld.TransitionTilesFolder,
                 waterBase,
                 grassBase,
                 stoneBase,
-                out stats);
+                out stats,
+                1);
             if (atlasBuild.tileIdMap != null && atlasBuild.atlasTexture != null)
             {
                 if (atlasBuild.clampMask != null)

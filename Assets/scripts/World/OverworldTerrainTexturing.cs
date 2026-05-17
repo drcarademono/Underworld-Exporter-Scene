@@ -24,7 +24,7 @@ public static class OverworldTerrainTexturing
     }
 
     private static readonly Dictionary<string, Texture2D> cache = new Dictionary<string, Texture2D>();
-    public static TileAtlasBuild BuildChunkTransitionAtlas(int[] terrainClassFull, int width, int height, string assetsRelativeFolder, Texture2D waterBase, Texture2D grassBase, Texture2D stoneBase, out BuildStats stats)
+    public static TileAtlasBuild BuildChunkTransitionAtlas(int[] terrainClassFull, int width, int height, string assetsRelativeFolder, Texture2D waterBase, Texture2D grassBase, Texture2D stoneBase, out BuildStats stats, int cropTiles = 0)
     {
         stats = new BuildStats();
         TileAtlasBuild build = new TileAtlasBuild();
@@ -32,24 +32,27 @@ public static class OverworldTerrainTexturing
 
         int tileW = width - 1;
         int tileH = height - 1;
-        byte[] ids = new byte[tileW * tileH];
-        byte[] waterFlags = new byte[tileW * tileH];
-        bool[] clampFlags = new bool[tileW * tileH];
+        int outTileW = tileW - (cropTiles * 2);
+        int outTileH = tileH - (cropTiles * 2);
+        if (outTileW <= 0 || outTileH <= 0) { return build; }
+        byte[] ids = new byte[outTileW * outTileH];
+        byte[] waterFlags = new byte[outTileW * outTileH];
+        bool[] clampFlags = new bool[outTileW * outTileH];
         Dictionary<string, byte> atlasLookup = new Dictionary<string, byte>();
         List<Texture2D> atlasTiles = new List<Texture2D>();
 
-        for (int ty = 0; ty < tileH; ty++)
+        for (int ty = cropTiles; ty < tileH - cropTiles; ty++)
         {
-            for (int tx = 0; tx < tileW; tx++)
+            for (int tx = cropTiles; tx < tileW - cropTiles; tx++)
             {
                 stats.tileCount++;
                 int center = GetTileClass(terrainClassFull, width, height, tx, ty);
-                if (center == 0) { waterFlags[(ty * tileW) + tx] = 255; }
+                if (center == 0) { waterFlags[((ty - cropTiles) * outTileW) + (tx - cropTiles)] = 255; }
                 int target = GetTransitionTarget(terrainClassFull, width, height, tx, ty, center);
                 int mask = BuildMask(terrainClassFull, width, height, tx, ty, target);
                 if (center == 0 || target == 0)
                 {
-                    clampFlags[(ty * tileW) + tx] = true;
+                    clampFlags[((ty - cropTiles) * outTileW) + (tx - cropTiles)] = true;
                 }
 
                 Texture2D tile = null;
@@ -79,12 +82,12 @@ public static class OverworldTerrainTexturing
                     atlasLookup[key] = id;
                     atlasTiles.Add(tile);
                 }
-                ids[(ty * tileW) + tx] = id;
+                ids[((ty - cropTiles) * outTileW) + (tx - cropTiles)] = id;
             }
         }
 
         stats.uniqueAtlasTiles = atlasTiles.Count;
-        build.tileIdMap = new Texture2D(tileW, tileH, TextureFormat.Alpha8, false);
+        build.tileIdMap = new Texture2D(outTileW, outTileH, TextureFormat.Alpha8, false);
         build.tileIdMap.filterMode = FilterMode.Point;
         build.tileIdMap.wrapMode = TextureWrapMode.Clamp;
         Color32[] mapPixels = new Color32[ids.Length];
@@ -92,7 +95,7 @@ public static class OverworldTerrainTexturing
         build.tileIdMap.SetPixels32(mapPixels);
         build.tileIdMap.Apply(false, false);
 
-        build.waterMask = new Texture2D(tileW, tileH, TextureFormat.Alpha8, false);
+        build.waterMask = new Texture2D(outTileW, outTileH, TextureFormat.Alpha8, false);
         build.waterMask.filterMode = FilterMode.Point;
         build.waterMask.wrapMode = TextureWrapMode.Clamp;
         Color32[] waterPixels = new Color32[waterFlags.Length];
