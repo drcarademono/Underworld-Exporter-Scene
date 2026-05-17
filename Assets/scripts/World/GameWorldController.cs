@@ -1616,14 +1616,17 @@ public class GameWorldController : UWEBase
                 else if (cornerWaterCount > 0)
                 {
                     // Shoreline transition tile: choose shoreline land class from non-water corners,
-                    // not broad triangle counts, to avoid grass islands inside stone-water shorelines.
+                    // not broad triangle counts, to avoid grass islands and class mismatches at complex shorelines.
                     int shorelineClass = 1;
-                    bool hasStoneLandCorner = false;
-                    if (!cornerBLWater && (terrainClassByVertex[bl] == 2 || terrainClassByVertex[bl] == 3)) hasStoneLandCorner = true;
-                    if (!cornerBRWater && (terrainClassByVertex[br] == 2 || terrainClassByVertex[br] == 3)) hasStoneLandCorner = true;
-                    if (!cornerTLWater && (terrainClassByVertex[tl] == 2 || terrainClassByVertex[tl] == 3)) hasStoneLandCorner = true;
-                    if (!cornerTRWater && (terrainClassByVertex[tr] == 2 || terrainClassByVertex[tr] == 3)) hasStoneLandCorner = true;
-                    if (hasStoneLandCorner) shorelineClass = 2;
+                    int[] corners = { terrainClassByVertex[bl], terrainClassByVertex[br], terrainClassByVertex[tl], terrainClassByVertex[tr] };
+                    for (int i = 0; i < corners.Length; i++)
+                    {
+                        int c = corners[i];
+                        if (c == 0) { continue; }
+                        if (c == 6) { shorelineClass = 6; break; } // Prefer sand coastlines where present.
+                        if ((c == 3) && shorelineClass != 6) { shorelineClass = 3; continue; }
+                        if ((c == 2) && shorelineClass == 1) { shorelineClass = 2; }
+                    }
 
                     tri0Class = shorelineClass;
                     tri1Class = shorelineClass;
