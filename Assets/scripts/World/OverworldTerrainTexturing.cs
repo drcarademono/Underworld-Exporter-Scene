@@ -43,7 +43,7 @@ public static class OverworldTerrainTexturing
             for (int tx = 0; tx < tileW; tx++)
             {
                 stats.tileCount++;
-                int center = terrainClassFull[(ty * width) + tx];
+                int center = GetTileClass(terrainClassFull, width, height, tx, ty);
                 if (center == 0) { waterFlags[(ty * tileW) + tx] = 255; }
                 int target = GetTransitionTarget(terrainClassFull, width, height, tx, ty, center);
                 int mask = BuildMask(terrainClassFull, width, height, tx, ty, target);
@@ -127,36 +127,60 @@ public static class OverworldTerrainTexturing
         return build;
     }
 
-    private static int GetTransitionTarget(int[] data, int w, int h, int x, int y, int c)
+    private static int GetTransitionTarget(int[] data, int w, int h, int tx, int ty, int center)
     {
-        int best = c;
-        TryPromote(data, w, h, x, y + 1, ref best, c);
-        TryPromote(data, w, h, x + 1, y, ref best, c);
-        TryPromote(data, w, h, x, y - 1, ref best, c);
-        TryPromote(data, w, h, x - 1, y, ref best, c);
+        int best = center;
+        TryPromoteTile(data, w, h, tx, ty + 1, ref best, center);
+        TryPromoteTile(data, w, h, tx + 1, ty, ref best, center);
+        TryPromoteTile(data, w, h, tx, ty - 1, ref best, center);
+        TryPromoteTile(data, w, h, tx - 1, ty, ref best, center);
         return best;
     }
 
-    private static void TryPromote(int[] d, int w, int h, int x, int y, ref int best, int c)
+    private static void TryPromoteTile(int[] d, int w, int h, int tx, int ty, ref int best, int center)
     {
-        if (x < 0 || y < 0 || x >= w || y >= h) return;
-        int v = d[y * w + x];
-        if (Priority(v) > Priority(best) && Priority(v) > Priority(c)) best = v;
+        int v = GetTileClass(d, w, h, tx, ty);
+        if (v < 0) return;
+        if (Priority(v) > Priority(best) && Priority(v) > Priority(center)) best = v;
     }
 
     private static int Priority(int c) { if (c == 0) return 3; if (c == 2) return 2; return 1; }
 
-    private static int BuildMask(int[] d, int w, int h, int x, int y, int target)
+    private static int BuildMask(int[] d, int w, int h, int tx, int ty, int target)
     {
         int m = 0;
-        if (Get(d, w, h, x, y + 1) == target) m |= 1;
-        if (Get(d, w, h, x + 1, y) == target) m |= 2;
-        if (Get(d, w, h, x, y - 1) == target) m |= 4;
-        if (Get(d, w, h, x - 1, y) == target) m |= 8;
+        if (GetTileClass(d, w, h, tx, ty + 1) == target) m |= 1;
+        if (GetTileClass(d, w, h, tx + 1, ty) == target) m |= 2;
+        if (GetTileClass(d, w, h, tx, ty - 1) == target) m |= 4;
+        if (GetTileClass(d, w, h, tx - 1, ty) == target) m |= 8;
         return m;
     }
 
-    private static int Get(int[] d, int w, int h, int x, int y) { if (x < 0 || y < 0 || x >= w || y >= h) return -1; return d[y * w + x]; }
+    private static int GetTileClass(int[] d, int w, int h, int tx, int ty)
+    {
+        if (tx < 0 || ty < 0 || tx >= w - 1 || ty >= h - 1) return -1;
+        int bl = d[ty * w + tx];
+        int br = d[ty * w + (tx + 1)];
+        int tl = d[(ty + 1) * w + tx];
+        int tr = d[(ty + 1) * w + (tx + 1)];
+
+        int water = 0, grass = 0, stone = 0;
+        CountClass(bl, ref water, ref grass, ref stone);
+        CountClass(br, ref water, ref grass, ref stone);
+        CountClass(tl, ref water, ref grass, ref stone);
+        CountClass(tr, ref water, ref grass, ref stone);
+
+        if (water >= 3) return 0;
+        if (stone > grass) return 2;
+        return 1;
+    }
+
+    private static void CountClass(int c, ref int water, ref int grass, ref int stone)
+    {
+        if (c == 0) water++;
+        else if (c == 2) stone++;
+        else grass++;
+    }
     private static string ClassName(int c) { if (c == 0) return "water"; if (c == 2) return "stone"; return "grass"; }
 
     private static Texture2D LoadTransitionTile(string from, string to, int mask, string folder)
