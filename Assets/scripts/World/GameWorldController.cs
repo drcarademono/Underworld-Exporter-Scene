@@ -243,11 +243,6 @@ public class GameWorldController : UWEBase
 
     [Header("Overworld Controller")]
     public OverworldTerrainController OverworldController;
-    [Header("Overworld LOD Skirt Lighting")]
-    public bool OverworldSkirtUseUpwardNormals = true;
-    public bool OverworldSkirtCastShadows = false;
-    public bool OverworldSkirtReceiveShadows = false;
-
     public bool StartInOverworld
     {
         get { return GetOverworldController().StartInOverworld; }
@@ -1886,7 +1881,8 @@ public class GameWorldController : UWEBase
         skirtMesh.SetTriangles(waterTris, 0);
         skirtMesh.SetTriangles(grassTris, 1);
         skirtMesh.SetTriangles(stoneTris, 2);
-        if (OverworldSkirtUseUpwardNormals)
+        OverworldTerrainController overworld = GetOverworldController();
+        if (overworld.SkirtUseUpwardNormals)
         {
             // Mitigate dark seam shading by biasing normals upward.
             Vector3[] skirtNormals = new Vector3[skirtVerts.Count];
@@ -1908,10 +1904,10 @@ public class GameWorldController : UWEBase
         MeshRenderer mr = skirt.AddComponent<MeshRenderer>();
         mf.sharedMesh = skirtMesh;
         mr.sharedMaterials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat };
-        mr.shadowCastingMode = OverworldSkirtCastShadows
+        mr.shadowCastingMode = overworld.SkirtCastShadows
             ? UnityEngine.Rendering.ShadowCastingMode.On
             : UnityEngine.Rendering.ShadowCastingMode.Off;
-        mr.receiveShadows = OverworldSkirtReceiveShadows;
+        mr.receiveShadows = overworld.SkirtReceiveShadows;
     }
 
 
