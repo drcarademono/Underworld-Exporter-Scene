@@ -45,10 +45,9 @@ Shader "Custom/OverworldTransitionAtlas"
 
         void surf(Input IN, inout SurfaceOutput o)
         {
-            float2 atlasUvScaled = IN.uv_TileAtlas;
-            float2 stScale = max(abs(_TileAtlas_ST.xy), float2(1e-6, 1e-6));
-            float2 atlasUvRaw = (atlasUvScaled - _TileAtlas_ST.zw) / stScale;
-            float2 atlasUV = ComputeAtlasUV(atlasUvRaw);
+            // Runtime materials explicitly force _TileAtlas scale/offset to identity.
+            // So uv_TileAtlas can be used directly as stable chunk UVs.
+            float2 atlasUV = ComputeAtlasUV(IN.uv_TileAtlas);
             fixed4 c = tex2D(_TileAtlas, atlasUV);
             o.Albedo = c.rgb;
             o.Alpha = 1;
