@@ -13,7 +13,7 @@ Shader "Custom/OverworldTransitionAtlas"
         LOD 200
 
         CGPROGRAM
-        #pragma surface surf Lambert fullforwardshadows
+        #pragma surface surf Lambert fullforwardshadows vertex:vert
         #include "UnityCG.cginc"
 
         sampler2D _TileIdMap;
@@ -24,8 +24,14 @@ Shader "Custom/OverworldTransitionAtlas"
 
         struct Input
         {
-            float2 uv_TileAtlas;
+            float2 uvRaw;
         };
+
+        void vert(inout appdata_full v, out Input o)
+        {
+            UNITY_INITIALIZE_OUTPUT(Input, o);
+            o.uvRaw = v.texcoord.xy;
+        }
 
         float2 ComputeAtlasUV(float2 uv)
         {
@@ -45,7 +51,7 @@ Shader "Custom/OverworldTransitionAtlas"
 
         void surf(Input IN, inout SurfaceOutput o)
         {
-            float2 atlasUV = ComputeAtlasUV(IN.uv_TileAtlas);
+            float2 atlasUV = ComputeAtlasUV(IN.uvRaw);
             fixed4 c = tex2D(_TileAtlas, atlasUV);
             o.Albedo = c.rgb;
             o.Alpha = 1;
