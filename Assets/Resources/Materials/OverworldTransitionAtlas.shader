@@ -39,8 +39,10 @@ Shader "Custom/OverworldTransitionAtlas"
 
             float atlasCols = max(1.0, _AtlasGrid.x);
             float atlasRows = max(1.0, _AtlasGrid.y);
-            float atlasX = fmod(tileId, atlasCols);
+            // Avoid fmod precision artifacts on non-power-of-two column counts (e.g. 7),
+            // which can misindex atlas tiles on some shader targets.
             float atlasY = floor(tileId / atlasCols);
+            float atlasX = tileId - (atlasY * atlasCols);
 
             float2 inTile = frac(uvClamped * mapSize);
             return (float2(atlasX, atlasY) + inTile) / float2(atlasCols, atlasRows);
