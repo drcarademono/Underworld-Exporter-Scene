@@ -1949,7 +1949,7 @@ public class GameWorldController : UWEBase
         }
         if (bestClass == 0 && counts[0] > 0 && counts[0] <= landMax)
         {
-            UnityEngine.Debug.LogWarning($"OverworldTerrainClassify: water tie avoided counts=[w:{counts[0]},g:{SafeCount(counts,1)},st:{SafeCount(counts,2)},sn:{SafeCount(counts,3)},sa:{SafeCount(counts,6)}]");
+            UnityEngine.Debug.LogWarning($"OverworldTerrainClassify: water tie avoided counts=[w:{counts[0]},g:{SafeCount(counts,1)},st:{SafeCount(counts,2)},sn:{SafeCount(counts,3)},sw:{SafeCount(counts,5)},sa:{SafeCount(counts,6)}]");
         }
         return bestClass;
     }
@@ -2019,8 +2019,6 @@ public class GameWorldController : UWEBase
         if (worldHeight <= overworld.WaterSurfaceEpsilon) { return 0; }
         if (IsSnowAtHeight(worldHeight, sampleX, sampleZ, overworld)) { return 3; }
         if (IsStoneAtHeight(worldHeight, sampleX, sampleZ, overworld)) { return 2; }
-        if (IsDesertClimateAtSample(sampleX, sampleZ, overworld)) { return 6; } // Desert climate uses sand as base terrain.
-        if (IsSwampClimateAtSample(sampleX, sampleZ, overworld)) { return 5; } // Swamp climate uses swamp as base terrain.
         // Preserve original stone patterning (slope-based) below the stone line,
         // while allowing stone line to add/force more stone at higher altitude.
         float hE = SampleSmoothedHeight(heightmap, Mathf.Clamp(px + tilesPerPixel, 0, heightmap.width - 1), pz);
@@ -2031,6 +2029,10 @@ public class GameWorldController : UWEBase
         bool baseStone = slopeMagnitude > 0.022f;
 
         if (baseStone) { return 2; }
+
+        // Sand/swamp are climate overlays on grassy land only; they must not override stone.
+        if (IsDesertClimateAtSample(sampleX, sampleZ, overworld)) { return 6; }
+        if (IsSwampClimateAtSample(sampleX, sampleZ, overworld)) { return 5; }
         return 1;
     }
 
