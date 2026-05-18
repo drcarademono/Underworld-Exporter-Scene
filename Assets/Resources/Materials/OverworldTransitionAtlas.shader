@@ -6,6 +6,7 @@ Shader "Custom/OverworldTransitionAtlas"
         _TileAtlas("Tile Atlas", 2D) = "white" {}
         _WaterMask("Water Mask", 2D) = "black" {}
         _AtlasGrid("Atlas Grid", Vector) = (8,8,0,0)
+        _DebugMode("Debug Mode", Float) = 0
     }
     SubShader
     {
@@ -21,6 +22,7 @@ Shader "Custom/OverworldTransitionAtlas"
         sampler2D _WaterMask;
         float4 _TileIdMap_TexelSize;
         float4 _AtlasGrid;
+        float _DebugMode;
 
         struct Input
         {
@@ -47,7 +49,23 @@ Shader "Custom/OverworldTransitionAtlas"
         {
             float2 atlasUV = ComputeAtlasUV(IN.uv_TileAtlas);
             fixed4 c = tex2D(_TileAtlas, atlasUV);
-            o.Albedo = c.rgb;
+
+            if (_DebugMode > 0.5)
+            {
+                float2 mapSize = float2(1.0 / _TileIdMap_TexelSize.x, 1.0 / _TileIdMap_TexelSize.y);
+                float2 tileUV = floor(saturate(IN.uv_TileAtlas) * mapSize) / mapSize;
+                float4 idPx = tex2D(_TileIdMap, tileUV + (0.5 / mapSize));
+                float tileId = floor(idPx.r * 255.0 + 0.5) + (floor(idPx.g * 255.0 + 0.5) * 256.0);
+                float atlasCols = max(1.0, _AtlasGrid.x);
+                float atlasX = fmod(tileId, atlasCols);
+                float atlasY = floor(tileId / atlasCols);
+                float idBand = frac(tileId / 64.0);
+                o.Albedo = float3(idBand, atlasX / atlasCols, frac(atlasY / 16.0));
+            }
+            else
+            {
+                o.Albedo = c.rgb;
+            }
             o.Alpha = 1;
         }
         ENDCG

@@ -30,7 +30,7 @@ public class OverworldChunkRuntimeTextures : MonoBehaviour
         }
     }
 
-    public void SetTransitionAtlas(OverworldTerrainTexturing.TileAtlasBuild build)
+    public void SetTransitionAtlas(OverworldTerrainTexturing.TileAtlasBuild build, bool debugMode = false)
     {
         if (tileIdMap != null && tileIdMap != build.tileIdMap) { Object.Destroy(tileIdMap); }
         if (atlasTexture != null && atlasTexture != build.atlasTexture) { Object.Destroy(atlasTexture); }
@@ -52,6 +52,7 @@ public class OverworldChunkRuntimeTextures : MonoBehaviour
             mat.SetTexture("_TileAtlas", atlasTexture);
             mat.SetVector("_AtlasGrid", new Vector4(build.atlasCols, build.atlasRows, 0f, 0f));
             mat.SetTexture("_WaterMask", waterMask);
+            mat.SetFloat("_DebugMode", debugMode ? 1f : 0f);
         }
     }
 

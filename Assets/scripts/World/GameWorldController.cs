@@ -1792,7 +1792,7 @@ public class GameWorldController : UWEBase
                 OverworldChunkRuntimeTextures rt = go.GetComponent<OverworldChunkRuntimeTextures>();
                 if (rt == null) { rt = go.AddComponent<OverworldChunkRuntimeTextures>(); }
                 rt.EnsureMaterials(overworldGrassMat, overworldStoneMat, overworldSnowMat, overworldSwampMat, overworldSandMat);
-                rt.SetTransitionAtlas(atlasBuild);
+                rt.SetTransitionAtlas(atlasBuild, overworld.TransitionTexturingDiagnostics);
                 Material[] landMats = rt.landRuntimeMats;
                 mr.materials = new Material[]
                 {
