@@ -1925,6 +1925,8 @@ public class GameWorldController : UWEBase
 
     private static int DominantClass(int[] counts, int[] activeLandClasses)
     {
+        int waterCount = SafeCount(counts, 0);
+
         int landMax = 0;
         for (int i = 0; i < activeLandClasses.Length; i++)
         {
@@ -1932,12 +1934,13 @@ public class GameWorldController : UWEBase
             int ct = counts[Mathf.Clamp(c, 0, counts.Length - 1)];
             if (ct > landMax) { landMax = ct; }
         }
-        // Water should only win by strict local majority, not by priority tie-breaking.
-        if (counts[0] >= 3 && counts[0] > landMax) { return 0; }
 
-        int bestClass = 0;
-        int bestCount = counts[0];
-        for (int i = 0; i < activeLandClasses.Length; i++)
+        // Water should only win by strict local majority, never by tie-break priority.
+        if (waterCount >= 3 && waterCount > landMax) { return 0; }
+
+        int bestClass = (activeLandClasses.Length > 0) ? activeLandClasses[0] : 1;
+        int bestCount = SafeCount(counts, bestClass);
+        for (int i = 1; i < activeLandClasses.Length; i++)
         {
             int c = activeLandClasses[i];
             int ct = counts[Mathf.Clamp(c, 0, counts.Length - 1)];
@@ -1947,10 +1950,7 @@ public class GameWorldController : UWEBase
                 bestClass = c;
             }
         }
-        if (bestClass == 0 && counts[0] > 0 && counts[0] <= landMax)
-        {
-            UnityEngine.Debug.LogWarning($"OverworldTerrainClassify: water tie avoided counts=[w:{counts[0]},g:{SafeCount(counts,1)},st:{SafeCount(counts,2)},sn:{SafeCount(counts,3)},sw:{SafeCount(counts,5)},sa:{SafeCount(counts,6)}]");
-        }
+
         return bestClass;
     }
 
