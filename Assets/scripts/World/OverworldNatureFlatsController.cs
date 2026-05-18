@@ -97,6 +97,7 @@ public class OverworldNatureFlatsController : MonoBehaviour
     public Color32 RainforestColor = new Color32(0, 0, 255, 255);
     public Color32 DesertColor = new Color32(255, 255, 0, 255);
     public Color32 SwampColor = new Color32(0, 255, 0, 255);
+    public Color32 LavaColor = new Color32(255, 0, 0, 255);
     // Dirt variants are "terrain-only" overlays: they use Dirt ground texturing but inherit
     // the corresponding base climate's nature profile (temperate/rainforest/mountain).
     public Color32 DirtTemperateColor = new Color32(153, 102, 51, 255);

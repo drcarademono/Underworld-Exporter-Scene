@@ -1293,6 +1293,7 @@ public class GameWorldController : UWEBase
         if (IsNearColor(c, flats.RainforestColor)) { return 2; }
         if (IsNearColor(c, flats.DesertColor)) { return 3; }
         if (IsNearColor(c, flats.SwampColor)) { return 4; }
+        if (IsNearColor(c, flats.LavaColor)) { return 5; }
         if (IsNearColor(c, flats.DirtTemperateColor)) { return ClimateMapDirtTemperate; }
         if (IsNearColor(c, flats.DirtRainforestColor)) { return ClimateMapDirtRainforest; }
         if (IsNearColor(c, flats.DirtMountainColor)) { return ClimateMapDirtMountain; }
@@ -1536,6 +1537,15 @@ public class GameWorldController : UWEBase
                 float y = Mathf.Lerp(y0, y1, tz);
                 if (y < 0f) { y = 0f; }
 
+                int fullX = Mathf.Clamp((globalX - startX) / baseSampleStep, 0, fullSampleWidth - 1);
+                int fullZ = Mathf.Clamp((globalZ - startY) / baseSampleStep, 0, fullSampleHeight - 1);
+                terrainClassByVertex[index] = terrainClassFull[(fullZ * fullSampleWidth) + fullX];
+                if (terrainClassByVertex[index] == TerrainClassLava)
+                {
+                    // Flatten lava to a configurable surface altitude, like water is flattened to sea level.
+                    y = overworld.LavaSurfaceAltitude;
+                }
+
                 if ((globalX >= 0) && (globalX < overworldTerrainMapWidth) && (globalZ >= 0) && (globalZ < overworldTerrainMapHeight))
                 {
                     int px = Mathf.Clamp(globalX * tilesPerPixel, 0, heightmap.width - 1);
@@ -1572,9 +1582,6 @@ public class GameWorldController : UWEBase
 
                 vertices[index] = new Vector3(globalX * overworld.TileWorldSize, y, globalZ * overworld.TileWorldSize);
                 uvs[index] = new Vector2(x / (float)(sampleWidth - 1), z / (float)(sampleHeight - 1));
-                int fullX = Mathf.Clamp((globalX - startX) / baseSampleStep, 0, fullSampleWidth - 1);
-                int fullZ = Mathf.Clamp((globalZ - startY) / baseSampleStep, 0, fullSampleHeight - 1);
-                terrainClassByVertex[index] = terrainClassFull[(fullZ * fullSampleWidth) + fullX];
 
                 if ((x < sampleWidth - 1) && (z < sampleHeight - 1))
                 {
@@ -2019,6 +2026,7 @@ public class GameWorldController : UWEBase
     private int ClassifyOverworldTerrainSample(float worldHeight, int sampleX, int sampleZ, int px, int pz, int tilesPerPixel, Texture2D heightmap, OverworldTerrainController overworld, int chunkClimateId)
     {
         if (worldHeight <= overworld.WaterSurfaceEpsilon) { return TerrainClassWater; }
+        if (chunkClimateId == 5) { return TerrainClassLava; }
         if (IsSnowAtHeight(worldHeight, sampleX, sampleZ, overworld)) { return TerrainClassSnow; }
         // Preserve original stone patterning (slope-based) below the stone line,
         // while allowing stone line to add/force more stone at higher altitude.

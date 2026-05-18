@@ -52,6 +52,8 @@ public class OverworldTerrainController : MonoBehaviour
 
     [Header("Water Classification")]
     [Range(0f, 0.2f)] public float WaterSurfaceEpsilon = 0.02f;
+    [Header("Lava Classification")]
+    [Range(0f, 120f)] public float LavaSurfaceAltitude = 20f;
     [Header("Snow Classification")]
     [Range(0f, 120f)] public float SnowLineAltitude = 40f;
     [Range(0f, 30f)] public float SnowTransitionWidth = 6f;
