@@ -30179,7 +30179,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::OverworldTerrainController
   StartInOverworld: 1
   OverworldStartPos: {x: 0, y: 5, z: 0}
-  OverworldStartTile: {x: 1590, y: 1630}
+  OverworldStartTile: {x: 630, y: 1300}
   HeightmapResourcePath: UIX/Britannia_Corv_Heightmap
   TilesPerPixel: 1
   TileWorldSize: 1
@@ -30244,7 +30244,7 @@ MonoBehaviour:
   TransitionPixelsPerTile: 32
   TransitionTilesFolder: Assets/Generated/OverworldTransitions
   TransitionTexturingDiagnostics: 1
-  TransitionDiagLogEveryNChunks: 8
+  TransitionDiagLogEveryNChunks: 1
 --- !u!4 &853464905
 Transform:
   m_ObjectHideFlags: 0
@@ -30274,8 +30274,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::OverworldSkyController
   SunLight: {fileID: 0}
   MaxSunlightIntensity: 0.75
-  MinWeatherDurationSeconds: 120
-  MaxWeatherDurationSeconds: 300
+  MinWeatherDurationSeconds: 300
+  MaxWeatherDurationSeconds: 1200
 --- !u!114 &853464907
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -30318,6 +30318,15 @@ MonoBehaviour:
   SwampColor:
     serializedVersion: 2
     rgba: 4278255360
+  DirtTemperateColor:
+    serializedVersion: 2
+    rgba: 4281558681
+  DirtRainforestColor:
+    serializedVersion: 2
+    rgba: 4281159288
+  DirtMountainColor:
+    serializedVersion: 2
+    rgba: 4282668390
   BiomeProfiles:
   - Name: Temperate
     ClimateId: 0
@@ -43028,7 +43037,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -50.700195, y: -10.047028}
+  m_AnchoredPosition: {x: -50.700195, y: -10.046997}
   m_SizeDelta: {x: -561.3, y: -390.01}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1208676313
@@ -74828,7 +74837,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 33.80005, y: -10.047028}
+  m_AnchoredPosition: {x: 33.80005, y: -10.046997}
   m_SizeDelta: {x: -561.3, y: -390.01}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2082366210
