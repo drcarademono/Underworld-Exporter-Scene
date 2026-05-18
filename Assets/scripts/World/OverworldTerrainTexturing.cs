@@ -87,11 +87,17 @@ public static class OverworldTerrainTexturing
         }
 
         stats.uniqueAtlasTiles = atlasTiles.Count;
-        build.tileIdMap = new Texture2D(outTileW, outTileH, TextureFormat.Alpha8, false);
+        build.tileIdMap = new Texture2D(outTileW, outTileH, TextureFormat.RGBA32, false);
         build.tileIdMap.filterMode = FilterMode.Point;
         build.tileIdMap.wrapMode = TextureWrapMode.Clamp;
         Color32[] mapPixels = new Color32[ids.Length];
-        for (int i = 0; i < ids.Length; i++) mapPixels[i] = new Color32(0, 0, 0, ids[i]);
+        for (int i = 0; i < ids.Length; i++)
+        {
+            ushort id16 = ids[i];
+            byte lo = (byte)(id16 & 0xFF);
+            byte hi = (byte)((id16 >> 8) & 0xFF);
+            mapPixels[i] = new Color32(lo, hi, 0, 255);
+        }
         build.tileIdMap.SetPixels32(mapPixels);
         build.tileIdMap.Apply(false, false);
 
