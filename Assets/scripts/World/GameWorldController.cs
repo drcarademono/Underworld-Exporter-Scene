@@ -1288,6 +1288,9 @@ public class GameWorldController : UWEBase
         if (IsNearColor(c, flats.RainforestColor)) { return 2; }
         if (IsNearColor(c, flats.DesertColor)) { return 3; }
         if (IsNearColor(c, flats.SwampColor)) { return 4; }
+        if (IsNearColor(c, flats.DirtTemperateColor)) { return ClimateMapDirtTemperate; }
+        if (IsNearColor(c, flats.DirtRainforestColor)) { return ClimateMapDirtRainforest; }
+        if (IsNearColor(c, flats.DirtMountainColor)) { return ClimateMapDirtMountain; }
         return 0;
     }
 
@@ -2022,6 +2025,7 @@ public class GameWorldController : UWEBase
         if (baseStone || IsStoneAtHeight(worldHeight, sampleX, sampleZ, overworld)) { return TerrainClassStone; }
         if (chunkClimateId == 3) { return TerrainClassSand; }
         if (chunkClimateId == 4) { return TerrainClassSwamp; }
+        if (chunkClimateId == ClimateMapDirtTemperate || chunkClimateId == ClimateMapDirtRainforest || chunkClimateId == ClimateMapDirtMountain) { return TerrainClassDirt; }
         return TerrainClassGrass;
     }
 
@@ -3635,3 +3639,8 @@ public class GameWorldController : UWEBase
         }
     }
 }
+    // Climate-map-only pseudo IDs for terrain classification.
+    // These are not biome profile IDs; they map to Dirt terrain while preserving parent climate for nature.
+    private const int ClimateMapDirtTemperate = 10;
+    private const int ClimateMapDirtRainforest = 11;
+    private const int ClimateMapDirtMountain = 12;

@@ -347,6 +347,10 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         if (IsNear(c, flats.RainforestColor)) { return 2; }
         if (IsNear(c, flats.DesertColor)) { return 3; }
         if (IsNear(c, flats.SwampColor)) { return 4; }
+        // Dirt variants inherit their parent climate for nature spawning.
+        if (IsNear(c, flats.DirtTemperateColor)) { return 0; }
+        if (IsNear(c, flats.DirtRainforestColor)) { return 2; }
+        if (IsNear(c, flats.DirtMountainColor)) { return 1; }
         return 0;
     }
 
