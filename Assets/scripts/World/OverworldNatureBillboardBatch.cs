@@ -346,6 +346,13 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         if (IsNear(c, flats.MountainColor)) { return 1; }
         if (IsNear(c, flats.RainforestColor)) { return 2; }
         if (IsNear(c, flats.DesertColor)) { return 3; }
+        if (IsNear(c, flats.SwampColor)) { return 4; }
+        // Lava is a terrain overlay; keep mountain-like biome profile for nature decisions.
+        if (IsNear(c, flats.LavaColor)) { return 1; }
+        // Dirt variants inherit their parent climate for nature spawning.
+        if (IsNear(c, flats.DirtTemperateColor)) { return 0; }
+        if (IsNear(c, flats.DirtRainforestColor)) { return 2; }
+        if (IsNear(c, flats.DirtMountainColor)) { return 1; }
         return 0;
     }
 

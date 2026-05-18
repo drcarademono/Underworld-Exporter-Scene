@@ -34,6 +34,8 @@ public class OverworldChunkRuntimeTextures : MonoBehaviour
             grassRuntimeMat.SetTexture("_TileAtlas", atlasTexture);
             grassRuntimeMat.SetVector("_AtlasGrid", new Vector4(build.atlasCols, build.atlasRows, 0f, 0f));
             grassRuntimeMat.SetTexture("_WaterMask", waterMask);
+            grassRuntimeMat.SetTextureScale("_TileAtlas", Vector2.one);
+            grassRuntimeMat.SetTextureOffset("_TileAtlas", Vector2.zero);
         }
         if (stoneRuntimeMat != null)
         {
@@ -42,6 +44,8 @@ public class OverworldChunkRuntimeTextures : MonoBehaviour
             stoneRuntimeMat.SetTexture("_TileAtlas", atlasTexture);
             stoneRuntimeMat.SetVector("_AtlasGrid", new Vector4(build.atlasCols, build.atlasRows, 0f, 0f));
             stoneRuntimeMat.SetTexture("_WaterMask", waterMask);
+            stoneRuntimeMat.SetTextureScale("_TileAtlas", Vector2.one);
+            stoneRuntimeMat.SetTextureOffset("_TileAtlas", Vector2.zero);
         }
     }
 

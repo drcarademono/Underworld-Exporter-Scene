@@ -24,7 +24,7 @@ public static class OverworldTerrainTexturing
     }
 
     private static readonly Dictionary<string, Texture2D> cache = new Dictionary<string, Texture2D>();
-    public static TileAtlasBuild BuildChunkTransitionAtlas(int[] terrainClassFull, int width, int height, string assetsRelativeFolder, Texture2D waterBase, Texture2D grassBase, Texture2D stoneBase, Texture2D snowBase, out BuildStats stats, int cropTiles = 0)
+    public static TileAtlasBuild BuildChunkTransitionAtlas(int[] terrainClassFull, int width, int height, string assetsRelativeFolder, IReadOnlyDictionary<int, Texture2D> baseTilesByClass, out BuildStats stats, int cropTiles = 0)
     {
         stats = new BuildStats();
         TileAtlasBuild build = new TileAtlasBuild();
@@ -66,12 +66,12 @@ public static class OverworldTerrainTexturing
                 }
                 else
                 {
-                    key = (center == 0) ? "base_water" : (center == 3 ? "base_snow" : (center == 2 ? "base_stone" : "base_grass"));
+                    key = "base_" + ClassName(center);
                 }
 
                 if (tile == null)
                 {
-                    tile = (center == 0) ? waterBase : ((center == 3) ? snowBase : ((center == 2) ? stoneBase : grassBase));
+                    if (baseTilesByClass != null) { baseTilesByClass.TryGetValue(center, out tile); }
                     stats.fallbackCenterTiles++;
                 }
 
@@ -87,11 +87,17 @@ public static class OverworldTerrainTexturing
         }
 
         stats.uniqueAtlasTiles = atlasTiles.Count;
-        build.tileIdMap = new Texture2D(outTileW, outTileH, TextureFormat.Alpha8, false);
+        build.tileIdMap = new Texture2D(outTileW, outTileH, TextureFormat.RGBA32, false);
         build.tileIdMap.filterMode = FilterMode.Point;
         build.tileIdMap.wrapMode = TextureWrapMode.Clamp;
         Color32[] mapPixels = new Color32[ids.Length];
-        for (int i = 0; i < ids.Length; i++) mapPixels[i] = new Color32(0, 0, 0, ids[i]);
+        for (int i = 0; i < ids.Length; i++)
+        {
+            ushort id16 = ids[i];
+            byte lo = (byte)(id16 & 0xFF);
+            byte hi = (byte)((id16 >> 8) & 0xFF);
+            mapPixels[i] = new Color32(lo, hi, 0, 255);
+        }
         build.tileIdMap.SetPixels32(mapPixels);
         build.tileIdMap.Apply(false, false);
 
@@ -103,9 +109,22 @@ public static class OverworldTerrainTexturing
         build.waterMask.SetPixels32(waterPixels);
         build.waterMask.Apply(false, false);
 
-        int atlasCols = Mathf.Clamp(Mathf.CeilToInt(Mathf.Sqrt(Mathf.Max(1, atlasTiles.Count))), 1, 16);
+        // IMPORTANT STABILITY NOTE:
+        // Keep atlas column count <= 6.
+        //
+        // Why:
+        // - We observed deterministic runtime rendering corruption once per-chunk transition atlases
+        //   reach layouts larger than 6 on a side (most visibly 7x6 and 7x7).
+        // - Symptoms included stretched/incorrect tile picks even when tile IDs and UV edge logic
+        //   appeared otherwise correct.
+        // - Limiting columns to 6 avoids entering the known-bad layout regime while still packing all
+        //   tiles (rows grow as needed).
+        //
+        // Do NOT increase this cap casually. If changed, verify in-game chunks that would naturally
+        // produce 7xN atlases and confirm corruption does not return.
+        int atlasCols = Mathf.Clamp(Mathf.CeilToInt(Mathf.Sqrt(Mathf.Max(1, atlasTiles.Count))), 1, 6);
         int atlasRows = Mathf.CeilToInt(atlasTiles.Count / (float)atlasCols);
-        int tileSize = (atlasTiles.Count > 0) ? atlasTiles[0].width : 16;
+        int tileSize = (atlasTiles.Count > 0) ? Mathf.Max(1, atlasTiles[0].width) : 16;
         build.atlasTexture = new Texture2D(atlasCols * tileSize, atlasRows * tileSize, TextureFormat.RGBA32, false);
         build.atlasTexture.filterMode = FilterMode.Point;
         build.atlasTexture.wrapMode = TextureWrapMode.Clamp;
@@ -114,12 +133,14 @@ public static class OverworldTerrainTexturing
         for (int i = 0; i < atlasTiles.Count; i++)
         {
             Texture2D tile = atlasTiles[i];
-            Color32[] src = tile.GetPixels32();
+            Color32[] src = (tile.width == tileSize && tile.height == tileSize)
+                ? tile.GetPixels32()
+                : GetPixelsResampledNearest(tile, tileSize, tileSize);
             int ox = (i % atlasCols) * tileSize;
             int oy = (i / atlasCols) * tileSize;
             for (int y = 0; y < tileSize; y++)
                 for (int x = 0; x < tileSize; x++)
-                    atlasPixels[(oy + y) * build.atlasTexture.width + (ox + x)] = src[y * tile.width + x];
+                    atlasPixels[(oy + y) * build.atlasTexture.width + (ox + x)] = src[y * tileSize + x];
         }
 
         build.atlasTexture.SetPixels32(atlasPixels);
@@ -168,7 +189,7 @@ public static class OverworldTerrainTexturing
         if (bestNonWater < 0 || Priority(v) > Priority(bestNonWater)) bestNonWater = v;
     }
 
-    private static int Priority(int c) { if (c == 0) return 4; if (c == 3) return 3; if (c == 2) return 2; return 1; }
+    private static int Priority(int c) { if (c == 0) return 100; if (c == 3) return 90; if (c == 2) return 80; if (c == 7) return 70; if (c == 6) return 60; if (c == 5) return 50; if (c == 4) return 40; return 30; }
 
     private static int BuildMask(int[] d, int w, int h, int tx, int ty, int target)
     {
@@ -188,26 +209,32 @@ public static class OverworldTerrainTexturing
         int tl = d[(ty + 1) * w + tx];
         int tr = d[(ty + 1) * w + (tx + 1)];
 
-        int water = 0, grass = 0, stone = 0, snow = 0;
-        CountClass(bl, ref water, ref grass, ref stone, ref snow);
-        CountClass(br, ref water, ref grass, ref stone, ref snow);
-        CountClass(tl, ref water, ref grass, ref stone, ref snow);
-        CountClass(tr, ref water, ref grass, ref stone, ref snow);
-
-        if (water >= 3) return 0;
-        if (snow > 0 && snow >= stone && snow >= grass) return 3;
-        if (stone > grass) return 2;
-        return 1;
+        int[] counts = new int[16];
+        CountClass(bl, counts); CountClass(br, counts); CountClass(tl, counts); CountClass(tr, counts);
+        if (counts[0] >= 3) return 0;
+        int bestClass = 1;
+        int bestCount = -1;
+        int bestPriority = int.MinValue;
+        for (int c = 1; c < counts.Length; c++)
+        {
+            if (counts[c] <= 0) { continue; }
+            int pr = Priority(c);
+            if (counts[c] > bestCount || (counts[c] == bestCount && pr > bestPriority))
+            {
+                bestClass = c;
+                bestCount = counts[c];
+                bestPriority = pr;
+            }
+        }
+        return bestClass;
     }
 
-    private static void CountClass(int c, ref int water, ref int grass, ref int stone, ref int snow)
+    private static void CountClass(int c, int[] counts)
     {
-        if (c == 0) water++;
-        else if (c == 3) snow++;
-        else if (c == 2) stone++;
-        else grass++;
+        if (c < 0 || c >= counts.Length) { c = 1; }
+        counts[c]++;
     }
-    private static string ClassName(int c) { if (c == 0) return "water"; if (c == 3) return "snow"; if (c == 2) return "stone"; return "grass"; }
+    private static string ClassName(int c) { if (c == 0) return "water"; if (c == 1) return "grass"; if (c == 2) return "stone"; if (c == 3) return "snow"; if (c == 4) return "dirt"; if (c == 5) return "sand"; if (c == 6) return "swamp"; if (c == 7) return "lava"; return "grass"; }
 
     private static Texture2D LoadTransitionTile(string from, string to, int mask, string folder)
     {
@@ -223,6 +250,24 @@ public static class OverworldTerrainTexturing
         tex.wrapMode = TextureWrapMode.Clamp;
         cache[key] = tex;
         return tex;
+    }
+
+    private static Color32[] GetPixelsResampledNearest(Texture2D src, int dstWidth, int dstHeight)
+    {
+        Color32[] srcPixels = src.GetPixels32();
+        Color32[] dstPixels = new Color32[dstWidth * dstHeight];
+        int sw = Mathf.Max(1, src.width);
+        int sh = Mathf.Max(1, src.height);
+        for (int y = 0; y < dstHeight; y++)
+        {
+            int sy = Mathf.Clamp((y * sh) / dstHeight, 0, sh - 1);
+            for (int x = 0; x < dstWidth; x++)
+            {
+                int sx = Mathf.Clamp((x * sw) / dstWidth, 0, sw - 1);
+                dstPixels[(y * dstWidth) + x] = srcPixels[(sy * sw) + sx];
+            }
+        }
+        return dstPixels;
     }
 
 }

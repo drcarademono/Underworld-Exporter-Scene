@@ -13,7 +13,7 @@ public class OverworldNatureCategoryMaterials
 public class OverworldNatureBiomeProfile
 {
     public string Name;
-    public int ClimateId; // 0=Temperate,1=Mountain,2=Rainforest,3=Desert
+    public int ClimateId; // 0=Temperate,1=Mountain,2=Rainforest,3=Desert,4=Swamp
 
     [Header("Distribution")]
     [Range(0f, 1f)] public float BaseDensity = 0.05f;
@@ -93,9 +93,16 @@ public class OverworldNatureFlatsController : MonoBehaviour
     [Range(1024f, 65536f)] public float NatureMapWorldHeight = 16384f;
 
     [Header("Climate Map Colors")]
-    public Color32 MountainColor = new Color32(0, 255, 0, 255);
+    public Color32 MountainColor = new Color32(128, 128, 128, 255);
     public Color32 RainforestColor = new Color32(0, 0, 255, 255);
     public Color32 DesertColor = new Color32(255, 255, 0, 255);
+    public Color32 SwampColor = new Color32(0, 255, 0, 255);
+    public Color32 LavaColor = new Color32(255, 0, 0, 255);
+    // Dirt variants are "terrain-only" overlays: they use Dirt ground texturing but inherit
+    // the corresponding base climate's nature profile (temperate/rainforest/mountain).
+    public Color32 DirtTemperateColor = new Color32(153, 102, 51, 255);
+    public Color32 DirtRainforestColor = new Color32(120, 78, 45, 255);
+    public Color32 DirtMountainColor = new Color32(102, 85, 68, 255);
 
     [Header("Biome Profiles")]
     public OverworldNatureBiomeProfile[] BiomeProfiles;
@@ -145,6 +152,13 @@ public class OverworldNatureFlatsController : MonoBehaviour
                 0.05f, 0.35f, 0.05f, 0.55f,
                 0.00f, 0.20f, 0.20f, 0.60f,
                 0.01f, 0.52f, 0.85f),
+
+            // Swamp (WO style defaults, no undergrowth overdraw spikes)
+            NewProfile("Swamp", 4, 0.18f, 0.42f, 0.02f, 0.72f, 0.38f, 3, 0.33f, 0.62f,
+                0.22f, 0.46f, 0.08f, 0.24f,
+                0.10f, 0.52f, 0.16f, 0.22f,
+                0.05f, 0.40f, 0.26f, 0.29f,
+                0.012f, 0.56f, 0.78f),
         };
     }
 
