@@ -21,7 +21,6 @@ Shader "Custom/OverworldTransitionAtlas"
         sampler2D _WaterMask;
         float4 _TileIdMap_TexelSize;
         float4 _AtlasGrid;
-        float4 _TileAtlas_ST;
 
         struct Input
         {
