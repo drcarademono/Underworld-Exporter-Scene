@@ -1769,7 +1769,7 @@ public class GameWorldController : UWEBase
             sw.Stop();
             if (overworld.TransitionTexturingDiagnostics && (((chunkCoord.x + chunkCoord.y) % Mathf.Max(1, overworld.TransitionDiagLogEveryNChunks)) == 0))
             {
-                UnityEngine.Debug.Log($"OverworldTransitionTexture chunk={chunkCoord} ms={sw.ElapsedMilliseconds} tiles={stats.tileCount} transitions={stats.transitionTiles} fallback={stats.fallbackCenterTiles} missing={stats.missingTransitionFiles} atlasTiles={stats.uniqueAtlasTiles}");
+                UnityEngine.Debug.Log($"OverworldTransitionTexture chunk={chunkCoord} ms={sw.ElapsedMilliseconds} tiles={stats.tileCount} transitions={stats.transitionTiles} fallback={stats.fallbackCenterTiles} missing={stats.missingTransitionFiles} atlasTiles={stats.uniqueAtlasTiles} firstTile={stats.firstTileWidth}x{stats.firstTileHeight} minTile={stats.minTileWidth}x{stats.minTileHeight} maxTile={stats.maxTileWidth}x{stats.maxTileHeight} canonicalTile={stats.canonicalTileSize}");
             }
         }
         else
@@ -1919,6 +1919,16 @@ public class GameWorldController : UWEBase
 
     private static int DominantClass(int[] counts, int[] activeLandClasses)
     {
+        int landMax = 0;
+        for (int i = 0; i < activeLandClasses.Length; i++)
+        {
+            int c = activeLandClasses[i];
+            int ct = counts[Mathf.Clamp(c, 0, counts.Length - 1)];
+            if (ct > landMax) { landMax = ct; }
+        }
+        // Water should only win by strict local majority, not by priority tie-breaking.
+        if (counts[0] >= 3 && counts[0] > landMax) { return 0; }
+
         int bestClass = 0;
         int bestCount = counts[0];
         for (int i = 0; i < activeLandClasses.Length; i++)
@@ -1931,7 +1941,16 @@ public class GameWorldController : UWEBase
                 bestClass = c;
             }
         }
+        if (bestClass == 0 && counts[0] > 0 && counts[0] <= landMax)
+        {
+            UnityEngine.Debug.LogWarning($"OverworldTerrainClassify: water tie avoided counts=[w:{counts[0]},g:{SafeCount(counts,1)},st:{SafeCount(counts,2)},sn:{SafeCount(counts,3)},sa:{SafeCount(counts,6)}]");
+        }
         return bestClass;
+    }
+
+    private static int SafeCount(int[] counts, int idx)
+    {
+        return (idx >= 0 && idx < counts.Length) ? counts[idx] : 0;
     }
 
     private static int TerrainPriority(int terrainClass)

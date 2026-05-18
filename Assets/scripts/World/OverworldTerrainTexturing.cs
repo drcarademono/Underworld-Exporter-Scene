@@ -11,6 +11,13 @@ public static class OverworldTerrainTexturing
         public int fallbackCenterTiles;
         public int missingTransitionFiles;
         public int uniqueAtlasTiles;
+        public int firstTileWidth;
+        public int firstTileHeight;
+        public int minTileWidth;
+        public int maxTileWidth;
+        public int minTileHeight;
+        public int maxTileHeight;
+        public int canonicalTileSize;
     }
 
     public struct TileAtlasBuild
@@ -103,9 +110,37 @@ public static class OverworldTerrainTexturing
         build.waterMask.SetPixels32(waterPixels);
         build.waterMask.Apply(false, false);
 
+        if (atlasTiles.Count > 0)
+        {
+            stats.firstTileWidth = atlasTiles[0].width;
+            stats.firstTileHeight = atlasTiles[0].height;
+            stats.minTileWidth = int.MaxValue; stats.maxTileWidth = 0;
+            stats.minTileHeight = int.MaxValue; stats.maxTileHeight = 0;
+            for (int i = 0; i < atlasTiles.Count; i++)
+            {
+                Texture2D t = atlasTiles[i];
+                if (t == null) { continue; }
+                if (t.width < stats.minTileWidth) stats.minTileWidth = t.width;
+                if (t.width > stats.maxTileWidth) stats.maxTileWidth = t.width;
+                if (t.height < stats.minTileHeight) stats.minTileHeight = t.height;
+                if (t.height > stats.maxTileHeight) stats.maxTileHeight = t.height;
+            }
+            if (stats.minTileWidth == int.MaxValue) { stats.minTileWidth = 0; stats.minTileHeight = 0; }
+        }
+
         int atlasCols = Mathf.Clamp(Mathf.CeilToInt(Mathf.Sqrt(Mathf.Max(1, atlasTiles.Count))), 1, 16);
         int atlasRows = Mathf.CeilToInt(atlasTiles.Count / (float)atlasCols);
-        int tileSize = (atlasTiles.Count > 0) ? atlasTiles[0].width : 16;
+        int tileSize = 16;
+        if (atlasTiles.Count > 0)
+        {
+            for (int i = 0; i < atlasTiles.Count; i++)
+            {
+                Texture2D t = atlasTiles[i];
+                if (t == null) { continue; }
+                tileSize = Mathf.Max(tileSize, t.width, t.height); // canonical size: max dimension
+            }
+        }
+        stats.canonicalTileSize = tileSize;
         build.atlasTexture = new Texture2D(atlasCols * tileSize, atlasRows * tileSize, TextureFormat.RGBA32, false);
         build.atlasTexture.filterMode = FilterMode.Point;
         build.atlasTexture.wrapMode = TextureWrapMode.Clamp;
@@ -119,7 +154,11 @@ public static class OverworldTerrainTexturing
             int oy = (i / atlasCols) * tileSize;
             for (int y = 0; y < tileSize; y++)
                 for (int x = 0; x < tileSize; x++)
-                    atlasPixels[(oy + y) * build.atlasTexture.width + (ox + x)] = src[y * tile.width + x];
+                {
+                    int sx = Mathf.Clamp(Mathf.FloorToInt((x / (float)tileSize) * tile.width), 0, tile.width - 1);
+                    int sy = Mathf.Clamp(Mathf.FloorToInt((y / (float)tileSize) * tile.height), 0, tile.height - 1);
+                    atlasPixels[(oy + y) * build.atlasTexture.width + (ox + x)] = src[sy * tile.width + sx];
+                }
         }
 
         build.atlasTexture.SetPixels32(atlasPixels);
