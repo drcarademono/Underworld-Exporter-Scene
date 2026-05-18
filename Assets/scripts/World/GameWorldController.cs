@@ -1727,6 +1727,18 @@ public class GameWorldController : UWEBase
                 sandBase,
                 out stats,
                 1);
+            int diagUvEdgeVertexCount = 0;
+            for (int vi = 0; vi < uvs.Length; vi++)
+            {
+                float ux = uvs[vi].x; float uz = uvs[vi].y;
+                if (ux <= 0f || ux >= 1f || uz <= 0f || uz >= 1f) { diagUvEdgeVertexCount++; }
+            }
+
+            int diagClampQuadCount = 0;
+            int diagMeshWaterQuadCount = 0;
+            int diagAtlasWaterQuadCount = 0;
+            int diagMeshAtlasDisagreeCount = 0;
+
             if (atlasBuild.tileIdMap != null && atlasBuild.atlasTexture != null)
             {
                 if (atlasBuild.clampMask != null)
@@ -1735,7 +1747,18 @@ public class GameWorldController : UWEBase
                     {
                         for (int tx = 0; tx < sampleWidth - 1; tx++)
                         {
-                            if (!atlasBuild.clampMask[(tz * (sampleWidth - 1)) + tx]) { continue; }
+                            bool atlasClamp = atlasBuild.clampMask[(tz * (sampleWidth - 1)) + tx];
+                            if (atlasClamp) { diagClampQuadCount++; }
+                            int blq = (tz * sampleWidth) + tx;
+                            int brq = blq + 1;
+                            int tlq = blq + sampleWidth;
+                            int trq = tlq + 1;
+                            bool meshWater = (terrainClassByVertex[blq] == 0) || (terrainClassByVertex[brq] == 0) || (terrainClassByVertex[tlq] == 0) || (terrainClassByVertex[trq] == 0);
+                            bool atlasWater = atlasClamp;
+                            if (meshWater) { diagMeshWaterQuadCount++; }
+                            if (atlasWater) { diagAtlasWaterQuadCount++; }
+                            if (meshWater != atlasWater) { diagMeshAtlasDisagreeCount++; }
+                            if (!atlasClamp) { continue; }
                             int bl = (tz * sampleWidth) + tx;
                             int br = bl + 1;
                             int tl = bl + sampleWidth;
@@ -1775,7 +1798,7 @@ public class GameWorldController : UWEBase
             sw.Stop();
             if (overworld.TransitionTexturingDiagnostics && (((chunkCoord.x + chunkCoord.y) % Mathf.Max(1, overworld.TransitionDiagLogEveryNChunks)) == 0))
             {
-                UnityEngine.Debug.Log($"OverworldTransitionTexture chunk={chunkCoord} ms={sw.ElapsedMilliseconds} tiles={stats.tileCount} transitions={stats.transitionTiles} fallback={stats.fallbackCenterTiles} missing={stats.missingTransitionFiles} atlasTiles={stats.uniqueAtlasTiles} firstTile={stats.firstTileWidth}x{stats.firstTileHeight} minTile={stats.minTileWidth}x{stats.minTileHeight} maxTile={stats.maxTileWidth}x{stats.maxTileHeight} canonicalTile={stats.canonicalTileSize}");
+                UnityEngine.Debug.Log($"OverworldTransitionTexture chunk={chunkCoord} ms={sw.ElapsedMilliseconds} tiles={stats.tileCount} transitions={stats.transitionTiles} fallback={stats.fallbackCenterTiles} missing={stats.missingTransitionFiles} atlasTiles={stats.uniqueAtlasTiles} tileIdRange={stats.minTileId}-{stats.maxTileId} firstTile={stats.firstTileWidth}x{stats.firstTileHeight} minTile={stats.minTileWidth}x{stats.minTileHeight} maxTile={stats.maxTileWidth}x{stats.maxTileHeight} canonicalTile={stats.canonicalTileSize} waterCenter={stats.waterCenterTiles} waterTarget={stats.waterTargetTiles} uvEdgeVerts={diagUvEdgeVertexCount} clampQuads={diagClampQuadCount} meshWaterQuads={diagMeshWaterQuadCount} atlasWaterQuads={diagAtlasWaterQuadCount} meshAtlasDisagree={diagMeshAtlasDisagreeCount}");
             }
         }
         else

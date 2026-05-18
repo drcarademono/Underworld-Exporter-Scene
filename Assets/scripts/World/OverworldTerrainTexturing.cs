@@ -18,6 +18,10 @@ public static class OverworldTerrainTexturing
         public int minTileHeight;
         public int maxTileHeight;
         public int canonicalTileSize;
+        public int minTileId;
+        public int maxTileId;
+        public int waterCenterTiles;
+        public int waterTargetTiles;
     }
 
     public struct TileAtlasBuild
@@ -43,6 +47,7 @@ public static class OverworldTerrainTexturing
         int outTileH = tileH - (cropTiles * 2);
         if (outTileW <= 0 || outTileH <= 0) { return build; }
         int[] ids = new int[outTileW * outTileH];
+        for (int i = 0; i < ids.Length; i++) { ids[i] = -1; }
         byte[] waterFlags = new byte[outTileW * outTileH];
         bool[] clampFlags = new bool[outTileW * outTileH];
         Dictionary<string, int> atlasLookup = new Dictionary<string, int>();
@@ -54,12 +59,13 @@ public static class OverworldTerrainTexturing
             {
                 stats.tileCount++;
                 int center = GetTileClass(terrainClassFull, width, height, tx, ty);
-                if (center == 0) { waterFlags[((ty - cropTiles) * outTileW) + (tx - cropTiles)] = 255; }
+                if (center == 0) { waterFlags[((ty - cropTiles) * outTileW) + (tx - cropTiles)] = 255; stats.waterCenterTiles++; }
                 int target = GetTransitionTarget(terrainClassFull, width, height, tx, ty, center);
                 int mask = BuildMask(terrainClassFull, width, height, tx, ty, target);
                 if (center == 0 || target == 0)
                 {
                     clampFlags[((ty - cropTiles) * outTileW) + (tx - cropTiles)] = true;
+                    if (target == 0) { stats.waterTargetTiles++; }
                 }
 
                 Texture2D tile = null;
@@ -94,6 +100,15 @@ public static class OverworldTerrainTexturing
         }
 
         stats.uniqueAtlasTiles = atlasTiles.Count;
+        stats.minTileId = int.MaxValue;
+        stats.maxTileId = int.MinValue;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            if (ids[i] < 0) { continue; }
+            if (ids[i] < stats.minTileId) { stats.minTileId = ids[i]; }
+            if (ids[i] > stats.maxTileId) { stats.maxTileId = ids[i]; }
+        }
+        if (stats.minTileId == int.MaxValue) { stats.minTileId = -1; stats.maxTileId = -1; }
         if (stats.uniqueAtlasTiles > 255)
         {
             UnityEngine.Debug.LogWarning($"OverworldTransitionTexture: chunk atlas has {stats.uniqueAtlasTiles} unique tiles; using 16-bit tile-id encoding.");
