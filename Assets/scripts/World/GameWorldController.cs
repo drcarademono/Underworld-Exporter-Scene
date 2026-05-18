@@ -1739,7 +1739,9 @@ public class GameWorldController : UWEBase
             MeshCollider mc = go.GetComponent<MeshCollider>();
             if (mc != null) { mc.sharedMesh = null; Destroy(mc); }
         }
-        if (overworld.UseTransitionTileTexturing && withCollision && (sampleStep <= 1))
+        // Apply transition-atlas texturing to both high-detail and low-detail chunks.
+        // Low-detail chunks still use decimated geometry, but should keep climate/terrain texture fidelity.
+        if (overworld.UseTransitionTileTexturing && withCollision)
         {
             System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
             Dictionary<int, Texture2D> baseTilesByClass = new Dictionary<int, Texture2D>
