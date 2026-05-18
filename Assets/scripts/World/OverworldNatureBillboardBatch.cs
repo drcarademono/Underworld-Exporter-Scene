@@ -346,6 +346,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         if (IsNear(c, flats.MountainColor)) { return 1; }
         if (IsNear(c, flats.RainforestColor)) { return 2; }
         if (IsNear(c, flats.DesertColor)) { return 3; }
+        if (IsNear(c, flats.SwampColor)) { return 4; }
         return 0;
     }
 
