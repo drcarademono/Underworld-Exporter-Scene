@@ -30,6 +30,9 @@ public static class OverworldTerrainTexturing
         public Texture2D atlasTexture;
         public Texture2D waterMask;
         public bool[] clampMask;
+        public byte[] centerClassMap;
+        public byte[] targetClassMap;
+        public byte[] maskMap;
         public int atlasCols;
         public int atlasRows;
     }
@@ -50,6 +53,9 @@ public static class OverworldTerrainTexturing
         for (int i = 0; i < ids.Length; i++) { ids[i] = -1; }
         byte[] waterFlags = new byte[outTileW * outTileH];
         bool[] clampFlags = new bool[outTileW * outTileH];
+        byte[] centerClassMap = new byte[outTileW * outTileH];
+        byte[] targetClassMap = new byte[outTileW * outTileH];
+        byte[] maskMap = new byte[outTileW * outTileH];
         Dictionary<string, int> atlasLookup = new Dictionary<string, int>();
         List<Texture2D> atlasTiles = new List<Texture2D>();
 
@@ -58,13 +64,17 @@ public static class OverworldTerrainTexturing
             for (int tx = cropTiles; tx < tileW - cropTiles; tx++)
             {
                 stats.tileCount++;
+                int outIdx = ((ty - cropTiles) * outTileW) + (tx - cropTiles);
                 int center = GetTileClass(terrainClassFull, width, height, tx, ty);
-                if (center == 0) { waterFlags[((ty - cropTiles) * outTileW) + (tx - cropTiles)] = 255; stats.waterCenterTiles++; }
+                if (center == 0) { waterFlags[outIdx] = 255; stats.waterCenterTiles++; }
                 int target = GetTransitionTarget(terrainClassFull, width, height, tx, ty, center);
                 int mask = BuildMask(terrainClassFull, width, height, tx, ty, target);
+                centerClassMap[outIdx] = (byte)Mathf.Clamp(center, 0, 255);
+                targetClassMap[outIdx] = (byte)Mathf.Clamp(target, 0, 255);
+                maskMap[outIdx] = (byte)Mathf.Clamp(mask, 0, 255);
                 if (center == 0 || target == 0)
                 {
-                    clampFlags[((ty - cropTiles) * outTileW) + (tx - cropTiles)] = true;
+                    clampFlags[outIdx] = true;
                     if (target == 0) { stats.waterTargetTiles++; }
                 }
 
@@ -95,7 +105,7 @@ public static class OverworldTerrainTexturing
                     atlasLookup[key] = id;
                     atlasTiles.Add(tile);
                 }
-                ids[((ty - cropTiles) * outTileW) + (tx - cropTiles)] = id;
+                ids[outIdx] = id;
             }
         }
 
@@ -185,6 +195,9 @@ public static class OverworldTerrainTexturing
         build.atlasCols = atlasCols;
         build.atlasRows = atlasRows;
         build.clampMask = clampFlags;
+        build.centerClassMap = centerClassMap;
+        build.targetClassMap = targetClassMap;
+        build.maskMap = maskMap;
         return build;
     }
 

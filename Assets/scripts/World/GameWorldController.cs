@@ -1738,6 +1738,7 @@ public class GameWorldController : UWEBase
             int diagMeshWaterQuadCount = 0;
             int diagAtlasWaterQuadCount = 0;
             int diagMeshAtlasDisagreeCount = 0;
+            int diagMismatchDetailLogged = 0;
 
             if (atlasBuild.tileIdMap != null && atlasBuild.atlasTexture != null)
             {
@@ -1757,7 +1758,19 @@ public class GameWorldController : UWEBase
                             bool atlasWater = atlasClamp;
                             if (meshWater) { diagMeshWaterQuadCount++; }
                             if (atlasWater) { diagAtlasWaterQuadCount++; }
-                            if (meshWater != atlasWater) { diagMeshAtlasDisagreeCount++; }
+                            if (meshWater != atlasWater)
+                            {
+                                diagMeshAtlasDisagreeCount++;
+                                if (overworld.TransitionTexturingDiagnostics && diagMismatchDetailLogged < 8)
+                                {
+                                    int localIdx = (tz * (sampleWidth - 1)) + tx;
+                                    int centerClass = (atlasBuild.centerClassMap != null && localIdx < atlasBuild.centerClassMap.Length) ? atlasBuild.centerClassMap[localIdx] : -1;
+                                    int targetClass = (atlasBuild.targetClassMap != null && localIdx < atlasBuild.targetClassMap.Length) ? atlasBuild.targetClassMap[localIdx] : -1;
+                                    int transMask = (atlasBuild.maskMap != null && localIdx < atlasBuild.maskMap.Length) ? atlasBuild.maskMap[localIdx] : -1;
+                                    UnityEngine.Debug.LogWarning($"OverworldTransitionTexture mismatch chunk={chunkCoord} tx={tx} tz={tz} meshWater={meshWater} atlasClamp={atlasClamp} center={centerClass} target={targetClass} mask={transMask} corners=[{terrainClassByVertex[blq]},{terrainClassByVertex[brq]},{terrainClassByVertex[tlq]},{terrainClassByVertex[trq]}]");
+                                    diagMismatchDetailLogged++;
+                                }
+                            }
                             if (!atlasClamp) { continue; }
                             int bl = (tz * sampleWidth) + tx;
                             int br = bl + 1;
