@@ -6,12 +6,26 @@ using UnityEngine;
 
 public class OverworldTransitionTileGeneratorWindow : EditorWindow
 {
+    private const string PrefPrefix = "UW.OverworldTransitionTileGen.";
+    private bool prefsLoaded = false;
+    [Serializable]
+    private class TerrainTextureEntry
+    {
+        public string name;
+        public Texture2D texture;
+    }
+
     private enum BlendMode { HardMask, OrderedDither, PerlinBorder }
 
     private OverworldTerrainController controller;
     private Texture2D grassTexture;
     private Texture2D stoneTexture;
     private Texture2D waterTexture;
+    private Texture2D dirtTexture;
+    private Texture2D sandTexture;
+    private Texture2D swampTexture;
+    private Texture2D snowTexture;
+    private Texture2D lavaTexture;
 
     private BlendMode blendMode = BlendMode.OrderedDither;
     private int tileSize = 64;
@@ -23,6 +37,8 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
     private float borderWidth = 0.12f;
     private float borderStochasticity = 0.35f;
     private float centerFillBoost = 0.08f;
+    private float m15CenterFillBoost = 0.08f;
+    private float shapeRoughness = 0.08f;
     private float elbowRoundness = 0.16f;
     private string outputFolder = "Assets/Generated/OverworldTransitions";
 
@@ -43,6 +59,13 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
 
     private void OnGUI()
     {
+        if (!prefsLoaded)
+        {
+            LoadPrefs();
+            prefsLoaded = true;
+        }
+
+        EditorGUI.BeginChangeCheck();
         EditorGUILayout.LabelField("Overworld 16-Mask Transition Tile Generator", EditorStyles.boldLabel);
         EditorGUILayout.HelpBox("Generates m00..m15 transition tiles with naming convention tr_<from>_to_<to>_mXX[_vN].", MessageType.Info);
 
@@ -56,6 +79,11 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         grassTexture = (Texture2D)EditorGUILayout.ObjectField("Grass Texture", grassTexture, typeof(Texture2D), false);
         stoneTexture = (Texture2D)EditorGUILayout.ObjectField("Stone Texture", stoneTexture, typeof(Texture2D), false);
         waterTexture = (Texture2D)EditorGUILayout.ObjectField("Water Texture", waterTexture, typeof(Texture2D), false);
+        dirtTexture = (Texture2D)EditorGUILayout.ObjectField("Dirt Texture", dirtTexture, typeof(Texture2D), false);
+        sandTexture = (Texture2D)EditorGUILayout.ObjectField("Sand Texture", sandTexture, typeof(Texture2D), false);
+        swampTexture = (Texture2D)EditorGUILayout.ObjectField("Swamp Texture", swampTexture, typeof(Texture2D), false);
+        snowTexture = (Texture2D)EditorGUILayout.ObjectField("Snow Texture", snowTexture, typeof(Texture2D), false);
+        lavaTexture = (Texture2D)EditorGUILayout.ObjectField("Lava Texture", lavaTexture, typeof(Texture2D), false);
 
         blendMode = (BlendMode)EditorGUILayout.EnumPopup("Blend Mode", blendMode);
         tileSize = EditorGUILayout.IntSlider("Output Tile Size", tileSize, 16, 256);
@@ -74,6 +102,8 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
             borderWidth = EditorGUILayout.Slider("Border Width", borderWidth, 0.02f, 0.45f);
             borderStochasticity = EditorGUILayout.Slider("Border Stochasticity", borderStochasticity, 0f, 1f);
             centerFillBoost = EditorGUILayout.Slider("Center Fill Boost", centerFillBoost, 0f, 0.35f);
+            m15CenterFillBoost = EditorGUILayout.Slider("M15 Center Fill Boost", m15CenterFillBoost, 0f, 0.35f);
+            shapeRoughness = EditorGUILayout.Slider("Shape Roughness", shapeRoughness, 0f, 0.35f);
             elbowRoundness = EditorGUILayout.Slider("Elbow Roundness", elbowRoundness, 0f, 0.35f);
         }
 
@@ -98,10 +128,26 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         EditorGUILayout.EndHorizontal();
 
         EditorGUILayout.Space();
-        if (GUILayout.Button("Generate 3-family first-pass set (grass/water/stone)", GUILayout.Height(36)))
+        if (GUILayout.Button("Generate transition set for all assigned terrain textures", GUILayout.Height(36)))
         {
             GenerateAll();
         }
+
+        if (EditorGUI.EndChangeCheck() && prefsLoaded)
+        {
+            SavePrefs();
+        }
+    }
+
+    private void OnEnable()
+    {
+        LoadPrefs();
+        prefsLoaded = true;
+    }
+
+    private void OnDisable()
+    {
+        SavePrefs();
     }
 
     private void PullFromController()
@@ -121,11 +167,36 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         {
             stoneTexture = controller.StoneMaterialOverride.mainTexture as Texture2D;
         }
+        if (controller.DirtMaterialOverride != null)
+        {
+            dirtTexture = controller.DirtMaterialOverride.mainTexture as Texture2D;
+        }
+        if (controller.SandMaterialOverride != null)
+        {
+            sandTexture = controller.SandMaterialOverride.mainTexture as Texture2D;
+        }
+        if (controller.SwampMaterialOverride != null)
+        {
+            swampTexture = controller.SwampMaterialOverride.mainTexture as Texture2D;
+        }
+        if (controller.SnowMaterialOverride != null)
+        {
+            snowTexture = controller.SnowMaterialOverride.mainTexture as Texture2D;
+        }
+        if (controller.LavaMaterialOverride != null)
+        {
+            lavaTexture = controller.LavaMaterialOverride.mainTexture as Texture2D;
+        }
 
         // Attempt to load UW2 terrain indices via private GameWorldController loader.
         TryPullViaGameWorldController(controller.GrassTextureIndex, ref grassTexture);
         TryPullViaGameWorldController(controller.StoneTextureIndex, ref stoneTexture);
         TryPullViaGameWorldController(controller.WaterTextureIndex, ref waterTexture);
+        TryPullViaGameWorldController(controller.DirtTextureIndex, ref dirtTexture);
+        TryPullViaGameWorldController(controller.SandTextureIndex, ref sandTexture);
+        TryPullViaGameWorldController(controller.SwampTextureIndex, ref swampTexture);
+        TryPullViaGameWorldController(controller.SnowTextureIndex, ref snowTexture);
+        TryPullViaGameWorldController(controller.LavaTextureIndex, ref lavaTexture);
 
         Debug.Log("TransitionTileGen: Pull complete. Verify texture slots before generating.");
     }
@@ -155,17 +226,23 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
 
     private void GenerateAll()
     {
-        if (grassTexture == null || stoneTexture == null || waterTexture == null)
+        var terrains = BuildAssignedTerrainList();
+        if (terrains.Count < 2)
         {
-            EditorUtility.DisplayDialog("Missing Textures", "Assign grass, stone, and water textures first.", "OK");
+            EditorUtility.DisplayDialog("Missing Textures", "Assign at least two terrain textures before generating.", "OK");
             return;
         }
 
         EnsureFolder(outputFolder);
 
-        GenerateFamily("grass", "water", grassTexture, waterTexture);
-        GenerateFamily("grass", "stone", grassTexture, stoneTexture);
-        GenerateFamily("stone", "water", stoneTexture, waterTexture);
+        for (int i = 0; i < terrains.Count - 1; i++)
+        {
+            for (int j = i + 1; j < terrains.Count; j++)
+            {
+                GenerateFamily(terrains[i].name, terrains[j].name, terrains[i].texture, terrains[j].texture);
+                GenerateFamily(terrains[j].name, terrains[i].name, terrains[j].texture, terrains[i].texture);
+            }
+        }
 
         AssetDatabase.Refresh();
         EditorUtility.DisplayDialog("Done", "Generated transition tiles in " + outputFolder, "OK");
@@ -210,6 +287,26 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
                 File.WriteAllBytes(path, outTex.EncodeToPNG());
             }
         }
+    }
+
+    private List<TerrainTextureEntry> BuildAssignedTerrainList()
+    {
+        var terrains = new List<TerrainTextureEntry>();
+        AddTerrainIfAssigned(terrains, "water", waterTexture);
+        AddTerrainIfAssigned(terrains, "grass", grassTexture);
+        AddTerrainIfAssigned(terrains, "stone", stoneTexture);
+        AddTerrainIfAssigned(terrains, "dirt", dirtTexture);
+        AddTerrainIfAssigned(terrains, "sand", sandTexture);
+        AddTerrainIfAssigned(terrains, "swamp", swampTexture);
+        AddTerrainIfAssigned(terrains, "snow", snowTexture);
+        AddTerrainIfAssigned(terrains, "lava", lavaTexture);
+        return terrains;
+    }
+
+    private static void AddTerrainIfAssigned(List<TerrainTextureEntry> terrains, string terrainName, Texture2D texture)
+    {
+        if (texture == null) { return; }
+        terrains.Add(new TerrainTextureEntry { name = terrainName, texture = texture });
     }
 
 
@@ -290,9 +387,24 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
         bool s = (mask & 4) != 0;
         bool w = (mask & 8) != 0;
 
+        // For m15 ("island" shape), use dedicated boost so island size is controllable independently.
+        float effectiveCenterFillBoost = (mask == 15) ? m15CenterFillBoost : centerFillBoost;
+
         // Positive boost should enlarge the center patch/stripe of the non-target texture.
         // So we shrink cardinal target bands toward edges as boost increases.
-        float baseHalf = Mathf.Clamp(0.5f - centerFillBoost, 0.05f, 0.5f);
+        float baseHalf = Mathf.Clamp(0.5f - effectiveCenterFillBoost, 0.05f, 0.5f);
+
+        // For m15 (all sides active), use a circular center island mask to avoid lumpy square-ish shapes.
+        if (mask == 15)
+        {
+            float islandRadius = Mathf.Clamp(effectiveCenterFillBoost * 1.15f, 0.04f, 0.45f);
+            float roughNoise = Mathf.PerlinNoise((fx * tileSize / Mathf.Max(0.001f, perlinScale)) + (seed * 0.007f), (fy * tileSize / Mathf.Max(0.001f, perlinScale)) + (seed * 0.011f));
+            float roughSigned = (roughNoise * 2f) - 1f;
+            islandRadius += roughSigned * shapeRoughness * 0.15f;
+            islandRadius = Mathf.Clamp(islandRadius, 0.02f, 0.48f);
+            float distToCenter = Vector2.Distance(new Vector2(fx, fy), new Vector2(0.5f, 0.5f));
+            return distToCenter - islandRadius; // target outside the island circle
+        }
 
         float dN = n ? (fy - (1f - baseHalf)) : float.NegativeInfinity;
         float dE = e ? (fx - (1f - baseHalf)) : float.NegativeInfinity;
@@ -310,6 +422,13 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
 
             float radial = elbowRoundness - Vector2.Distance(new Vector2(fx, fy), new Vector2(cx, cy));
             d = Mathf.Max(d, radial);
+        }
+
+        if (shapeRoughness > 0f)
+        {
+            float roughNoise = Mathf.PerlinNoise((fx * tileSize / Mathf.Max(0.001f, perlinScale)) + (seed * 0.007f), (fy * tileSize / Mathf.Max(0.001f, perlinScale)) + (seed * 0.011f));
+            float roughSigned = (roughNoise * 2f) - 1f;
+            d += roughSigned * shapeRoughness * 0.1f;
         }
 
         return d;
@@ -354,5 +473,83 @@ public class OverworldTransitionTileGeneratorWindow : EditorWindow
             }
             current = next;
         }
+    }
+
+    private void LoadPrefs()
+    {
+        tileSize = EditorPrefs.GetInt(PrefPrefix + nameof(tileSize), tileSize);
+        variantsPerMask = EditorPrefs.GetInt(PrefPrefix + nameof(variantsPerMask), variantsPerMask);
+        seed = EditorPrefs.GetInt(PrefPrefix + nameof(seed), seed);
+        blendMode = (BlendMode)EditorPrefs.GetInt(PrefPrefix + nameof(blendMode), (int)blendMode);
+        ditherThresholdBias = EditorPrefs.GetInt(PrefPrefix + nameof(ditherThresholdBias), ditherThresholdBias);
+        perlinScale = EditorPrefs.GetFloat(PrefPrefix + nameof(perlinScale), perlinScale);
+        perlinStrength = EditorPrefs.GetFloat(PrefPrefix + nameof(perlinStrength), perlinStrength);
+        borderWidth = EditorPrefs.GetFloat(PrefPrefix + nameof(borderWidth), borderWidth);
+        borderStochasticity = EditorPrefs.GetFloat(PrefPrefix + nameof(borderStochasticity), borderStochasticity);
+        centerFillBoost = EditorPrefs.GetFloat(PrefPrefix + nameof(centerFillBoost), centerFillBoost);
+        m15CenterFillBoost = EditorPrefs.GetFloat(PrefPrefix + nameof(m15CenterFillBoost), m15CenterFillBoost);
+        shapeRoughness = EditorPrefs.GetFloat(PrefPrefix + nameof(shapeRoughness), shapeRoughness);
+        elbowRoundness = EditorPrefs.GetFloat(PrefPrefix + nameof(elbowRoundness), elbowRoundness);
+        outputFolder = EditorPrefs.GetString(PrefPrefix + nameof(outputFolder), outputFolder);
+
+        LoadTexturePref(nameof(grassTexture), ref grassTexture);
+        LoadTexturePref(nameof(stoneTexture), ref stoneTexture);
+        LoadTexturePref(nameof(waterTexture), ref waterTexture);
+        LoadTexturePref(nameof(dirtTexture), ref dirtTexture);
+        LoadTexturePref(nameof(sandTexture), ref sandTexture);
+        LoadTexturePref(nameof(swampTexture), ref swampTexture);
+        LoadTexturePref(nameof(snowTexture), ref snowTexture);
+        LoadTexturePref(nameof(lavaTexture), ref lavaTexture);
+    }
+
+    private void SavePrefs()
+    {
+        EditorPrefs.SetInt(PrefPrefix + nameof(tileSize), tileSize);
+        EditorPrefs.SetInt(PrefPrefix + nameof(variantsPerMask), variantsPerMask);
+        EditorPrefs.SetInt(PrefPrefix + nameof(seed), seed);
+        EditorPrefs.SetInt(PrefPrefix + nameof(blendMode), (int)blendMode);
+        EditorPrefs.SetInt(PrefPrefix + nameof(ditherThresholdBias), ditherThresholdBias);
+        EditorPrefs.SetFloat(PrefPrefix + nameof(perlinScale), perlinScale);
+        EditorPrefs.SetFloat(PrefPrefix + nameof(perlinStrength), perlinStrength);
+        EditorPrefs.SetFloat(PrefPrefix + nameof(borderWidth), borderWidth);
+        EditorPrefs.SetFloat(PrefPrefix + nameof(borderStochasticity), borderStochasticity);
+        EditorPrefs.SetFloat(PrefPrefix + nameof(centerFillBoost), centerFillBoost);
+        EditorPrefs.SetFloat(PrefPrefix + nameof(m15CenterFillBoost), m15CenterFillBoost);
+        EditorPrefs.SetFloat(PrefPrefix + nameof(shapeRoughness), shapeRoughness);
+        EditorPrefs.SetFloat(PrefPrefix + nameof(elbowRoundness), elbowRoundness);
+        EditorPrefs.SetString(PrefPrefix + nameof(outputFolder), outputFolder ?? "Assets/Generated/OverworldTransitions");
+
+        SaveTexturePref(nameof(grassTexture), grassTexture);
+        SaveTexturePref(nameof(stoneTexture), stoneTexture);
+        SaveTexturePref(nameof(waterTexture), waterTexture);
+        SaveTexturePref(nameof(dirtTexture), dirtTexture);
+        SaveTexturePref(nameof(sandTexture), sandTexture);
+        SaveTexturePref(nameof(swampTexture), swampTexture);
+        SaveTexturePref(nameof(snowTexture), snowTexture);
+        SaveTexturePref(nameof(lavaTexture), lavaTexture);
+    }
+
+    private void SaveTexturePref(string key, Texture2D texture)
+    {
+        if (texture == null)
+        {
+            EditorPrefs.DeleteKey(PrefPrefix + key);
+            return;
+        }
+
+        string path = AssetDatabase.GetAssetPath(texture);
+        if (string.IsNullOrEmpty(path))
+        {
+            EditorPrefs.DeleteKey(PrefPrefix + key);
+            return;
+        }
+        EditorPrefs.SetString(PrefPrefix + key, path);
+    }
+
+    private void LoadTexturePref(string key, ref Texture2D destination)
+    {
+        string path = EditorPrefs.GetString(PrefPrefix + key, string.Empty);
+        if (string.IsNullOrEmpty(path)) { return; }
+        destination = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
     }
 }

@@ -52,12 +52,33 @@ public class OverworldTerrainController : MonoBehaviour
 
     [Header("Water Classification")]
     [Range(0f, 0.2f)] public float WaterSurfaceEpsilon = 0.02f;
+    [Header("Snow Classification")]
+    [Range(0f, 120f)] public float SnowLineAltitude = 40f;
+    [Range(0f, 30f)] public float SnowTransitionWidth = 6f;
+    [Range(0f, 20f)] public float SnowNoiseScale = 5f;
+    [Range(0f, 20f)] public float SnowNoiseAmplitude = 3f;
+    public bool RenderSnowUsingStoneLayer = true;
+    [Header("Stone Classification")]
+    [Range(0f, 120f)] public float StoneLineAltitude = 20f;
+    [Range(0f, 30f)] public float StoneTransitionWidth = 6f;
+    [Range(0f, 20f)] public float StoneNoiseScale = 5f;
+    [Range(0f, 20f)] public float StoneNoiseAmplitude = 2f;
     public int GrassTextureIndex = 181;
     public int StoneTextureIndex = 253;
+    public int DirtTextureIndex = 182;
+    public int SandTextureIndex = 183;
+    public int SwampTextureIndex = 251;
+    public int SnowTextureIndex = 248;
+    public int LavaTextureIndex = 252;
 
     [Header("Custom Material Overrides")]
     public Material GrassMaterialOverride;
     public Material StoneMaterialOverride;
+    public Material DirtMaterialOverride;
+    public Material SandMaterialOverride;
+    public Material SwampMaterialOverride;
+    public Material SnowMaterialOverride;
+    public Material LavaMaterialOverride;
 
 
     [Header("Texture Filtering")]
