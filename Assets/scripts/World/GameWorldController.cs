@@ -1796,14 +1796,27 @@ public class GameWorldController : UWEBase
                 mr.materials = BuildChunkMaterials(overworldGrassMat, overworldStoneMat, overworldSnowMat, overworldSwampMat, overworldSandMat);
             }
             sw.Stop();
-            if (overworld.TransitionTexturingDiagnostics && (((chunkCoord.x + chunkCoord.y) % Mathf.Max(1, overworld.TransitionDiagLogEveryNChunks)) == 0))
+            if (overworld.TransitionTexturingDiagnostics)
             {
-                UnityEngine.Debug.Log($"OverworldTransitionTexture chunk={chunkCoord} ms={sw.ElapsedMilliseconds} tiles={stats.tileCount} transitions={stats.transitionTiles} fallback={stats.fallbackCenterTiles} missing={stats.missingTransitionFiles} atlasTiles={stats.uniqueAtlasTiles} tileIdRange={stats.minTileId}-{stats.maxTileId} firstTile={stats.firstTileWidth}x{stats.firstTileHeight} minTile={stats.minTileWidth}x{stats.minTileHeight} maxTile={stats.maxTileWidth}x{stats.maxTileHeight} canonicalTile={stats.canonicalTileSize} waterCenter={stats.waterCenterTiles} waterTarget={stats.waterTargetTiles} uvEdgeVerts={diagUvEdgeVertexCount} clampQuads={diagClampQuadCount} meshWaterQuads={diagMeshWaterQuadCount} atlasWaterQuads={diagAtlasWaterQuadCount} meshAtlasDisagree={diagMeshAtlasDisagreeCount}");
+                int diagEvery = Mathf.Max(1, overworld.TransitionDiagLogEveryNChunks);
+                int diagBucket = (chunkCoord.x + chunkCoord.y) % diagEvery;
+                if (diagBucket == 0)
+                {
+                    UnityEngine.Debug.Log($"OverworldTransitionTexture chunk={chunkCoord} ms={sw.ElapsedMilliseconds} tiles={stats.tileCount} transitions={stats.transitionTiles} fallback={stats.fallbackCenterTiles} missing={stats.missingTransitionFiles} atlasTiles={stats.uniqueAtlasTiles} tileIdRange={stats.minTileId}-{stats.maxTileId} firstTile={stats.firstTileWidth}x{stats.firstTileHeight} minTile={stats.minTileWidth}x{stats.minTileHeight} maxTile={stats.maxTileWidth}x{stats.maxTileHeight} canonicalTile={stats.canonicalTileSize} waterCenter={stats.waterCenterTiles} waterTarget={stats.waterTargetTiles} uvEdgeVerts={diagUvEdgeVertexCount} clampQuads={diagClampQuadCount} meshWaterQuads={diagMeshWaterQuadCount} atlasWaterQuads={diagAtlasWaterQuadCount} meshAtlasDisagree={diagMeshAtlasDisagreeCount}");
+                }
+                else
+                {
+                    UnityEngine.Debug.Log($"OverworldTransitionTexture diag-suppressed chunk={chunkCoord} diagEvery={diagEvery} bucket={diagBucket}");
+                }
             }
         }
         else
         {
             mr.materials = BuildChunkMaterials(overworldGrassMat, overworldStoneMat, overworldSnowMat, overworldSwampMat, overworldSandMat);
+            if (overworld.TransitionTexturingDiagnostics)
+            {
+                UnityEngine.Debug.Log($"OverworldTransitionTexture diag-skipped chunk={chunkCoord} useTransition={overworld.UseTransitionTileTexturing} withCollision={withCollision} sampleStep={sampleStep}");
+            }
         }
 
         OverworldNatureFlatsController natureFlats = GetOverworldNatureFlatsController();
