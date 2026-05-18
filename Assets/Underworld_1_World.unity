@@ -30179,7 +30179,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::OverworldTerrainController
   StartInOverworld: 1
   OverworldStartPos: {x: 0, y: 5, z: 0}
-  OverworldStartTile: {x: 830, y: 1358}
+  OverworldStartTile: {x: 1590, y: 1630}
   HeightmapResourcePath: UIX/Britannia_Corv_Heightmap
   TilesPerPixel: 1
   TileWorldSize: 1
@@ -30190,6 +30190,10 @@ MonoBehaviour:
   LoadWholeMapAtStartup: 0
   LoadDistantChunks: 1
   DistantChunkStep: 2
+  SkirtUseUpwardNormals: 1
+  SkirtUpwardNormalBlend: 0.5
+  SkirtCastShadows: 1
+  SkirtReceiveShadows: 1
   StartHour: 12
   StartMinute: 0
   StartSecond: 0
@@ -30205,11 +30209,36 @@ MonoBehaviour:
   AnimateWater: 1
   WaterAnimFrameTime: 0.2
   WaterSurfaceEpsilon: 0.02
+  SnowLineAltitude: 30
+  SnowTransitionWidth: 4
+  SnowNoiseScale: 5
+  SnowNoiseAmplitude: 3
+  RenderSnowUsingStoneLayer: 1
+  StoneLineAltitude: 20
+  StoneTransitionWidth: 4
+  StoneNoiseScale: 5
+  StoneNoiseAmplitude: 2
   GrassTextureIndex: 181
   StoneTextureIndex: 253
+  DirtTextureIndex: 182
+  SandTextureIndex: 183
+  SwampTextureIndex: 251
+  SnowTextureIndex: 248
+  LavaTextureIndex: 252
   GrassMaterialOverride: {fileID: 2100000, guid: d52084be472840527917e9998092ea8a,
     type: 2}
-  StoneMaterialOverride: {fileID: 0}
+  StoneMaterialOverride: {fileID: 2100000, guid: fde3801c2716c958bb45400f780c7c03,
+    type: 2}
+  DirtMaterialOverride: {fileID: 2100000, guid: 6a80616a43a925168a1843c3223fc87f,
+    type: 2}
+  SandMaterialOverride: {fileID: 2100000, guid: 9aff3810adc382c61a8f56cbadee3c13,
+    type: 2}
+  SwampMaterialOverride: {fileID: 2100000, guid: d6eb3f4fab02110579a44da40018d6ea,
+    type: 2}
+  SnowMaterialOverride: {fileID: 2100000, guid: 931e0469a36c0a905be95dbbfe08a418,
+    type: 2}
+  LavaMaterialOverride: {fileID: 2100000, guid: ed22340d35e17b5939fbe0a9cefef257,
+    type: 2}
   EnableOverworldTerrainMipmaps: 0
   UseTransitionTileTexturing: 1
   TransitionPixelsPerTile: 32
@@ -30244,7 +30273,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OverworldSkyController
   SunLight: {fileID: 0}
-  MaxSunlightIntensity: 0.5
+  MaxSunlightIntensity: 0.75
   MinWeatherDurationSeconds: 120
   MaxWeatherDurationSeconds: 300
 --- !u!114 &853464907
@@ -30279,13 +30308,16 @@ MonoBehaviour:
   NatureMapWorldHeight: 2048
   MountainColor:
     serializedVersion: 2
-    rgba: 4278255360
+    rgba: 4286611584
   RainforestColor:
     serializedVersion: 2
     rgba: 4294901760
   DesertColor:
     serializedVersion: 2
     rgba: 4278255615
+  SwampColor:
+    serializedVersion: 2
+    rgba: 4278255360
   BiomeProfiles:
   - Name: Temperate
     ClimateId: 0
@@ -30410,6 +30442,38 @@ MonoBehaviour:
     ForestHabitatBushWeight: 0.2
     ForestHabitatTreeWeight: 0.2
     ForestHabitatRockWeight: 0.6
+    ElevationDensityMultiplier: 1
+    SlopeDensityMultiplier: 0.6
+    Categories:
+      Trees: []
+      Bushes: []
+      Flowers: []
+      Rocks: []
+  - Name: Swamp
+    ClimateId: 4
+    BaseDensity: 0.22
+    ClusterDensity: 0.5
+    MacroNoiseFrequency: 0.01
+    MacroNoiseAmplitude: 0.9
+    MacroNoisePersistence: 0.35
+    MacroNoiseOctaves: 3
+    FlowerLimit: 0.4
+    ForestLimit: 0.7
+    ClearingNoiseFrequency: 0.12
+    ClearingThreshold: 0.45
+    ClearingStrength: 0.08
+    FlowerHabitatFlowerWeight: 0.35
+    FlowerHabitatBushWeight: 0.06
+    FlowerHabitatTreeWeight: 0.4
+    FlowerHabitatRockWeight: 0.1
+    GrassHabitatFlowerWeight: 0.44
+    GrassHabitatBushWeight: 0.01
+    GrassHabitatTreeWeight: 0.25
+    GrassHabitatRockWeight: 0.3
+    ForestHabitatFlowerWeight: 0.44
+    ForestHabitatBushWeight: 0.08
+    ForestHabitatTreeWeight: 0.56
+    ForestHabitatRockWeight: 0.8
     ElevationDensityMultiplier: 1
     SlopeDensityMultiplier: 0.6
     Categories:
@@ -42964,7 +43028,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -50.700195, y: -10.047012}
+  m_AnchoredPosition: {x: -50.700195, y: -10.047028}
   m_SizeDelta: {x: -561.3, y: -390.01}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1208676313
@@ -74764,7 +74828,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 33.80005, y: -10.047012}
+  m_AnchoredPosition: {x: 33.80005, y: -10.047028}
   m_SizeDelta: {x: -561.3, y: -390.01}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2082366210
