@@ -72,11 +72,16 @@ public static class OverworldTerrainTexturing
                 centerClassMap[outIdx] = (byte)Mathf.Clamp(center, 0, 255);
                 targetClassMap[outIdx] = (byte)Mathf.Clamp(target, 0, 255);
                 maskMap[outIdx] = (byte)Mathf.Clamp(mask, 0, 255);
-                if (center == 0 || target == 0)
+                int bl = terrainClassFull[(ty * width) + tx];
+                int br = terrainClassFull[(ty * width) + (tx + 1)];
+                int tl = terrainClassFull[((ty + 1) * width) + tx];
+                int tr = terrainClassFull[((ty + 1) * width) + (tx + 1)];
+                bool hasAnyWaterCorner = (bl == 0) || (br == 0) || (tl == 0) || (tr == 0);
+                if (hasAnyWaterCorner)
                 {
                     clampFlags[outIdx] = true;
-                    if (target == 0) { stats.waterTargetTiles++; }
                 }
+                if (target == 0) { stats.waterTargetTiles++; }
 
                 Texture2D tile = null;
                 string key;
