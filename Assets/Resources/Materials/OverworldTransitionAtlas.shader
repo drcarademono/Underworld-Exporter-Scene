@@ -30,7 +30,10 @@ Shader "Custom/OverworldTransitionAtlas"
         float2 ComputeAtlasUV(float2 uv)
         {
             float2 mapSize = float2(1.0 / _TileIdMap_TexelSize.x, 1.0 / _TileIdMap_TexelSize.y);
-            float2 tileUV = floor(saturate(uv) * mapSize) / mapSize;
+            float2 uvClamped = saturate(uv);
+            // Keep tile coordinate in [0, mapSize-1] even when UV is exactly 1.0 at chunk borders.
+            float2 tileCoord = min(floor(uvClamped * mapSize), mapSize - 1.0);
+            float2 tileUV = tileCoord / mapSize;
             float4 idSample = tex2D(_TileIdMap, tileUV + (0.5 / mapSize));
             float tileId = floor(idSample.r * 255.0 + 0.5) + (floor(idSample.g * 255.0 + 0.5) * 256.0);
 
@@ -39,7 +42,7 @@ Shader "Custom/OverworldTransitionAtlas"
             float atlasX = fmod(tileId, atlasCols);
             float atlasY = floor(tileId / atlasCols);
 
-            float2 inTile = frac(saturate(uv) * mapSize);
+            float2 inTile = frac(uvClamped * mapSize);
             return (float2(atlasX, atlasY) + inTile) / float2(atlasCols, atlasRows);
         }
 
