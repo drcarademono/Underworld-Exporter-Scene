@@ -221,6 +221,11 @@ public class GameWorldController : UWEBase
     private const int TerrainClassSand = 5;
     private const int TerrainClassSwamp = 6;
     private const int TerrainClassLava = 7;
+    // Climate-map-only pseudo IDs for terrain classification.
+    // These are not biome profile IDs; they map to Dirt terrain while preserving parent climate for nature.
+    private const int ClimateMapDirtTemperate = 10;
+    private const int ClimateMapDirtRainforest = 11;
+    private const int ClimateMapDirtMountain = 12;
     private Dictionary<Vector2Int, GameObject> loadedOverworldChunks = new Dictionary<Vector2Int, GameObject>();
     private HashSet<Vector2Int> lowDetailOverworldChunks = new HashSet<Vector2Int>();
     private HashSet<Vector2Int> noNatureOverworldChunks = new HashSet<Vector2Int>();
@@ -3639,8 +3644,3 @@ public class GameWorldController : UWEBase
         }
     }
 }
-    // Climate-map-only pseudo IDs for terrain classification.
-    // These are not biome profile IDs; they map to Dirt terrain while preserving parent climate for nature.
-    private const int ClimateMapDirtTemperate = 10;
-    private const int ClimateMapDirtRainforest = 11;
-    private const int ClimateMapDirtMountain = 12;
