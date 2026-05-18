@@ -105,7 +105,7 @@ public static class OverworldTerrainTexturing
 
         int atlasCols = Mathf.Clamp(Mathf.CeilToInt(Mathf.Sqrt(Mathf.Max(1, atlasTiles.Count))), 1, 16);
         int atlasRows = Mathf.CeilToInt(atlasTiles.Count / (float)atlasCols);
-        int tileSize = (atlasTiles.Count > 0) ? atlasTiles[0].width : 16;
+        int tileSize = (atlasTiles.Count > 0) ? Mathf.Max(1, atlasTiles[0].width) : 16;
         build.atlasTexture = new Texture2D(atlasCols * tileSize, atlasRows * tileSize, TextureFormat.RGBA32, false);
         build.atlasTexture.filterMode = FilterMode.Point;
         build.atlasTexture.wrapMode = TextureWrapMode.Clamp;
@@ -114,12 +114,14 @@ public static class OverworldTerrainTexturing
         for (int i = 0; i < atlasTiles.Count; i++)
         {
             Texture2D tile = atlasTiles[i];
-            Color32[] src = tile.GetPixels32();
+            Color32[] src = (tile.width == tileSize && tile.height == tileSize)
+                ? tile.GetPixels32()
+                : GetPixelsResampledNearest(tile, tileSize, tileSize);
             int ox = (i % atlasCols) * tileSize;
             int oy = (i / atlasCols) * tileSize;
             for (int y = 0; y < tileSize; y++)
                 for (int x = 0; x < tileSize; x++)
-                    atlasPixels[(oy + y) * build.atlasTexture.width + (ox + x)] = src[y * tile.width + x];
+                    atlasPixels[(oy + y) * build.atlasTexture.width + (ox + x)] = src[y * tileSize + x];
         }
 
         build.atlasTexture.SetPixels32(atlasPixels);
@@ -229,6 +231,24 @@ public static class OverworldTerrainTexturing
         tex.wrapMode = TextureWrapMode.Clamp;
         cache[key] = tex;
         return tex;
+    }
+
+    private static Color32[] GetPixelsResampledNearest(Texture2D src, int dstWidth, int dstHeight)
+    {
+        Color32[] srcPixels = src.GetPixels32();
+        Color32[] dstPixels = new Color32[dstWidth * dstHeight];
+        int sw = Mathf.Max(1, src.width);
+        int sh = Mathf.Max(1, src.height);
+        for (int y = 0; y < dstHeight; y++)
+        {
+            int sy = Mathf.Clamp((y * sh) / dstHeight, 0, sh - 1);
+            for (int x = 0; x < dstWidth; x++)
+            {
+                int sx = Mathf.Clamp((x * sw) / dstWidth, 0, sw - 1);
+                dstPixels[(y * dstWidth) + x] = srcPixels[(sy * sw) + sx];
+            }
+        }
+        return dstPixels;
     }
 
 }

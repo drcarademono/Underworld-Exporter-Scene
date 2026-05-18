@@ -1272,12 +1272,13 @@ public class GameWorldController : UWEBase
         return cachedOverworldClimateMap;
     }
 
-    private int SampleChunkClimateId(Vector2Int chunkCoord, int startX, int endX, int startY, int endY, OverworldNatureFlatsController flats)
+    private int SampleClimateIdAtSample(int sampleX, int sampleZ, OverworldNatureFlatsController flats)
     {
         Texture2D climateMap = GetNatureClimateMap(flats);
         if (flats == null || climateMap == null) { return 0; }
-        float cx = (startX + endX) * 0.5f * Mathf.Max(1f, GetOverworldController().TileWorldSize);
-        float cz = (startY + endY) * 0.5f * Mathf.Max(1f, GetOverworldController().TileWorldSize);
+        float tileWorldSize = Mathf.Max(1f, GetOverworldController().TileWorldSize);
+        float cx = sampleX * tileWorldSize;
+        float cz = sampleZ * tileWorldSize;
         float u = Mathf.Clamp01(cx / Mathf.Max(1f, flats.NatureMapWorldWidth));
         float v = Mathf.Clamp01(cz / Mathf.Max(1f, flats.NatureMapWorldHeight));
         int px = Mathf.Clamp(Mathf.FloorToInt(u * climateMap.width), 0, climateMap.width - 1);
@@ -1287,7 +1288,7 @@ public class GameWorldController : UWEBase
         if (IsNearColor(c, flats.RainforestColor)) { return 2; }
         if (IsNearColor(c, flats.DesertColor)) { return 3; }
         if (IsNearColor(c, flats.SwampColor)) { return 4; }
-        return flats.EstimateClimateIdForChunk(chunkCoord);
+        return 0;
     }
 
     private static bool IsNearColor(Color32 a, Color32 b)
@@ -1473,7 +1474,6 @@ public class GameWorldController : UWEBase
         int[] terrainClassFull = new int[fullSampleWidth * fullSampleHeight];
 
         OverworldNatureFlatsController natureFlatsForTerrain = GetOverworldNatureFlatsController();
-        int chunkClimateId = SampleChunkClimateId(chunkCoord, startX, endX, startY, endY, natureFlatsForTerrain);
 
         for (int fz = 0; fz < fullSampleHeight; fz++)
         {
@@ -1491,7 +1491,8 @@ public class GameWorldController : UWEBase
                 if (fullY < 0f) { fullY = 0f; }
 
                 int fullIndex = (fz * fullSampleWidth) + fx;
-                terrainClassFull[fullIndex] = ClassifyOverworldTerrainSample(fullY, fullGlobalX, fullGlobalZ, fullPx, fullPz, tilesPerPixel, heightmap, overworld, chunkClimateId);
+                int climateId = SampleClimateIdAtSample(fullGlobalX, fullGlobalZ, natureFlatsForTerrain);
+                terrainClassFull[fullIndex] = ClassifyOverworldTerrainSample(fullY, fullGlobalX, fullGlobalZ, fullPx, fullPz, tilesPerPixel, heightmap, overworld, climateId);
             }
         }
 
@@ -1763,7 +1764,8 @@ public class GameWorldController : UWEBase
                     float fullY = fullShapedElevation * overworld.HeightScale + fullPerlinDisplacement - overworld.SeaLevelOffset;
                     if (fullY < 0f) { fullY = 0f; }
                     int idx = ez * texWidth + ex;
-                    terrainClassExpanded[idx] = ClassifyOverworldTerrainSample(fullY, fullGlobalX, fullGlobalZ, fullPx, fullPz, tilesPerPixel, heightmap, overworld, chunkClimateId);
+                    int climateId = SampleClimateIdAtSample(fullGlobalX, fullGlobalZ, natureFlatsForTerrain);
+                    terrainClassExpanded[idx] = ClassifyOverworldTerrainSample(fullY, fullGlobalX, fullGlobalZ, fullPx, fullPz, tilesPerPixel, heightmap, overworld, climateId);
                 }
             }
 
