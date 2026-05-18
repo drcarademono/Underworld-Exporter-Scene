@@ -42,10 +42,10 @@ public static class OverworldTerrainTexturing
         int outTileW = tileW - (cropTiles * 2);
         int outTileH = tileH - (cropTiles * 2);
         if (outTileW <= 0 || outTileH <= 0) { return build; }
-        byte[] ids = new byte[outTileW * outTileH];
+        int[] ids = new int[outTileW * outTileH];
         byte[] waterFlags = new byte[outTileW * outTileH];
         bool[] clampFlags = new bool[outTileW * outTileH];
-        Dictionary<string, byte> atlasLookup = new Dictionary<string, byte>();
+        Dictionary<string, int> atlasLookup = new Dictionary<string, int>();
         List<Texture2D> atlasTiles = new List<Texture2D>();
 
         for (int ty = cropTiles; ty < tileH - cropTiles; ty++)
@@ -83,9 +83,9 @@ public static class OverworldTerrainTexturing
                 }
 
                 if (tile == null) { continue; }
-                if (!atlasLookup.TryGetValue(key, out byte id))
+                if (!atlasLookup.TryGetValue(key, out int id))
                 {
-                    id = (byte)Mathf.Clamp(atlasTiles.Count, 0, 255);
+                    id = atlasTiles.Count;
                     atlasLookup[key] = id;
                     atlasTiles.Add(tile);
                 }
@@ -94,11 +94,15 @@ public static class OverworldTerrainTexturing
         }
 
         stats.uniqueAtlasTiles = atlasTiles.Count;
-        build.tileIdMap = new Texture2D(outTileW, outTileH, TextureFormat.Alpha8, false);
+        if (stats.uniqueAtlasTiles > 255)
+        {
+            UnityEngine.Debug.LogWarning($"OverworldTransitionTexture: chunk atlas has {stats.uniqueAtlasTiles} unique tiles; using 16-bit tile-id encoding.");
+        }
+        build.tileIdMap = new Texture2D(outTileW, outTileH, TextureFormat.RGBA32, false);
         build.tileIdMap.filterMode = FilterMode.Point;
         build.tileIdMap.wrapMode = TextureWrapMode.Clamp;
         Color32[] mapPixels = new Color32[ids.Length];
-        for (int i = 0; i < ids.Length; i++) mapPixels[i] = new Color32(0, 0, 0, ids[i]);
+        for (int i = 0; i < ids.Length; i++) { int id = Mathf.Clamp(ids[i], 0, 65535); mapPixels[i] = new Color32((byte)(id & 255), (byte)((id >> 8) & 255), 0, 255); }
         build.tileIdMap.SetPixels32(mapPixels);
         build.tileIdMap.Apply(false, false);
 

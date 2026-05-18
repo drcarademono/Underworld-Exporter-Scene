@@ -31,8 +31,8 @@ Shader "Custom/OverworldTransitionAtlas"
         {
             float2 mapSize = float2(1.0 / _TileIdMap_TexelSize.x, 1.0 / _TileIdMap_TexelSize.y);
             float2 tileUV = floor(saturate(uv) * mapSize) / mapSize;
-            float idNorm = tex2D(_TileIdMap, tileUV + (0.5 / mapSize)).a;
-            float tileId = floor(idNorm * 255.0 + 0.5);
+            float4 idPx = tex2D(_TileIdMap, tileUV + (0.5 / mapSize));
+            float tileId = floor(idPx.r * 255.0 + 0.5) + (floor(idPx.g * 255.0 + 0.5) * 256.0);
 
             float atlasCols = max(1.0, _AtlasGrid.x);
             float atlasRows = max(1.0, _AtlasGrid.y);
