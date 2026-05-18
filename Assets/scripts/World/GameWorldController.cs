@@ -207,6 +207,7 @@ public class GameWorldController : UWEBase
     private Material overworldStoneMat;
     private Material overworldSnowMat;
     private Material overworldSandMat;
+    private Material overworldSwampMat;
     private Dictionary<Vector2Int, GameObject> loadedOverworldChunks = new Dictionary<Vector2Int, GameObject>();
     private HashSet<Vector2Int> lowDetailOverworldChunks = new HashSet<Vector2Int>();
     private HashSet<Vector2Int> noNatureOverworldChunks = new HashSet<Vector2Int>();
@@ -1048,6 +1049,7 @@ public class GameWorldController : UWEBase
         overworldStoneMat = BuildOverworldSurfaceMaterial(overworld.StoneTextureIndex, overworld.StoneMaterialOverride, new Color(0.45f, 0.45f, 0.45f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
         overworldSnowMat = BuildOverworldSurfaceMaterial(overworld.SnowTextureIndex, overworld.SnowMaterialOverride, Color.white, overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
         overworldSandMat = BuildOverworldSurfaceMaterial(overworld.SandTextureIndex, overworld.SandMaterialOverride, new Color(0.82f, 0.76f, 0.52f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
+        overworldSwampMat = BuildOverworldSurfaceMaterial(overworld.SwampTextureIndex, overworld.SwampMaterialOverride, new Color(0.25f, 0.35f, 0.24f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
         if (overworld.AnimateWater)
         {
             int frameCount = Mathf.Max(1, (overworld.WaterTextureAnimEndIndex - overworld.WaterTextureIndex) + 1);
@@ -1543,7 +1545,7 @@ public class GameWorldController : UWEBase
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
 
-        int[] activeLandClasses = new int[] { 1, 2, 3, 6 };
+        int[] activeLandClasses = new int[] { 1, 2, 3, 5, 6 };
         int subMeshCount = 1 + activeLandClasses.Length; // water + N land classes
         List<int>[] triLists = new List<int>[subMeshCount];
         for (int i = 0; i < subMeshCount; i++) { triLists[i] = new List<int>(); }
@@ -1615,6 +1617,7 @@ public class GameWorldController : UWEBase
                         int c = corners[i];
                         if (c == 0) { continue; }
                         if (c == 6) { shorelineClass = 6; break; } // Prefer sand coastlines where present.
+                        if ((c == 5) && shorelineClass != 6) { shorelineClass = 5; continue; }
                         if ((c == 3) && shorelineClass != 6) { shorelineClass = 3; continue; }
                         if ((c == 2) && shorelineClass == 1) { shorelineClass = 2; }
                     }
@@ -1687,6 +1690,7 @@ public class GameWorldController : UWEBase
             Texture2D stoneBase = (overworldStoneMat != null) ? (overworldStoneMat.mainTexture as Texture2D) : null;
             Texture2D snowBase = (overworldSnowMat != null) ? (overworldSnowMat.mainTexture as Texture2D) : null;
             Texture2D sandBase = (overworld.SandMaterialOverride != null) ? (overworld.SandMaterialOverride.mainTexture as Texture2D) : MaybeEnableOverworldMipmaps(LoadUW2TerrainTexture(overworld.SandTextureIndex), overworld);
+            Texture2D swampBase = (overworld.SwampMaterialOverride != null) ? (overworld.SwampMaterialOverride.mainTexture as Texture2D) : MaybeEnableOverworldMipmaps(LoadUW2TerrainTexture(overworld.SwampTextureIndex), overworld);
             OverworldTerrainTexturing.BuildStats stats;
             int texWidth = fullSampleWidth + 2;
             int texHeight = fullSampleHeight + 2;
@@ -1719,6 +1723,7 @@ public class GameWorldController : UWEBase
                 grassBase,
                 stoneBase,
                 snowBase,
+                swampBase,
                 sandBase,
                 out stats,
                 1);
@@ -1750,7 +1755,7 @@ public class GameWorldController : UWEBase
                 atlasBuild.atlasTexture.name = $"OWChunkAtlas_{chunkCoord.x}_{chunkCoord.y}";
                 OverworldChunkRuntimeTextures rt = go.GetComponent<OverworldChunkRuntimeTextures>();
                 if (rt == null) { rt = go.AddComponent<OverworldChunkRuntimeTextures>(); }
-                rt.EnsureMaterials(overworldGrassMat, overworldStoneMat, overworldSnowMat, overworldSandMat);
+                rt.EnsureMaterials(overworldGrassMat, overworldStoneMat, overworldSnowMat, overworldSwampMat, overworldSandMat);
                 rt.SetTransitionAtlas(atlasBuild);
                 Material[] landMats = rt.landRuntimeMats;
                 mr.materials = new Material[]
@@ -1759,12 +1764,13 @@ public class GameWorldController : UWEBase
                     (landMats != null && landMats.Length > 0) ? landMats[0] : overworldGrassMat, // grass
                     (landMats != null && landMats.Length > 1) ? landMats[1] : overworldStoneMat, // stone
                     (landMats != null && landMats.Length > 2) ? landMats[2] : overworldSnowMat,  // snow
-                    (landMats != null && landMats.Length > 3) ? landMats[3] : overworldSandMat,  // sand
+                    (landMats != null && landMats.Length > 3) ? landMats[3] : overworldSwampMat, // swamp
+                    (landMats != null && landMats.Length > 4) ? landMats[4] : overworldSandMat,  // sand
                 };
             }
             else
             {
-                mr.materials = BuildChunkMaterials(overworldGrassMat, overworldStoneMat, overworldSnowMat, overworldSandMat);
+                mr.materials = BuildChunkMaterials(overworldGrassMat, overworldStoneMat, overworldSnowMat, overworldSwampMat, overworldSandMat);
             }
             sw.Stop();
             if (overworld.TransitionTexturingDiagnostics && (((chunkCoord.x + chunkCoord.y) % Mathf.Max(1, overworld.TransitionDiagLogEveryNChunks)) == 0))
@@ -1774,7 +1780,7 @@ public class GameWorldController : UWEBase
         }
         else
         {
-            mr.materials = BuildChunkMaterials(overworldGrassMat, overworldStoneMat, overworldSnowMat, overworldSandMat);
+            mr.materials = BuildChunkMaterials(overworldGrassMat, overworldStoneMat, overworldSnowMat, overworldSwampMat, overworldSandMat);
         }
 
         OverworldNatureFlatsController natureFlats = GetOverworldNatureFlatsController();
@@ -1824,7 +1830,7 @@ public class GameWorldController : UWEBase
         if (vertices == null || vertices.Length == 0) { return; }
         List<Vector3> skirtVerts = new List<Vector3>();
         List<Vector2> skirtUvs = new List<Vector2>();
-        int[] activeLandClasses = new int[] { 1, 2, 3, 6 };
+        int[] activeLandClasses = new int[] { 1, 2, 3, 5, 6 };
         int subMeshCount = 1 + activeLandClasses.Length;
         List<int>[] triLists = new List<int>[subMeshCount];
         for (int i = 0; i < subMeshCount; i++) { triLists[i] = new List<int>(); }
@@ -1903,7 +1909,7 @@ public class GameWorldController : UWEBase
         MeshFilter mf = skirt.AddComponent<MeshFilter>();
         MeshRenderer mr = skirt.AddComponent<MeshRenderer>();
         mf.sharedMesh = skirtMesh;
-        mr.sharedMaterials = BuildChunkMaterials(overworldGrassMat, overworldStoneMat, overworldSnowMat, overworldSandMat);
+        mr.sharedMaterials = BuildChunkMaterials(overworldGrassMat, overworldStoneMat, overworldSnowMat, overworldSwampMat, overworldSandMat);
         mr.shadowCastingMode = overworld.SkirtCastShadows
             ? UnityEngine.Rendering.ShadowCastingMode.On
             : UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -1957,6 +1963,7 @@ public class GameWorldController : UWEBase
     {
         if (terrainClass == 0) return 100;
         if (terrainClass == 6) return 40; // prefer sand at mixed coasts
+        if (terrainClass == 5) return 35; // swamp coast next priority
         if (terrainClass == 3) return 30;
         if (terrainClass == 2) return 20;
         return 10;
@@ -2013,6 +2020,7 @@ public class GameWorldController : UWEBase
         if (IsSnowAtHeight(worldHeight, sampleX, sampleZ, overworld)) { return 3; }
         if (IsStoneAtHeight(worldHeight, sampleX, sampleZ, overworld)) { return 2; }
         if (IsDesertClimateAtSample(sampleX, sampleZ, overworld)) { return 6; } // Desert climate uses sand as base terrain.
+        if (IsSwampClimateAtSample(sampleX, sampleZ, overworld)) { return 5; } // Swamp climate uses swamp as base terrain.
         // Preserve original stone patterning (slope-based) below the stone line,
         // while allowing stone line to add/force more stone at higher altitude.
         float hE = SampleSmoothedHeight(heightmap, Mathf.Clamp(px + tilesPerPixel, 0, heightmap.width - 1), pz);
@@ -2038,6 +2046,21 @@ public class GameWorldController : UWEBase
         int py = Mathf.Clamp(Mathf.RoundToInt(v * (cachedNatureClimateMap.height - 1)), 0, cachedNatureClimateMap.height - 1);
         Color32 c = cachedNatureClimateMap.GetPixel(px, py);
         return (c.r == terrainClassifyDesertColor.r) && (c.g == terrainClassifyDesertColor.g) && (c.b == terrainClassifyDesertColor.b);
+    }
+
+    private bool IsSwampClimateAtSample(int sampleX, int sampleZ, OverworldTerrainController overworld)
+    {
+        if (!terrainClassifyUseDesertClimateMap || cachedNatureClimateMap == null || cachedNatureFlatsController == null) { return false; }
+        float tileWorldSize = Mathf.Max(0.01f, overworld.TileWorldSize);
+        float worldX = sampleX * tileWorldSize;
+        float worldZ = sampleZ * tileWorldSize;
+        float u = Mathf.Clamp01(worldX * terrainClassifyClimateInvWorldW);
+        float v = Mathf.Clamp01(worldZ * terrainClassifyClimateInvWorldH);
+        int px = Mathf.Clamp(Mathf.RoundToInt(u * (cachedNatureClimateMap.width - 1)), 0, cachedNatureClimateMap.width - 1);
+        int py = Mathf.Clamp(Mathf.RoundToInt(v * (cachedNatureClimateMap.height - 1)), 0, cachedNatureClimateMap.height - 1);
+        Color32 c = cachedNatureClimateMap.GetPixel(px, py);
+        Color32 swamp = cachedNatureFlatsController.SwampColor;
+        return (c.r == swamp.r) && (c.g == swamp.g) && (c.b == swamp.b);
     }
 
     private void PrepareTerrainClassificationContext(OverworldTerrainController overworld)

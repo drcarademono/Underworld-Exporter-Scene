@@ -31,7 +31,7 @@ public static class OverworldTerrainTexturing
     }
 
     private static readonly Dictionary<string, Texture2D> cache = new Dictionary<string, Texture2D>();
-    public static TileAtlasBuild BuildChunkTransitionAtlas(int[] terrainClassFull, int width, int height, string assetsRelativeFolder, Texture2D waterBase, Texture2D grassBase, Texture2D stoneBase, Texture2D snowBase, Texture2D sandBase, out BuildStats stats, int cropTiles = 0)
+    public static TileAtlasBuild BuildChunkTransitionAtlas(int[] terrainClassFull, int width, int height, string assetsRelativeFolder, Texture2D waterBase, Texture2D grassBase, Texture2D stoneBase, Texture2D snowBase, Texture2D swampBase, Texture2D sandBase, out BuildStats stats, int cropTiles = 0)
     {
         stats = new BuildStats();
         TileAtlasBuild build = new TileAtlasBuild();
@@ -78,7 +78,7 @@ public static class OverworldTerrainTexturing
 
                 if (tile == null)
                 {
-                    tile = GetBaseTexture(center, waterBase, grassBase, stoneBase, snowBase, sandBase);
+                    tile = GetBaseTexture(center, waterBase, grassBase, stoneBase, snowBase, swampBase, sandBase);
                     stats.fallbackCenterTiles++;
                 }
 
@@ -207,7 +207,7 @@ public static class OverworldTerrainTexturing
         if (bestNonWater < 0 || Priority(v) > Priority(bestNonWater)) bestNonWater = v;
     }
 
-    private static int Priority(int c) { if (c == 0) return 5; if (c == 3) return 4; if (c == 2) return 3; if (c == 6) return 2; return 1; }
+    private static int Priority(int c) { if (c == 0) return 6; if (c == 6) return 5; if (c == 5) return 4; if (c == 3) return 3; if (c == 2) return 2; return 1; }
 
     private static int BuildMask(int[] d, int w, int h, int tx, int ty, int target)
     {
@@ -237,10 +237,10 @@ public static class OverworldTerrainTexturing
     }
 
     private static void CountClass(int c, int[] counts) { counts[Mathf.Clamp(c, 0, 6)]++; }
-    private static string ClassName(int c) { if (c == 0) return "water"; if (c == 2) return "stone"; if (c == 3) return "snow"; if (c == 6) return "sand"; return "grass"; }
-    private static Texture2D GetBaseTexture(int c, Texture2D water, Texture2D grass, Texture2D stone, Texture2D snow, Texture2D sand)
+    private static string ClassName(int c) { if (c == 0) return "water"; if (c == 2) return "stone"; if (c == 3) return "snow"; if (c == 5) return "swamp"; if (c == 6) return "sand"; return "grass"; }
+    private static Texture2D GetBaseTexture(int c, Texture2D water, Texture2D grass, Texture2D stone, Texture2D snow, Texture2D swamp, Texture2D sand)
     {
-        if (c == 0) return water; if (c == 2) return stone; if (c == 3) return snow; if (c == 6) return sand; return grass;
+        if (c == 0) return water; if (c == 2) return stone; if (c == 3) return snow; if (c == 5) return swamp; if (c == 6) return sand; return grass;
     }
 
     private static Texture2D LoadTransitionTile(string from, string to, int mask, string folder)
