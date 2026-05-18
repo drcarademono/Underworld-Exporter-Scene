@@ -109,7 +109,10 @@ public static class OverworldTerrainTexturing
         build.waterMask.SetPixels32(waterPixels);
         build.waterMask.Apply(false, false);
 
-        int atlasCols = Mathf.Clamp(Mathf.CeilToInt(Mathf.Sqrt(Mathf.Max(1, atlasTiles.Count))), 1, 16);
+        // Workaround: keep atlas column count <= 6.
+        // Field reports show rendering corruption begins once atlas dimensions exceed 6 on either axis (e.g. 7x6, 7x7).
+        // Constraining columns prevents entering those problematic layouts while preserving all tile variants.
+        int atlasCols = Mathf.Clamp(Mathf.CeilToInt(Mathf.Sqrt(Mathf.Max(1, atlasTiles.Count))), 1, 6);
         int atlasRows = Mathf.CeilToInt(atlasTiles.Count / (float)atlasCols);
         int tileSize = (atlasTiles.Count > 0) ? Mathf.Max(1, atlasTiles[0].width) : 16;
         build.atlasTexture = new Texture2D(atlasCols * tileSize, atlasRows * tileSize, TextureFormat.RGBA32, false);
