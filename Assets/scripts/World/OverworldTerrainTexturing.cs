@@ -109,9 +109,19 @@ public static class OverworldTerrainTexturing
         build.waterMask.SetPixels32(waterPixels);
         build.waterMask.Apply(false, false);
 
-        // Workaround: keep atlas column count <= 6.
-        // Field reports show rendering corruption begins once atlas dimensions exceed 6 on either axis (e.g. 7x6, 7x7).
-        // Constraining columns prevents entering those problematic layouts while preserving all tile variants.
+        // IMPORTANT STABILITY NOTE:
+        // Keep atlas column count <= 6.
+        //
+        // Why:
+        // - We observed deterministic runtime rendering corruption once per-chunk transition atlases
+        //   reach layouts larger than 6 on a side (most visibly 7x6 and 7x7).
+        // - Symptoms included stretched/incorrect tile picks even when tile IDs and UV edge logic
+        //   appeared otherwise correct.
+        // - Limiting columns to 6 avoids entering the known-bad layout regime while still packing all
+        //   tiles (rows grow as needed).
+        //
+        // Do NOT increase this cap casually. If changed, verify in-game chunks that would naturally
+        // produce 7xN atlases and confirm corruption does not return.
         int atlasCols = Mathf.Clamp(Mathf.CeilToInt(Mathf.Sqrt(Mathf.Max(1, atlasTiles.Count))), 1, 6);
         int atlasRows = Mathf.CeilToInt(atlasTiles.Count / (float)atlasCols);
         int tileSize = (atlasTiles.Count > 0) ? Mathf.Max(1, atlasTiles[0].width) : 16;
