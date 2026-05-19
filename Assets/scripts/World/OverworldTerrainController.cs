@@ -61,6 +61,7 @@ public class OverworldTerrainController : MonoBehaviour
     [Range(0f, 20f)] public float SnowNoiseAmplitude = 3f;
     public bool RenderSnowUsingStoneLayer = true;
     [Header("Stone Classification")]
+    [Range(0f, 90f)] public float StoneSlopeAngleDegrees = 38f;
     [Range(0f, 120f)] public float StoneLineAltitude = 20f;
     [Range(0f, 30f)] public float StoneTransitionWidth = 6f;
     [Range(0f, 20f)] public float StoneNoiseScale = 5f;
