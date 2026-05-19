@@ -30186,7 +30186,7 @@ MonoBehaviour:
   ChunkSizeSamples: 64
   ActiveChunkRadius: 2
   HighDetailUnloadMargin: 3
-  TerrainDecimationStep: 4
+  TerrainDecimationStep: 2
   LoadWholeMapAtStartup: 0
   LoadDistantChunks: 1
   DistantChunkStep: 2
@@ -30210,11 +30210,12 @@ MonoBehaviour:
   WaterAnimFrameTime: 0.2
   WaterSurfaceEpsilon: 0.02
   LavaSurfaceAltitude: 20
-  SnowLineAltitude: 30
+  SnowLineAltitude: 35
   SnowTransitionWidth: 4
   SnowNoiseScale: 5
   SnowNoiseAmplitude: 3
   RenderSnowUsingStoneLayer: 1
+  StoneSlopeAngleDegrees: 1.5
   StoneLineAltitude: 20
   StoneTransitionWidth: 4
   StoneNoiseScale: 5
