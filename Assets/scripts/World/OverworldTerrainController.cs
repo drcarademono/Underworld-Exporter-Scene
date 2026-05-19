@@ -8,7 +8,7 @@ public class OverworldTerrainController : MonoBehaviour
     public Vector2Int OverworldStartTile = new Vector2Int(1418, 1398);
 
     [Header("Heightmap Sampling")]
-    public string HeightmapResourcePath = "UIX/Britannia_Corv_Heightmap";
+    public string HeightmapResourcePath = "UIX/britannia_heightmap";
     public int TilesPerPixel = 8;
     public float TileWorldSize = 8f;
 

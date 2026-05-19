@@ -30180,7 +30180,7 @@ MonoBehaviour:
   StartInOverworld: 1
   OverworldStartPos: {x: 0, y: 5, z: 0}
   OverworldStartTile: {x: 630, y: 1300}
-  HeightmapResourcePath: UIX/Britannia_Corv_Heightmap
+  HeightmapResourcePath: UIX/britannia_heightmap
   TilesPerPixel: 1
   TileWorldSize: 1
   ChunkSizeSamples: 64
@@ -30209,6 +30209,7 @@ MonoBehaviour:
   AnimateWater: 1
   WaterAnimFrameTime: 0.2
   WaterSurfaceEpsilon: 0.02
+  LavaSurfaceAltitude: 20
   SnowLineAltitude: 30
   SnowTransitionWidth: 4
   SnowNoiseScale: 5
@@ -30274,7 +30275,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::OverworldSkyController
   SunLight: {fileID: 0}
   MaxSunlightIntensity: 0.75
-  MinWeatherDurationSeconds: 300
+  MinWeatherDurationSeconds: 1600
   MaxWeatherDurationSeconds: 1200
 --- !u!114 &853464907
 MonoBehaviour:
@@ -30318,6 +30319,9 @@ MonoBehaviour:
   SwampColor:
     serializedVersion: 2
     rgba: 4278255360
+  LavaColor:
+    serializedVersion: 2
+    rgba: 4278190335
   DirtTemperateColor:
     serializedVersion: 2
     rgba: 4281558681
