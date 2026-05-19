@@ -2035,10 +2035,11 @@ public class GameWorldController : UWEBase
         float hN = SampleSmoothedHeight(heightmap, px, Mathf.Clamp(pz + tilesPerPixel, 0, heightmap.height - 1));
         float hS = SampleSmoothedHeight(heightmap, px, Mathf.Clamp(pz - tilesPerPixel, 0, heightmap.height - 1));
         float slopeMagnitude = Mathf.Sqrt(((hE - hW) * (hE - hW)) + ((hN - hS) * (hN - hS)));
-        // Approximate slope angle from normalized-height gradient.
-        // This keeps the setting intuitive in inspector (degrees) while preserving prior behavior.
-        float slopeAngleDegrees = Mathf.Atan(slopeMagnitude) * Mathf.Rad2Deg;
-        bool baseStone = slopeAngleDegrees > overworld.StoneSlopeAngleDegrees;
+        // Compare in original slopeMagnitude space to preserve historical behavior exactly.
+        // Equivalent legacy value:
+        //   slopeMagnitude > 0.022f  <=>  angleDegrees > atan(0.022) ~= 1.26°
+        float slopeMagnitudeThreshold = Mathf.Tan(overworld.StoneSlopeAngleDegrees * Mathf.Deg2Rad);
+        bool baseStone = slopeMagnitude > slopeMagnitudeThreshold;
 
         if (baseStone || IsStoneAtHeight(worldHeight, sampleX, sampleZ, overworld)) { return TerrainClassStone; }
         if (chunkClimateId == 3) { return TerrainClassSand; }
