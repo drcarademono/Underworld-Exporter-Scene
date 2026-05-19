@@ -83,7 +83,16 @@ public class MainMenuHud : GuiBase
             switch (_RES)
             {
                 case GAME_UW2:
-                    OpScr.GetComponent<RawImage>().texture = GameWorldController.instance.bytloader.LoadImageAt(BytLoader.UW2MAIN_BYT);
+                    Texture2D uw2MainTexture = GameWorldController.instance.bytloader.LoadImageAt(BytLoader.UW2MAIN_BYT);
+                    if (GameWorldController.instance.StartedFromDemoPath)
+                    {
+                        Texture2D demoPathMenuTexture = Resources.Load<Texture2D>("UIX/UW2_UI_BytScreens_UI_BYT_5");
+                        if (demoPathMenuTexture != null)
+                        {
+                            uw2MainTexture = demoPathMenuTexture;
+                        }
+                    }
+                    OpScr.GetComponent<RawImage>().texture = uw2MainTexture;
                     CharGenQuestion.color = Color.white;
                     CharName.color = Color.white;
                     CharGender.color = Color.white;
