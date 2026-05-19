@@ -310,6 +310,10 @@ public class UWTextureViewerWindow : EditorWindow
         {
             Texture2D readable = MakeReadableTexture(entry.texture);
             if (readable == null) { continue; }
+            if (entry.category == AssetCategory.UI_BytScreens)
+            {
+                ForceOpaqueAlpha(readable);
+            }
             byte[] png = readable.EncodeToPNG();
             if (png == null) { continue; }
             string safeLabel = entry.label.Replace("#", "").Replace(" ", "_").Replace("/", "_");
@@ -332,6 +336,18 @@ public class UWTextureViewerWindow : EditorWindow
         RenderTexture.active = prev;
         RenderTexture.ReleaseTemporary(rt);
         return readable;
+    }
+
+    private static void ForceOpaqueAlpha(Texture2D texture)
+    {
+        if (texture == null) { return; }
+        Color32[] pixels = texture.GetPixels32();
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            pixels[i].a = 255;
+        }
+        texture.SetPixels32(pixels);
+        texture.Apply();
     }
 
     private static bool ValidateBasePath(string path)
