@@ -1468,7 +1468,9 @@ public class GameWorldController : UWEBase
 
         int baseSampleStep = Mathf.Max(1, sampleStep);
         int decimationStep = Mathf.Max(1, overworld.TerrainDecimationStep);
-        int meshSampleStep = baseSampleStep; // keep high-resolution mesh topology
+        // Phase A seam fix: keep a uniform vertex topology across chunks so neighboring borders share the same polyline.
+        // We still reduce distant geometric detail via height snapping (geometrySampleStep), but we do not coarsen border topology.
+        int meshSampleStep = 1;
         int geometrySampleStep = Mathf.Max(1, baseSampleStep * decimationStep); // snap heights to coarse sampling
         int sampleWidth = ((endX - startX) / meshSampleStep) + 1;
         int sampleHeight = ((endY - startY) / meshSampleStep) + 1;
@@ -1850,10 +1852,7 @@ public class GameWorldController : UWEBase
             batch.Initialize(vertices, grass.ToArray(), natureFlats, overworld.WaterSurfaceEpsilon, chunkCoord);
         }
 
-        if (geometrySampleStep > 1)
-        {
-            AddDistantChunkSkirt(go.transform, vertices, terrainClassByVertex, sampleWidth, sampleHeight, Mathf.Max(2f, geometrySampleStep * overworld.TileWorldSize * 0.35f) * 5f, overworld.TileWorldSize);
-        }
+        // Phase A: do not add crack-hiding skirts; borders are now topology-compatible by construction.
         if (withCollision)
         {
             GameObject waterContact = new GameObject("WaterContact");
