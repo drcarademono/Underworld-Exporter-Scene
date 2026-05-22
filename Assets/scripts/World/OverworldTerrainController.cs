@@ -11,6 +11,13 @@ public class OverworldTerrainController : MonoBehaviour
     public string HeightmapResourcePath = "UIX/britannia_heightmap";
     public int TilesPerPixel = 8;
     public float TileWorldSize = 8f;
+    [Tooltip("Scales how much real-world area each map pixel covers. Use 2 for double-size overworld, 4 for quadruple-size.")]
+    [Range(1, 4)] public int OverworldAreaScale = 1;
+
+    public float EffectiveTileWorldSize
+    {
+        get { return TileWorldSize * Mathf.Max(1, OverworldAreaScale); }
+    }
 
     [Header("Chunking")]
     [Range(16,128)] public int ChunkSizeSamples = 64;

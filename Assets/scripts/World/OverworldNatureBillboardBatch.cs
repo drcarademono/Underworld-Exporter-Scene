@@ -34,6 +34,8 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         if (vertices == null || grassTriangles == null || flats == null || !flats.EnableNatureFlats) { return; }
 
         TryLoadControlMaps(flats);
+        float natureMapAreaScale = ResolveOverworldAreaScale();
+        float densityScaleMultiplier = natureMapAreaScale * natureMapAreaScale;
         int climateId = EstimateClimateId(chunkCoord, flats, vertices);
         OverworldNatureBiomeProfile profile = flats.GetBiomeProfileForClimate(climateId);
         Material atlasMaterial = BuildAtlasMaterial(flats, profile, out atlasRects, out atlasNativeSizes);
@@ -55,7 +57,8 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             float threshold = Mathf.Lerp(baseDensity, clusterDensity, cluster);
             threshold *= ComputeContextDensity(center, vertices[grassTriangles[i]], vertices[grassTriangles[i+1]], vertices[grassTriangles[i+2]], profile);
             threshold *= ComputeClearingFactor(center, flats, profile, macro);
-            threshold *= SampleDensityMap(center, flats);
+            threshold *= SampleDensityMap(center, flats, natureMapAreaScale);
+            threshold *= densityScaleMultiplier;
             threshold = Mathf.Clamp01(threshold);
             if (Deterministic01(center, flats.NatureSeed) <= threshold) { candidates.Add(i); }
         }
@@ -235,9 +238,16 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         OverworldTerrainController overworld = Object.FindObjectOfType<OverworldTerrainController>();
         if (overworld != null)
         {
-            return Mathf.Max(0.125f, overworld.TileWorldSize);
+            return Mathf.Max(0.125f, overworld.EffectiveTileWorldSize);
         }
         return 8f;
+    }
+
+    private static float ResolveOverworldAreaScale()
+    {
+        OverworldTerrainController overworld = Object.FindObjectOfType<OverworldTerrainController>();
+        if (overworld == null) { return 1f; }
+        return Mathf.Max(1f, overworld.OverworldAreaScale);
     }
 
     private static HabitatType GetHabitat(float macroNoise, OverworldNatureBiomeProfile profile)
@@ -320,12 +330,14 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         }
     }
 
-    private static float SampleDensityMap(Vector3 worldPos, OverworldNatureFlatsController flats)
+    private static float SampleDensityMap(Vector3 worldPos, OverworldNatureFlatsController flats, float areaScale)
     {
         if (cachedDensityMap == null) { return 1f; }
+        float worldWidth = Mathf.Max(1f, flats.NatureMapWorldWidth * areaScale);
+        float worldHeight = Mathf.Max(1f, flats.NatureMapWorldHeight * areaScale);
 
-        float u = Mathf.Clamp01(worldPos.x / Mathf.Max(1f, flats.NatureMapWorldWidth));
-        float v = Mathf.Clamp01(worldPos.z / Mathf.Max(1f, flats.NatureMapWorldHeight));
+        float u = Mathf.Clamp01(worldPos.x / worldWidth);
+        float v = Mathf.Clamp01(worldPos.z / worldHeight);
 
         // Pixel-accurate sampling (not bilinear): one map pixel controls one world cell region.
         int px = Mathf.Clamp(Mathf.FloorToInt(u * cachedDensityMap.width), 0, cachedDensityMap.width - 1);
@@ -338,8 +350,11 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     {
         if (cachedClimateMap == null || vertices == null || vertices.Length == 0) { return flats.EstimateClimateIdForChunk(chunkCoord); }
         Vector3 center = vertices[vertices.Length / 2];
-        float u = Mathf.Clamp01(center.x / Mathf.Max(1f, flats.NatureMapWorldWidth));
-        float v = Mathf.Clamp01(center.z / Mathf.Max(1f, flats.NatureMapWorldHeight));
+        float areaScale = ResolveOverworldAreaScale();
+        float worldWidth = Mathf.Max(1f, flats.NatureMapWorldWidth * areaScale);
+        float worldHeight = Mathf.Max(1f, flats.NatureMapWorldHeight * areaScale);
+        float u = Mathf.Clamp01(center.x / worldWidth);
+        float v = Mathf.Clamp01(center.z / worldHeight);
         int cx = Mathf.Clamp(Mathf.FloorToInt(u * cachedClimateMap.width), 0, cachedClimateMap.width - 1);
         int cy = Mathf.Clamp(Mathf.FloorToInt(v * cachedClimateMap.height), 0, cachedClimateMap.height - 1);
         Color32 c = cachedClimateMap.GetPixel(cx, cy);
