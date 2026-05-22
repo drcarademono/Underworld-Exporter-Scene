@@ -56,6 +56,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             threshold *= ComputeContextDensity(center, vertices[grassTriangles[i]], vertices[grassTriangles[i+1]], vertices[grassTriangles[i+2]], profile);
             threshold *= ComputeClearingFactor(center, flats, profile, macro);
             threshold *= SampleDensityMap(center, flats);
+            threshold *= GetNatureDensityScaleMultiplier();
             threshold = Mathf.Clamp01(threshold);
             if (Deterministic01(center, flats.NatureSeed) <= threshold) { candidates.Add(i); }
         }
@@ -242,11 +243,15 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
 
     private static Vector3 GetNatureSamplingWorldPos(Vector3 worldPos)
     {
+        return worldPos;
+    }
+
+    private static float GetNatureDensityScaleMultiplier()
+    {
         OverworldTerrainController overworld = Object.FindObjectOfType<OverworldTerrainController>();
-        if (overworld == null) { return worldPos; }
+        if (overworld == null) { return 1f; }
         float areaScale = Mathf.Max(1f, overworld.OverworldAreaScale);
-        if (areaScale <= 1f) { return worldPos; }
-        return new Vector3(worldPos.x / areaScale, worldPos.y, worldPos.z / areaScale);
+        return areaScale * areaScale;
     }
 
     private static HabitatType GetHabitat(float macroNoise, OverworldNatureBiomeProfile profile)
