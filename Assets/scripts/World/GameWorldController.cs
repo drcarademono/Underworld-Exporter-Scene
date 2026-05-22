@@ -1463,31 +1463,19 @@ public class GameWorldController : UWEBase
                 var req = overworldChunkBuildQueue.Dequeue();
                 queuedOverworldChunks.Remove(req.chunkCoord);
                 if (!pendingOverworldChunkRequests.ContainsKey(req.chunkCoord)) { continue; }
-                OverworldChunkBuildRequest latestReq = pendingOverworldChunkRequests[req.chunkCoord];
-                // If a newer request for this chunk replaced the queued one, ignore the stale entry.
-                // Compare full build-shape, not just sampleStep, to avoid applying an old
-                // "no nature" request after a newer high-detail-with-nature request.
-                if (latestReq.sampleStep != req.sampleStep
-                    || latestReq.withCollision != req.withCollision
-                    || latestReq.withNatureBillboards != req.withNatureBillboards
-                    || latestReq.lowDetail != req.lowDetail
-                    || latestReq.noNature != req.noNature)
-                {
-                    // A newer request replaced this queued one; ensure the latest request is
-                    // actually queued so it gets processed.
-                    if (queuedOverworldChunks.Add(latestReq.chunkCoord))
-                    {
-                        overworldChunkBuildQueue.Enqueue(latestReq);
-                    }
-                    continue;
-                }
+                if (pendingOverworldChunkRequests[req.chunkCoord].sampleStep != req.sampleStep) { continue; }
                 pendingOverworldChunkRequests.Remove(req.chunkCoord);
-                GameObject chunk = BuildChunk(latestReq.chunkCoord, cachedOverworldHeightmap, overworld, latestReq.sampleStep, latestReq.withCollision, latestReq.withNatureBillboards);
+                bool traceChunk = (req.chunkCoord == new Vector2Int(9, 20)) || (req.chunkCoord == new Vector2Int(10, 20));
+                if (traceChunk)
+                {
+                    UnityEngine.Debug.Log($"[NatureTrace][Queue] Dequeue build chunk={req.chunkCoord} sampleStep={req.sampleStep} withCollision={req.withCollision} withNature={req.withNatureBillboards} lowDetail={req.lowDetail} noNature={req.noNature}");
+                }
+                GameObject chunk = BuildChunk(req.chunkCoord, cachedOverworldHeightmap, overworld, req.sampleStep, req.withCollision, req.withNatureBillboards);
                 if (chunk != null)
                 {
-                    if (loadedOverworldChunks.ContainsKey(latestReq.chunkCoord))
+                    if (loadedOverworldChunks.ContainsKey(req.chunkCoord))
                     {
-                        GameObject oldChunk = loadedOverworldChunks[latestReq.chunkCoord];
+                        GameObject oldChunk = loadedOverworldChunks[req.chunkCoord];
                         if ((oldChunk != null) && (oldChunk != chunk))
                         {
                             oldChunk.SetActive(false);
@@ -1495,9 +1483,9 @@ public class GameWorldController : UWEBase
                             overworldChunkPool.Push(oldChunk);
                         }
                     }
-                    loadedOverworldChunks[latestReq.chunkCoord] = chunk;
-                    if (latestReq.lowDetail) { lowDetailOverworldChunks.Add(latestReq.chunkCoord); } else { lowDetailOverworldChunks.Remove(latestReq.chunkCoord); }
-                    if (latestReq.noNature) { noNatureOverworldChunks.Add(latestReq.chunkCoord); } else { noNatureOverworldChunks.Remove(latestReq.chunkCoord); }
+                    loadedOverworldChunks[req.chunkCoord] = chunk;
+                    if (req.lowDetail) { lowDetailOverworldChunks.Add(req.chunkCoord); } else { lowDetailOverworldChunks.Remove(req.chunkCoord); }
+                    if (req.noNature) { noNatureOverworldChunks.Add(req.chunkCoord); } else { noNatureOverworldChunks.Remove(req.chunkCoord); }
                 }
             }
             yield return null;
@@ -1912,6 +1900,11 @@ public class GameWorldController : UWEBase
             mr.materials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat, overworldSnowMat };
         }
 
+        bool traceNatureChunk = (chunkCoord == new Vector2Int(9, 20)) || (chunkCoord == new Vector2Int(10, 20));
+        if (traceNatureChunk)
+        {
+            UnityEngine.Debug.Log($"[NatureTrace][BuildChunk] chunk={chunkCoord} sampleStep={sampleStep} withCollision={withCollision} withNatureBillboards={withNatureBillboards} grassTriCount={grass.Count}");
+        }
         OverworldNatureFlatsController natureFlats = GetOverworldNatureFlatsController();
         if (withCollision && withNatureBillboards && (natureFlats != null) && natureFlats.EnableNatureFlats)
         {
@@ -1919,6 +1912,10 @@ public class GameWorldController : UWEBase
             natureBillboards.transform.SetParent(go.transform, false);
             OverworldNatureBillboardBatch batch = natureBillboards.AddComponent<OverworldNatureBillboardBatch>();
             batch.Initialize(vertices, grass.ToArray(), natureFlats, overworld.WaterSurfaceEpsilon, chunkCoord);
+        }
+        else if (traceNatureChunk)
+        {
+            UnityEngine.Debug.Log($"[NatureTrace][BuildChunk] chunk={chunkCoord} SKIP Initialize reason withCollision={withCollision} withNatureBillboards={withNatureBillboards} natureFlatsNull={(natureFlats == null)} enableNature={(natureFlats != null ? natureFlats.EnableNatureFlats : false)}");
         }
 
         if (geometrySampleStep > 1)

@@ -28,9 +28,11 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     private static string cachedDensityPath;
     private static Texture2D cachedClimateMap;
     private static string cachedClimatePath;
+    private static bool ShouldTraceChunk(Vector2Int chunkCoord) { return chunkCoord == new Vector2Int(9, 20) || chunkCoord == new Vector2Int(10, 20); }
 
     public void Initialize(Vector3[] vertices, int[] grassTriangles, OverworldNatureFlatsController flats, float waterSurfaceEpsilon, Vector2Int chunkCoord)
     {
+        bool trace = ShouldTraceChunk(chunkCoord);
         if (vertices == null || grassTriangles == null || flats == null || !flats.EnableNatureFlats) { return; }
 
         TryLoadControlMaps(flats);
@@ -39,7 +41,15 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         int climateId = EstimateClimateId(chunkCoord, flats, vertices);
         OverworldNatureBiomeProfile profile = flats.GetBiomeProfileForClimate(climateId);
         Material atlasMaterial = BuildAtlasMaterial(flats, profile, out atlasRects, out atlasNativeSizes);
-        if (atlasMaterial == null || atlasRects == null || atlasRects.Length == 0) { return; }
+        if (trace)
+        {
+            UnityEngine.Debug.Log($"[NatureTrace][BatchInit] chunk={chunkCoord} verts={vertices.Length} grassTriIndices={grassTriangles.Length} areaScale={natureMapAreaScale:F3} climateId={climateId} profile={(profile != null ? profile.Name : "null")} atlasRects={(atlasRects != null ? atlasRects.Length : 0)}");
+        }
+        if (atlasMaterial == null || atlasRects == null || atlasRects.Length == 0)
+        {
+            if (trace) { UnityEngine.Debug.Log($"[NatureTrace][BatchInit] chunk={chunkCoord} ABORT no atlas material/rects"); }
+            return;
+        }
 
         meshFilter = gameObject.AddComponent<MeshFilter>();
         meshRenderer = gameObject.AddComponent<MeshRenderer>();
@@ -62,7 +72,12 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             threshold = Mathf.Clamp01(threshold);
             if (Deterministic01(center, flats.NatureSeed) <= threshold) { candidates.Add(i); }
         }
-        if (candidates.Count == 0) { return; }
+        if (trace) { UnityEngine.Debug.Log($"[NatureTrace][BatchInit] chunk={chunkCoord} candidates={candidates.Count}"); }
+        if (candidates.Count == 0)
+        {
+            if (trace) { UnityEngine.Debug.Log($"[NatureTrace][BatchInit] chunk={chunkCoord} ABORT no candidates"); }
+            return;
+        }
 
         int maxCount = Mathf.Max(0, flats.MaxBillboardsPerChunk);
         float keepProb = (maxCount <= 0 || candidates.Count <= maxCount) ? 1f : (maxCount / (float)candidates.Count);
@@ -74,7 +89,12 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             Vector3 center = (vertices[grassTriangles[triStart]] + vertices[grassTriangles[triStart + 1]] + vertices[grassTriangles[triStart + 2]]) / 3f;
             if (keepProb >= 1f || Deterministic01(center + new Vector3(37.17f, 0f, -91.73f), flats.NatureSeed) <= keepProb) { selected.Add(triStart); }
         }
-        if (selected.Count == 0) { return; }
+        if (trace) { UnityEngine.Debug.Log($"[NatureTrace][BatchInit] chunk={chunkCoord} selected={selected.Count} maxCount={maxCount} keepProb={keepProb:F4}"); }
+        if (selected.Count == 0)
+        {
+            if (trace) { UnityEngine.Debug.Log($"[NatureTrace][BatchInit] chunk={chunkCoord} ABORT no selected"); }
+            return;
+        }
 
         int quadCount = selected.Count;
         quadCenters = new Vector3[quadCount];
@@ -145,6 +165,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         batchMesh.normals = meshNormals;
         batchMesh.RecalculateBounds();
         meshFilter.sharedMesh = batchMesh;
+        if (trace) { UnityEngine.Debug.Log($"[NatureTrace][BatchInit] chunk={chunkCoord} SUCCESS quads={quadCount}"); }
     }
 
     private void LateUpdate()
