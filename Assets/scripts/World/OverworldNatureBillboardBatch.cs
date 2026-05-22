@@ -243,7 +243,11 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
 
     private static Vector3 GetNatureSamplingWorldPos(Vector3 worldPos)
     {
-        return worldPos;
+        OverworldTerrainController overworld = Object.FindObjectOfType<OverworldTerrainController>();
+        if (overworld == null) { return worldPos; }
+        float areaScale = Mathf.Max(1f, overworld.OverworldAreaScale);
+        if (areaScale <= 1f) { return worldPos; }
+        return new Vector3(worldPos.x / areaScale, worldPos.y, worldPos.z / areaScale);
     }
 
     private static float GetNatureDensityScaleMultiplier()
