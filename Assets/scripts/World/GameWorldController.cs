@@ -1473,6 +1473,12 @@ public class GameWorldController : UWEBase
                     || latestReq.lowDetail != req.lowDetail
                     || latestReq.noNature != req.noNature)
                 {
+                    // A newer request replaced this queued one; ensure the latest request is
+                    // actually queued so it gets processed.
+                    if (queuedOverworldChunks.Add(latestReq.chunkCoord))
+                    {
+                        overworldChunkBuildQueue.Enqueue(latestReq);
+                    }
                     continue;
                 }
                 pendingOverworldChunkRequests.Remove(req.chunkCoord);

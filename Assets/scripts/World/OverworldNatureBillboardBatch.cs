@@ -62,23 +62,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             threshold = Mathf.Clamp01(threshold);
             if (Deterministic01(center, flats.NatureSeed) <= threshold) { candidates.Add(i); }
         }
-        if (candidates.Count == 0)
-        {
-            // Chunk-level safety net: avoid deterministic "all empty" chunks by applying a very
-            // low fallback spawn chance across grass triangles when the main density pipeline
-            // yields nothing for the entire chunk.
-            const float emptyChunkRescueChance = 0.02f;
-            for (int i = 0; i < grassTriangles.Length; i += 3)
-            {
-                Vector3 center = (vertices[grassTriangles[i]] + vertices[grassTriangles[i + 1]] + vertices[grassTriangles[i + 2]]) / 3f;
-                if (center.y <= waterSurfaceEpsilon) { continue; }
-                if (Deterministic01(center + new Vector3(123.4f, 0f, -55.6f), flats.NatureSeed) <= emptyChunkRescueChance)
-                {
-                    candidates.Add(i);
-                }
-            }
-            if (candidates.Count == 0) { return; }
-        }
+        if (candidates.Count == 0) { return; }
 
         int maxCount = Mathf.Max(0, flats.MaxBillboardsPerChunk);
         float keepProb = (maxCount <= 0 || candidates.Count <= maxCount) ? 1f : (maxCount / (float)candidates.Count);
@@ -354,15 +338,11 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         float u = Mathf.Clamp01(worldPos.x / worldWidth);
         float v = Mathf.Clamp01(worldPos.z / worldHeight);
 
-        // Bilinear sampling prevents hard "empty strip" artifacts when chunk centers cross
-        // map-pixel boundaries or painted seams in the density map.
-        Color c = cachedDensityMap.GetPixelBilinear(u, v);
-        float sampled = Mathf.Clamp01(c.grayscale);
-
-        // Keep explicit "no nature" regions mostly empty, but avoid single-pixel dropouts that
-        // can zero-out an entire chunk unexpectedly.
-        if (sampled <= 0.001f) { return 0.08f; }
-        return sampled;
+        // Pixel-accurate sampling (not bilinear): one map pixel controls one world cell region.
+        int px = Mathf.Clamp(Mathf.FloorToInt(u * cachedDensityMap.width), 0, cachedDensityMap.width - 1);
+        int py = Mathf.Clamp(Mathf.FloorToInt(v * cachedDensityMap.height), 0, cachedDensityMap.height - 1);
+        Color c = cachedDensityMap.GetPixel(px, py);
+        return Mathf.Clamp01(c.grayscale);
     }
 
     private static int EstimateClimateId(Vector2Int chunkCoord, OverworldNatureFlatsController flats, Vector3[] vertices)
@@ -429,10 +409,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             AddFrom(profile.Categories.Rocks, NatureCategory.Rock);
         }
 
-        // If biome profile materials are missing/unassigned, fall back to legacy pools so
-        // chunks in those climates still spawn nature instead of going completely empty.
-        bool hasAnyProfileSprites = textures.Count > 0;
-        if (!hasAnyProfileSprites)
+        else
         {
             AddFrom(flats.TreeMaterials, NatureCategory.Tree);
             AddFrom(flats.TerrainSpriteMaterials, NatureCategory.Bush);
