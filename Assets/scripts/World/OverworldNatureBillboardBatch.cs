@@ -429,8 +429,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             AddFrom(profile.Categories.Flowers, NatureCategory.Flower);
             AddFrom(profile.Categories.Rocks, NatureCategory.Rock);
         }
-
-        else
+        if (textures.Count == 0)
         {
             AddFrom(flats.TreeMaterials, NatureCategory.Tree);
             AddFrom(flats.TerrainSpriteMaterials, NatureCategory.Bush);
