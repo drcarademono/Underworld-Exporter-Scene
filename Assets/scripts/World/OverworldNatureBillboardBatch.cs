@@ -62,7 +62,23 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             threshold = Mathf.Clamp01(threshold);
             if (Deterministic01(center, flats.NatureSeed) <= threshold) { candidates.Add(i); }
         }
-        if (candidates.Count == 0) { return; }
+        if (candidates.Count == 0)
+        {
+            // Chunk-level safety net: avoid deterministic "all empty" chunks by applying a very
+            // low fallback spawn chance across grass triangles when the main density pipeline
+            // yields nothing for the entire chunk.
+            const float emptyChunkRescueChance = 0.02f;
+            for (int i = 0; i < grassTriangles.Length; i += 3)
+            {
+                Vector3 center = (vertices[grassTriangles[i]] + vertices[grassTriangles[i + 1]] + vertices[grassTriangles[i + 2]]) / 3f;
+                if (center.y <= waterSurfaceEpsilon) { continue; }
+                if (Deterministic01(center + new Vector3(123.4f, 0f, -55.6f), flats.NatureSeed) <= emptyChunkRescueChance)
+                {
+                    candidates.Add(i);
+                }
+            }
+            if (candidates.Count == 0) { return; }
+        }
 
         int maxCount = Mathf.Max(0, flats.MaxBillboardsPerChunk);
         float keepProb = (maxCount <= 0 || candidates.Count <= maxCount) ? 1f : (maxCount / (float)candidates.Count);
