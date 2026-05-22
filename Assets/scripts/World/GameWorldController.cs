@@ -1465,6 +1465,11 @@ public class GameWorldController : UWEBase
                 if (!pendingOverworldChunkRequests.ContainsKey(req.chunkCoord)) { continue; }
                 if (pendingOverworldChunkRequests[req.chunkCoord].sampleStep != req.sampleStep) { continue; }
                 pendingOverworldChunkRequests.Remove(req.chunkCoord);
+                bool traceChunk = (req.chunkCoord == new Vector2Int(9, 20)) || (req.chunkCoord == new Vector2Int(10, 20));
+                if (traceChunk)
+                {
+                    UnityEngine.Debug.Log($"[NatureTrace][Queue] Dequeue build chunk={req.chunkCoord} sampleStep={req.sampleStep} withCollision={req.withCollision} withNature={req.withNatureBillboards} lowDetail={req.lowDetail} noNature={req.noNature}");
+                }
                 GameObject chunk = BuildChunk(req.chunkCoord, cachedOverworldHeightmap, overworld, req.sampleStep, req.withCollision, req.withNatureBillboards);
                 if (chunk != null)
                 {
@@ -1895,6 +1900,11 @@ public class GameWorldController : UWEBase
             mr.materials = new Material[] { overworldWaterMat, overworldGrassMat, overworldStoneMat, overworldSnowMat };
         }
 
+        bool traceNatureChunk = (chunkCoord == new Vector2Int(9, 20)) || (chunkCoord == new Vector2Int(10, 20));
+        if (traceNatureChunk)
+        {
+            UnityEngine.Debug.Log($"[NatureTrace][BuildChunk] chunk={chunkCoord} sampleStep={sampleStep} withCollision={withCollision} withNatureBillboards={withNatureBillboards} grassTriCount={grass.Count}");
+        }
         OverworldNatureFlatsController natureFlats = GetOverworldNatureFlatsController();
         if (withCollision && withNatureBillboards && (natureFlats != null) && natureFlats.EnableNatureFlats)
         {
@@ -1902,6 +1912,10 @@ public class GameWorldController : UWEBase
             natureBillboards.transform.SetParent(go.transform, false);
             OverworldNatureBillboardBatch batch = natureBillboards.AddComponent<OverworldNatureBillboardBatch>();
             batch.Initialize(vertices, grass.ToArray(), natureFlats, overworld.WaterSurfaceEpsilon, chunkCoord);
+        }
+        else if (traceNatureChunk)
+        {
+            UnityEngine.Debug.Log($"[NatureTrace][BuildChunk] chunk={chunkCoord} SKIP Initialize reason withCollision={withCollision} withNatureBillboards={withNatureBillboards} natureFlatsNull={(natureFlats == null)} enableNature={(natureFlats != null ? natureFlats.EnableNatureFlats : false)}");
         }
 
         if (geometrySampleStep > 1)
