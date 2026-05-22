@@ -226,6 +226,7 @@ public class GameWorldController : UWEBase
     private const int ClimateMapDirtTemperate = 10;
     private const int ClimateMapDirtRainforest = 11;
     private const int ClimateMapDirtMountain = 12;
+    private const int ClimateMapShoreline = 13;
     private Dictionary<Vector2Int, GameObject> loadedOverworldChunks = new Dictionary<Vector2Int, GameObject>();
     private HashSet<Vector2Int> lowDetailOverworldChunks = new HashSet<Vector2Int>();
     private HashSet<Vector2Int> noNatureOverworldChunks = new HashSet<Vector2Int>();
@@ -1346,6 +1347,7 @@ public class GameWorldController : UWEBase
         if (IsNearColor(c, flats.DesertColor)) { return 3; }
         if (IsNearColor(c, flats.SwampColor)) { return 4; }
         if (IsNearColor(c, flats.LavaColor)) { return 5; }
+        if (IsNearColor(c, flats.ShorelineColor)) { return ClimateMapShoreline; }
         if (IsNearColor(c, flats.DirtTemperateColor)) { return ClimateMapDirtTemperate; }
         if (IsNearColor(c, flats.DirtRainforestColor)) { return ClimateMapDirtRainforest; }
         if (IsNearColor(c, flats.DirtMountainColor)) { return ClimateMapDirtMountain; }
@@ -2092,6 +2094,12 @@ public class GameWorldController : UWEBase
         //   slopeMagnitude > 0.022f  <=>  angleDegrees > atan(0.022) ~= 1.26°
         float slopeMagnitudeThreshold = Mathf.Tan(overworld.StoneSlopeAngleDegrees * Mathf.Deg2Rad);
         bool baseStone = slopeMagnitude > slopeMagnitudeThreshold;
+
+        if (chunkClimateId == ClimateMapShoreline)
+        {
+            float sandSlopeMagnitudeThreshold = Mathf.Tan(overworld.SandSlopeAngleDegrees * Mathf.Deg2Rad);
+            if (slopeMagnitude < sandSlopeMagnitudeThreshold) { return TerrainClassSand; }
+        }
 
         if (baseStone || IsStoneAtHeight(worldHeight, sampleX, sampleZ, overworld)) { return TerrainClassStone; }
         if (chunkClimateId == 3) { return TerrainClassSand; }
