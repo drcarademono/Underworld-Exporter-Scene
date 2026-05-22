@@ -335,8 +335,8 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         if (cachedDensityMap == null) { return 1f; }
         float worldWidth = Mathf.Max(1f, flats.NatureMapWorldWidth * areaScale);
         float worldHeight = Mathf.Max(1f, flats.NatureMapWorldHeight * areaScale);
-        float u = WorldToMap01(worldPos.x, worldWidth);
-        float v = WorldToMap01(worldPos.z, worldHeight);
+        float u = Mathf.Clamp01(worldPos.x / worldWidth);
+        float v = Mathf.Clamp01(worldPos.z / worldHeight);
 
         // Pixel-accurate sampling (not bilinear): one map pixel controls one world cell region.
         int px = Mathf.Clamp(Mathf.FloorToInt(u * cachedDensityMap.width), 0, cachedDensityMap.width - 1);
@@ -352,8 +352,8 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         float areaScale = ResolveOverworldAreaScale();
         float worldWidth = Mathf.Max(1f, flats.NatureMapWorldWidth * areaScale);
         float worldHeight = Mathf.Max(1f, flats.NatureMapWorldHeight * areaScale);
-        float u = WorldToMap01(center.x, worldWidth);
-        float v = WorldToMap01(center.z, worldHeight);
+        float u = Mathf.Clamp01(center.x / worldWidth);
+        float v = Mathf.Clamp01(center.z / worldHeight);
         int cx = Mathf.Clamp(Mathf.FloorToInt(u * cachedClimateMap.width), 0, cachedClimateMap.width - 1);
         int cy = Mathf.Clamp(Mathf.FloorToInt(v * cachedClimateMap.height), 0, cachedClimateMap.height - 1);
         Color32 c = cachedClimateMap.GetPixel(cx, cy);
@@ -374,14 +374,6 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     {
         int dr = a.r - b.r; int dg = a.g - b.g; int db = a.b - b.b;
         return (dr * dr + dg * dg + db * db) <= (20 * 20);
-    }
-
-    private static float WorldToMap01(float worldCoord, float worldSpan)
-    {
-        // Control maps are authored for the full overworld footprint, centered around world origin.
-        // Convert [-span/2, +span/2] into [0, 1] so negative chunks sample valid map pixels.
-        float halfSpan = Mathf.Max(0.5f, worldSpan * 0.5f);
-        return Mathf.InverseLerp(-halfSpan, halfSpan, worldCoord);
     }
 
     private Material BuildAtlasMaterial(OverworldNatureFlatsController flats, OverworldNatureBiomeProfile profile, out Rect[] rects, out Vector2[] nativeSizes)
@@ -416,7 +408,11 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             AddFrom(profile.Categories.Flowers, NatureCategory.Flower);
             AddFrom(profile.Categories.Rocks, NatureCategory.Rock);
         }
-        else
+
+        // If biome profile materials are missing/unassigned, fall back to legacy pools so
+        // chunks in those climates still spawn nature instead of going completely empty.
+        bool hasAnyProfileSprites = textures.Count > 0;
+        if (!hasAnyProfileSprites)
         {
             AddFrom(flats.TreeMaterials, NatureCategory.Tree);
             AddFrom(flats.TerrainSpriteMaterials, NatureCategory.Bush);
