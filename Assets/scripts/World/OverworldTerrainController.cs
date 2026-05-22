@@ -74,6 +74,7 @@ public class OverworldTerrainController : MonoBehaviour
     [Range(0f, 30f)] public float StoneTransitionWidth = 6f;
     [Range(0f, 20f)] public float StoneNoiseScale = 5f;
     [Range(0f, 20f)] public float StoneNoiseAmplitude = 2f;
+    [Range(0f, 10f)] public float SandSlopeAngleDegrees = 1f;
     public int GrassTextureIndex = 181;
     public int StoneTextureIndex = 253;
     public int DirtTextureIndex = 182;
