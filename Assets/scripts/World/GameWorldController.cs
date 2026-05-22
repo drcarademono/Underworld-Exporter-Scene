@@ -1463,14 +1463,25 @@ public class GameWorldController : UWEBase
                 var req = overworldChunkBuildQueue.Dequeue();
                 queuedOverworldChunks.Remove(req.chunkCoord);
                 if (!pendingOverworldChunkRequests.ContainsKey(req.chunkCoord)) { continue; }
-                if (pendingOverworldChunkRequests[req.chunkCoord].sampleStep != req.sampleStep) { continue; }
+                OverworldChunkBuildRequest latestReq = pendingOverworldChunkRequests[req.chunkCoord];
+                // If a newer request for this chunk replaced the queued one, ignore the stale entry.
+                // Compare full build-shape, not just sampleStep, to avoid applying an old
+                // "no nature" request after a newer high-detail-with-nature request.
+                if (latestReq.sampleStep != req.sampleStep
+                    || latestReq.withCollision != req.withCollision
+                    || latestReq.withNatureBillboards != req.withNatureBillboards
+                    || latestReq.lowDetail != req.lowDetail
+                    || latestReq.noNature != req.noNature)
+                {
+                    continue;
+                }
                 pendingOverworldChunkRequests.Remove(req.chunkCoord);
-                GameObject chunk = BuildChunk(req.chunkCoord, cachedOverworldHeightmap, overworld, req.sampleStep, req.withCollision, req.withNatureBillboards);
+                GameObject chunk = BuildChunk(latestReq.chunkCoord, cachedOverworldHeightmap, overworld, latestReq.sampleStep, latestReq.withCollision, latestReq.withNatureBillboards);
                 if (chunk != null)
                 {
-                    if (loadedOverworldChunks.ContainsKey(req.chunkCoord))
+                    if (loadedOverworldChunks.ContainsKey(latestReq.chunkCoord))
                     {
-                        GameObject oldChunk = loadedOverworldChunks[req.chunkCoord];
+                        GameObject oldChunk = loadedOverworldChunks[latestReq.chunkCoord];
                         if ((oldChunk != null) && (oldChunk != chunk))
                         {
                             oldChunk.SetActive(false);
@@ -1478,9 +1489,9 @@ public class GameWorldController : UWEBase
                             overworldChunkPool.Push(oldChunk);
                         }
                     }
-                    loadedOverworldChunks[req.chunkCoord] = chunk;
-                    if (req.lowDetail) { lowDetailOverworldChunks.Add(req.chunkCoord); } else { lowDetailOverworldChunks.Remove(req.chunkCoord); }
-                    if (req.noNature) { noNatureOverworldChunks.Add(req.chunkCoord); } else { noNatureOverworldChunks.Remove(req.chunkCoord); }
+                    loadedOverworldChunks[latestReq.chunkCoord] = chunk;
+                    if (latestReq.lowDetail) { lowDetailOverworldChunks.Add(latestReq.chunkCoord); } else { lowDetailOverworldChunks.Remove(latestReq.chunkCoord); }
+                    if (latestReq.noNature) { noNatureOverworldChunks.Add(latestReq.chunkCoord); } else { noNatureOverworldChunks.Remove(latestReq.chunkCoord); }
                 }
             }
             yield return null;
