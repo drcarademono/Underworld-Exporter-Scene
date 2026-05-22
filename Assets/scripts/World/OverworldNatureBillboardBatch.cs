@@ -338,11 +338,15 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         float u = Mathf.Clamp01(worldPos.x / worldWidth);
         float v = Mathf.Clamp01(worldPos.z / worldHeight);
 
-        // Pixel-accurate sampling (not bilinear): one map pixel controls one world cell region.
-        int px = Mathf.Clamp(Mathf.FloorToInt(u * cachedDensityMap.width), 0, cachedDensityMap.width - 1);
-        int py = Mathf.Clamp(Mathf.FloorToInt(v * cachedDensityMap.height), 0, cachedDensityMap.height - 1);
-        Color c = cachedDensityMap.GetPixel(px, py);
-        return Mathf.Clamp01(c.grayscale);
+        // Bilinear sampling prevents hard "empty strip" artifacts when chunk centers cross
+        // map-pixel boundaries or painted seams in the density map.
+        Color c = cachedDensityMap.GetPixelBilinear(u, v);
+        float sampled = Mathf.Clamp01(c.grayscale);
+
+        // Keep explicit "no nature" regions mostly empty, but avoid single-pixel dropouts that
+        // can zero-out an entire chunk unexpectedly.
+        if (sampled <= 0.001f) { return 0.08f; }
+        return sampled;
     }
 
     private static int EstimateClimateId(Vector2Int chunkCoord, OverworldNatureFlatsController flats, Vector3[] vertices)
