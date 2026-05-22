@@ -1331,10 +1331,13 @@ public class GameWorldController : UWEBase
         Texture2D climateMap = GetNatureClimateMap(flats);
         if (flats == null || climateMap == null) { return 0; }
         float tileWorldSize = Mathf.Max(1f, GetOverworldTileWorldSize(GetOverworldController()));
+        float areaScale = Mathf.Max(1f, GetOverworldController().OverworldAreaScale);
         float cx = sampleX * tileWorldSize;
         float cz = sampleZ * tileWorldSize;
-        float u = Mathf.Clamp01(cx / Mathf.Max(1f, flats.NatureMapWorldWidth));
-        float v = Mathf.Clamp01(cz / Mathf.Max(1f, flats.NatureMapWorldHeight));
+        float worldWidth = Mathf.Max(1f, flats.NatureMapWorldWidth * areaScale);
+        float worldHeight = Mathf.Max(1f, flats.NatureMapWorldHeight * areaScale);
+        float u = Mathf.Clamp01(cx / worldWidth);
+        float v = Mathf.Clamp01(cz / worldHeight);
         int px = Mathf.Clamp(Mathf.FloorToInt(u * climateMap.width), 0, climateMap.width - 1);
         int pz = Mathf.Clamp(Mathf.FloorToInt(v * climateMap.height), 0, climateMap.height - 1);
         Color32 c = climateMap.GetPixel(px, pz);

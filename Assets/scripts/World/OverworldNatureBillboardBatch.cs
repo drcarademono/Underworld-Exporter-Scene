@@ -241,13 +241,11 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         return 8f;
     }
 
-    private static Vector3 GetNatureSamplingWorldPos(Vector3 worldPos)
+    private static float GetNatureMapAreaScale()
     {
         OverworldTerrainController overworld = Object.FindObjectOfType<OverworldTerrainController>();
-        if (overworld == null) { return worldPos; }
-        float areaScale = Mathf.Max(1f, overworld.OverworldAreaScale);
-        if (areaScale <= 1f) { return worldPos; }
-        return new Vector3(worldPos.x / areaScale, worldPos.y, worldPos.z / areaScale);
+        if (overworld == null) { return 1f; }
+        return Mathf.Max(1f, overworld.OverworldAreaScale);
     }
 
     private static float GetNatureDensityScaleMultiplier()
@@ -341,10 +339,12 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     private static float SampleDensityMap(Vector3 worldPos, OverworldNatureFlatsController flats)
     {
         if (cachedDensityMap == null) { return 1f; }
-        Vector3 samplePos = GetNatureSamplingWorldPos(worldPos);
+        float areaScale = GetNatureMapAreaScale();
+        float worldWidth = Mathf.Max(1f, flats.NatureMapWorldWidth * areaScale);
+        float worldHeight = Mathf.Max(1f, flats.NatureMapWorldHeight * areaScale);
 
-        float u = Mathf.Clamp01(samplePos.x / Mathf.Max(1f, flats.NatureMapWorldWidth));
-        float v = Mathf.Clamp01(samplePos.z / Mathf.Max(1f, flats.NatureMapWorldHeight));
+        float u = Mathf.Clamp01(worldPos.x / worldWidth);
+        float v = Mathf.Clamp01(worldPos.z / worldHeight);
 
         // Pixel-accurate sampling (not bilinear): one map pixel controls one world cell region.
         int px = Mathf.Clamp(Mathf.FloorToInt(u * cachedDensityMap.width), 0, cachedDensityMap.width - 1);
@@ -356,9 +356,12 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     private static int EstimateClimateId(Vector2Int chunkCoord, OverworldNatureFlatsController flats, Vector3[] vertices)
     {
         if (cachedClimateMap == null || vertices == null || vertices.Length == 0) { return flats.EstimateClimateIdForChunk(chunkCoord); }
-        Vector3 center = GetNatureSamplingWorldPos(vertices[vertices.Length / 2]);
-        float u = Mathf.Clamp01(center.x / Mathf.Max(1f, flats.NatureMapWorldWidth));
-        float v = Mathf.Clamp01(center.z / Mathf.Max(1f, flats.NatureMapWorldHeight));
+        Vector3 center = vertices[vertices.Length / 2];
+        float areaScale = GetNatureMapAreaScale();
+        float worldWidth = Mathf.Max(1f, flats.NatureMapWorldWidth * areaScale);
+        float worldHeight = Mathf.Max(1f, flats.NatureMapWorldHeight * areaScale);
+        float u = Mathf.Clamp01(center.x / worldWidth);
+        float v = Mathf.Clamp01(center.z / worldHeight);
         int cx = Mathf.Clamp(Mathf.FloorToInt(u * cachedClimateMap.width), 0, cachedClimateMap.width - 1);
         int cy = Mathf.Clamp(Mathf.FloorToInt(v * cachedClimateMap.height), 0, cachedClimateMap.height - 1);
         Color32 c = cachedClimateMap.GetPixel(cx, cy);
