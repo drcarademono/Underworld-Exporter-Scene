@@ -793,6 +793,8 @@ public class GameWorldController : UWEBase
     /// Begins the specified game.
     /// </summary>
     /// <param name="res">Res.</param>
+    public bool StartedFromDemoPath { get; private set; }
+
     public void Begin(string res)
     {
         //Save config file as paths may have been changed.
@@ -801,10 +803,15 @@ public class GameWorldController : UWEBase
 
         string requestedRes = res;
         string effectiveRes = res;
-        if (requestedRes == GAME_UWDEMO)
+        StartedFromDemoPath = (requestedRes == GAME_UWDEMO);
+        if (StartedFromDemoPath)
         {
             effectiveRes = GAME_UW2;
             GetOverworldController().StartInOverworld = true;
+        }
+        else
+        {
+            GetOverworldController().StartInOverworld = false;
         }
 
         LoadPath(effectiveRes);
