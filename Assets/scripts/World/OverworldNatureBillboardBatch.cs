@@ -15,6 +15,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     private float[] quadWidths;
     private float[] quadHeights;
     private int[] quadSpriteIndex;
+    private bool[] quadMirrorX;
 
     private Vector3[] meshVerts;
     private Vector2[] meshUvs;
@@ -81,6 +82,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         quadWidths = new float[quadCount];
         quadHeights = new float[quadCount];
         quadSpriteIndex = new int[quadCount];
+        quadMirrorX = new bool[quadCount];
         quadOrder = new int[quadCount];
         meshVerts = new Vector3[quadCount * VertsPerQuad];
         meshUvs = new Vector2[quadCount * VertsPerQuad];
@@ -130,6 +132,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             quadWidths[q] = baseWidth;
             quadHeights[q] = baseHeight;
             quadSpriteIndex[q] = spriteIndex;
+            quadMirrorX[q] = Deterministic01(center + new Vector3(-14.3f, 0f, 27.9f), flats.NatureSeed) < 0.5f;
             quadOrder[q] = q;
         }
 
@@ -183,10 +186,12 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             meshNormals[vi + 3] = Vector3.up;
 
             Rect r = atlasRects[Mathf.Clamp(quadSpriteIndex[q], 0, atlasRects.Length - 1)];
-            meshUvs[vi + 0] = new Vector2(r.xMin, r.yMin);
-            meshUvs[vi + 1] = new Vector2(r.xMax, r.yMin);
-            meshUvs[vi + 2] = new Vector2(r.xMin, r.yMax);
-            meshUvs[vi + 3] = new Vector2(r.xMax, r.yMax);
+            float uLeft = quadMirrorX[q] ? r.xMax : r.xMin;
+            float uRight = quadMirrorX[q] ? r.xMin : r.xMax;
+            meshUvs[vi + 0] = new Vector2(uLeft, r.yMin);
+            meshUvs[vi + 1] = new Vector2(uRight, r.yMin);
+            meshUvs[vi + 2] = new Vector2(uLeft, r.yMax);
+            meshUvs[vi + 3] = new Vector2(uRight, r.yMax);
         }
 
         for (int sorted = 0; sorted < quadOrder.Length; sorted++)
@@ -386,16 +391,22 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         categoryAtlasIndices = new Dictionary<NatureCategory, List<int>>();
         Material baseMat = null;
 
-        void AddFrom(Material[] mats, NatureCategory category)
+        void AddFromTextures(Texture2D[] texs, NatureCategory category)
         {
-            if (mats == null) { return; }
+            if (texs == null) { return; }
             if (!categoryAtlasIndices.ContainsKey(category)) { categoryAtlasIndices[category] = new List<int>(); }
-            for (int i = 0; i < mats.Length; i++)
+            for (int i = 0; i < texs.Length; i++)
             {
-                if (mats[i] == null) { continue; }
-                Texture2D tex = mats[i].mainTexture as Texture2D;
+                Texture2D tex = texs[i];
                 if (tex == null) { continue; }
-                if (baseMat == null) { baseMat = mats[i]; }
+                if (baseMat == null)
+                {
+                    Shader spriteSeed = Shader.Find("Custom/OverworldNatureBillboardBatch");
+                    if (spriteSeed == null) { spriteSeed = Shader.Find("Sprites/Default"); }
+                    if (spriteSeed == null) { spriteSeed = Shader.Find("Unlit/Transparent"); }
+                    if (spriteSeed == null) { spriteSeed = Shader.Find("Standard"); }
+                    if (spriteSeed != null) { baseMat = new Material(spriteSeed); }
+                }
                 categoryAtlasIndices[category].Add(textures.Count);
                 textures.Add(tex);
                 sizes.Add(new Vector2(tex.width, tex.height));
@@ -404,15 +415,10 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
 
         if (profile != null && profile.Categories != null)
         {
-            AddFrom(profile.Categories.Trees, NatureCategory.Tree);
-            AddFrom(profile.Categories.Bushes, NatureCategory.Bush);
-            AddFrom(profile.Categories.Flowers, NatureCategory.Flower);
-            AddFrom(profile.Categories.Rocks, NatureCategory.Rock);
-        }
-        else
-        {
-            AddFrom(flats.TreeMaterials, NatureCategory.Tree);
-            AddFrom(flats.TerrainSpriteMaterials, NatureCategory.Bush);
+            AddFromTextures(profile.Categories.TreeTextures, NatureCategory.Tree);
+            AddFromTextures(profile.Categories.BushTextures, NatureCategory.Bush);
+            AddFromTextures(profile.Categories.FlowerTextures, NatureCategory.Flower);
+            AddFromTextures(profile.Categories.RockTextures, NatureCategory.Rock);
         }
 
         if (baseMat == null || textures.Count == 0) { return null; }
@@ -423,12 +429,14 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         atlas.wrapMode = TextureWrapMode.Clamp;
         atlas.filterMode = FilterMode.Point;
 
-        Shader lit = Shader.Find("Standard");
-        Material m = (lit != null) ? new Material(lit) : new Material(baseMat);
+        Shader spriteShader = Shader.Find("Custom/OverworldNatureBillboardBatch");
+        if (spriteShader == null) { spriteShader = Shader.Find("Sprites/Default"); }
+        if (spriteShader == null) { spriteShader = Shader.Find("Unlit/Transparent"); }
+        Material m = (spriteShader != null) ? new Material(spriteShader) : new Material(baseMat);
         m.mainTexture = atlas;
         if (m.HasProperty("_Glossiness")) { m.SetFloat("_Glossiness", 0f); }
         if (m.HasProperty("_Metallic")) { m.SetFloat("_Metallic", 0f); }
-        if (m.HasProperty("_Mode")) { m.SetFloat("_Mode", 1f); }
+        if (m.HasProperty("_Mode")) { m.SetFloat("_Mode", 2f); }
         if (m.HasProperty("_Cutoff")) { m.SetFloat("_Cutoff", 0.33f); }
         if (m.HasProperty("_Cull")) { m.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off); }
         m.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
