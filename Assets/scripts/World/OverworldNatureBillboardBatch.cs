@@ -15,6 +15,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
     private float[] quadWidths;
     private float[] quadHeights;
     private int[] quadSpriteIndex;
+    private bool[] quadMirrorX;
 
     private Vector3[] meshVerts;
     private Vector2[] meshUvs;
@@ -81,6 +82,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         quadWidths = new float[quadCount];
         quadHeights = new float[quadCount];
         quadSpriteIndex = new int[quadCount];
+        quadMirrorX = new bool[quadCount];
         quadOrder = new int[quadCount];
         meshVerts = new Vector3[quadCount * VertsPerQuad];
         meshUvs = new Vector2[quadCount * VertsPerQuad];
@@ -130,6 +132,7 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             quadWidths[q] = baseWidth;
             quadHeights[q] = baseHeight;
             quadSpriteIndex[q] = spriteIndex;
+            quadMirrorX[q] = Deterministic01(center + new Vector3(-14.3f, 0f, 27.9f), flats.NatureSeed) < 0.5f;
             quadOrder[q] = q;
         }
 
@@ -183,10 +186,12 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             meshNormals[vi + 3] = Vector3.up;
 
             Rect r = atlasRects[Mathf.Clamp(quadSpriteIndex[q], 0, atlasRects.Length - 1)];
-            meshUvs[vi + 0] = new Vector2(r.xMin, r.yMin);
-            meshUvs[vi + 1] = new Vector2(r.xMax, r.yMin);
-            meshUvs[vi + 2] = new Vector2(r.xMin, r.yMax);
-            meshUvs[vi + 3] = new Vector2(r.xMax, r.yMax);
+            float uLeft = quadMirrorX[q] ? r.xMax : r.xMin;
+            float uRight = quadMirrorX[q] ? r.xMin : r.xMax;
+            meshUvs[vi + 0] = new Vector2(uLeft, r.yMin);
+            meshUvs[vi + 1] = new Vector2(uRight, r.yMin);
+            meshUvs[vi + 2] = new Vector2(uLeft, r.yMax);
+            meshUvs[vi + 3] = new Vector2(uRight, r.yMax);
         }
 
         for (int sorted = 0; sorted < quadOrder.Length; sorted++)
