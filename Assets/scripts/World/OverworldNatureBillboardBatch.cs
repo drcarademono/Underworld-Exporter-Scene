@@ -396,8 +396,10 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
                 if (tex == null) { continue; }
                 if (baseMat == null)
                 {
-                    Shader litSeed = Shader.Find("Standard");
-                    if (litSeed != null) { baseMat = new Material(litSeed); }
+                    Shader spriteSeed = Shader.Find("Sprites/Default");
+                    if (spriteSeed == null) { spriteSeed = Shader.Find("Unlit/Transparent"); }
+                    if (spriteSeed == null) { spriteSeed = Shader.Find("Standard"); }
+                    if (spriteSeed != null) { baseMat = new Material(spriteSeed); }
                 }
                 categoryAtlasIndices[category].Add(textures.Count);
                 textures.Add(tex);
@@ -421,12 +423,13 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         atlas.wrapMode = TextureWrapMode.Clamp;
         atlas.filterMode = FilterMode.Point;
 
-        Shader lit = Shader.Find("Standard");
-        Material m = (lit != null) ? new Material(lit) : new Material(baseMat);
+        Shader spriteShader = Shader.Find("Sprites/Default");
+        if (spriteShader == null) { spriteShader = Shader.Find("Unlit/Transparent"); }
+        Material m = (spriteShader != null) ? new Material(spriteShader) : new Material(baseMat);
         m.mainTexture = atlas;
         if (m.HasProperty("_Glossiness")) { m.SetFloat("_Glossiness", 0f); }
         if (m.HasProperty("_Metallic")) { m.SetFloat("_Metallic", 0f); }
-        if (m.HasProperty("_Mode")) { m.SetFloat("_Mode", 1f); }
+        if (m.HasProperty("_Mode")) { m.SetFloat("_Mode", 2f); }
         if (m.HasProperty("_Cutoff")) { m.SetFloat("_Cutoff", 0.33f); }
         if (m.HasProperty("_Cull")) { m.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off); }
         m.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
