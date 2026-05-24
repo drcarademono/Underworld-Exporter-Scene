@@ -4,9 +4,13 @@ using UnityEngine;
 public class OverworldNatureCategoryMaterials
 {
     public Material[] Trees;
+    public Texture2D[] TreeTextures;
     public Material[] Bushes;
+    public Texture2D[] BushTextures;
     public Material[] Flowers;
+    public Texture2D[] FlowerTextures;
     public Material[] Rocks;
+    public Texture2D[] RockTextures;
 }
 
 [System.Serializable]

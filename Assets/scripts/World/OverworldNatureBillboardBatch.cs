@@ -402,12 +402,30 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             }
         }
 
+        void AddFromTextures(Texture2D[] texs, NatureCategory category)
+        {
+            if (texs == null) { return; }
+            if (!categoryAtlasIndices.ContainsKey(category)) { categoryAtlasIndices[category] = new List<int>(); }
+            for (int i = 0; i < texs.Length; i++)
+            {
+                Texture2D tex = texs[i];
+                if (tex == null) { continue; }
+                categoryAtlasIndices[category].Add(textures.Count);
+                textures.Add(tex);
+                sizes.Add(new Vector2(tex.width, tex.height));
+            }
+        }
+
         if (profile != null && profile.Categories != null)
         {
             AddFrom(profile.Categories.Trees, NatureCategory.Tree);
+            AddFromTextures(profile.Categories.TreeTextures, NatureCategory.Tree);
             AddFrom(profile.Categories.Bushes, NatureCategory.Bush);
+            AddFromTextures(profile.Categories.BushTextures, NatureCategory.Bush);
             AddFrom(profile.Categories.Flowers, NatureCategory.Flower);
+            AddFromTextures(profile.Categories.FlowerTextures, NatureCategory.Flower);
             AddFrom(profile.Categories.Rocks, NatureCategory.Rock);
+            AddFromTextures(profile.Categories.RockTextures, NatureCategory.Rock);
         }
         else
         {
