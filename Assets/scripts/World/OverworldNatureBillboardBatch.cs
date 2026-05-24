@@ -386,22 +386,6 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         categoryAtlasIndices = new Dictionary<NatureCategory, List<int>>();
         Material baseMat = null;
 
-        void AddFrom(Material[] mats, NatureCategory category)
-        {
-            if (mats == null) { return; }
-            if (!categoryAtlasIndices.ContainsKey(category)) { categoryAtlasIndices[category] = new List<int>(); }
-            for (int i = 0; i < mats.Length; i++)
-            {
-                if (mats[i] == null) { continue; }
-                Texture2D tex = mats[i].mainTexture as Texture2D;
-                if (tex == null) { continue; }
-                if (baseMat == null) { baseMat = mats[i]; }
-                categoryAtlasIndices[category].Add(textures.Count);
-                textures.Add(tex);
-                sizes.Add(new Vector2(tex.width, tex.height));
-            }
-        }
-
         void AddFromTextures(Texture2D[] texs, NatureCategory category)
         {
             if (texs == null) { return; }
@@ -410,6 +394,11 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
             {
                 Texture2D tex = texs[i];
                 if (tex == null) { continue; }
+                if (baseMat == null)
+                {
+                    Shader litSeed = Shader.Find("Standard");
+                    if (litSeed != null) { baseMat = new Material(litSeed); }
+                }
                 categoryAtlasIndices[category].Add(textures.Count);
                 textures.Add(tex);
                 sizes.Add(new Vector2(tex.width, tex.height));
@@ -418,19 +407,10 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
 
         if (profile != null && profile.Categories != null)
         {
-            AddFrom(profile.Categories.Trees, NatureCategory.Tree);
             AddFromTextures(profile.Categories.TreeTextures, NatureCategory.Tree);
-            AddFrom(profile.Categories.Bushes, NatureCategory.Bush);
             AddFromTextures(profile.Categories.BushTextures, NatureCategory.Bush);
-            AddFrom(profile.Categories.Flowers, NatureCategory.Flower);
             AddFromTextures(profile.Categories.FlowerTextures, NatureCategory.Flower);
-            AddFrom(profile.Categories.Rocks, NatureCategory.Rock);
             AddFromTextures(profile.Categories.RockTextures, NatureCategory.Rock);
-        }
-        else
-        {
-            AddFrom(flats.TreeMaterials, NatureCategory.Tree);
-            AddFrom(flats.TerrainSpriteMaterials, NatureCategory.Bush);
         }
 
         if (baseMat == null || textures.Count == 0) { return null; }

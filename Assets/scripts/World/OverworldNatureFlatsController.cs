@@ -3,13 +3,9 @@ using UnityEngine;
 [System.Serializable]
 public class OverworldNatureCategoryMaterials
 {
-    public Material[] Trees;
     public Texture2D[] TreeTextures;
-    public Material[] Bushes;
     public Texture2D[] BushTextures;
-    public Material[] Flowers;
     public Texture2D[] FlowerTextures;
-    public Material[] Rocks;
     public Texture2D[] RockTextures;
 }
 
@@ -67,10 +63,6 @@ public class OverworldNatureFlatsController : MonoBehaviour
 {
     [Header("Enable")]
     public bool EnableNatureFlats = true;
-
-    [Header("Legacy Material Pools")]
-    public Material[] TreeMaterials;
-    public Material[] TerrainSpriteMaterials;
 
     [Header("Determinism + Distribution")]
     [Range(0, 2048)] public int NatureSeed = 7341;
