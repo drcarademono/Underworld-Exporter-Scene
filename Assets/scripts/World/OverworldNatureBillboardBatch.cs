@@ -396,7 +396,8 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
                 if (tex == null) { continue; }
                 if (baseMat == null)
                 {
-                    Shader spriteSeed = Shader.Find("Sprites/Default");
+                    Shader spriteSeed = Shader.Find("Custom/OverworldNatureBillboardBatch");
+                    if (spriteSeed == null) { spriteSeed = Shader.Find("Sprites/Default"); }
                     if (spriteSeed == null) { spriteSeed = Shader.Find("Unlit/Transparent"); }
                     if (spriteSeed == null) { spriteSeed = Shader.Find("Standard"); }
                     if (spriteSeed != null) { baseMat = new Material(spriteSeed); }
@@ -423,7 +424,8 @@ public class OverworldNatureBillboardBatch : MonoBehaviour
         atlas.wrapMode = TextureWrapMode.Clamp;
         atlas.filterMode = FilterMode.Point;
 
-        Shader spriteShader = Shader.Find("Sprites/Default");
+        Shader spriteShader = Shader.Find("Custom/OverworldNatureBillboardBatch");
+        if (spriteShader == null) { spriteShader = Shader.Find("Sprites/Default"); }
         if (spriteShader == null) { spriteShader = Shader.Find("Unlit/Transparent"); }
         Material m = (spriteShader != null) ? new Material(spriteShader) : new Material(baseMat);
         m.mainTexture = atlas;
