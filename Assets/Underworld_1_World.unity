@@ -30229,6 +30229,13 @@ MonoBehaviour:
   SwampTextureIndex: 251
   SnowTextureIndex: 248
   LavaTextureIndex: 252
+  WaterMaterialOverride: {fileID: 0}
+  WaterAnimationFrameOverrides:
+  - {fileID: 2800000, guid: e7fbf09655646c791ab272ba763e253d, type: 3}
+  - {fileID: 2800000, guid: aebb5f38ad9778940b5c5ae8319914a8, type: 3}
+  - {fileID: 2800000, guid: a594544a1adbe76db9e625673c8ed50f, type: 3}
+  - {fileID: 2800000, guid: b006cde74c94c6d5486dba8b2ea2fa7a, type: 3}
+  - {fileID: 2800000, guid: 42adeea34d693f5089d7803e1e3ae2d3, type: 3}
   GrassMaterialOverride: {fileID: 2100000, guid: d52084be472840527917e9998092ea8a,
     type: 2}
   StoneMaterialOverride: {fileID: 2100000, guid: fde3801c2716c958bb45400f780c7c03,
