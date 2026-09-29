@@ -135,6 +135,13 @@ public class Character : UWEBase
     public Camera playerCam;
     public Vector3 CameraPos;
 
+    [Header("VR Pose Abstractions")]
+    [SerializeField] private MonoBehaviour viewPoseProviderBehaviour;
+    [SerializeField] private MonoBehaviour interactionSourceBehaviour;
+
+    private IViewPoseProvider viewPoseProvider;
+    private IInteractionSource interactionSource;
+
     //Object for picking up quantities
     protected ObjectInteraction QuantityObj = null;
 
@@ -189,9 +196,43 @@ public class Character : UWEBase
         LastEnemyToHitMe = src;
     }
 
+    private void ResolvePoseProviders()
+    {
+        viewPoseProvider = viewPoseProviderBehaviour as IViewPoseProvider;
+        interactionSource = interactionSourceBehaviour as IInteractionSource;
+
+        if (viewPoseProvider == null)
+        {
+            viewPoseProvider = FindAnyObjectByType<DesktopViewPoseProvider>(FindObjectsInactive.Include);
+        }
+
+        if (interactionSource == null)
+        {
+            interactionSource = FindAnyObjectByType<DesktopInteractionSource>(FindObjectsInactive.Include);
+        }
+    }
+
+    private Ray GetInteractionRay()
+    {
+        if (interactionSource == null)
+        {
+            ResolvePoseProviders();
+        }
+
+        if (interactionSource != null)
+        {
+            return interactionSource.GetInteractionRay();
+        }
+
+        var cam = Camera.main;
+        return cam != null ? cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f)) : new Ray(transform.position, transform.forward);
+    }
+
     // Use this for initialization
     public virtual void Begin()
     {
+        ResolvePoseProviders();
+
         if (_RES == GAME_SHOCK)
         {
             InteractionMode = InteractionModePickup;
@@ -204,11 +245,24 @@ public class Character : UWEBase
     {
         //Get the current compass heading
         HeadingForCompass = CompassHeadings[(int)Mathf.Round(((this.gameObject.transform.eulerAngles.y % 360) / 22.5f))];
-        dir = Camera.main.transform.forward;//Billboarding
+        if (viewPoseProvider == null)
+        {
+            ResolvePoseProviders();
+        }
+
+        if (viewPoseProvider != null)
+        {
+            dir = viewPoseProvider.Forward;//Billboarding
+            CameraPos = viewPoseProvider.Position;
+        }
+        else
+        {
+            dir = Camera.main.transform.forward;//Billboarding
+            CameraPos = Camera.main.transform.position;
+        }
         dirForNPC = dir;
         dirForNPC.y = 0.0f;
         //dir.y = 0.0f;
-        CameraPos = Camera.main.transform.position;
 
         if (transform.position.y < -10f)
         {
@@ -221,15 +275,7 @@ public class Character : UWEBase
 
     public void UseMode()
     {//Uses the object on right click
-        Ray ray;
-        if (MouseLookEnabled == true)
-        {
-            ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));//This is a vector to the center of the window
-        }
-        else
-        {
-            ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        }
+        Ray ray = GetInteractionRay();
         RaycastHit hit = new RaycastHit();
         if (Physics.Raycast(ray, out hit, GetUseRange()))
         {
@@ -288,15 +334,7 @@ public class Character : UWEBase
         PlayerInventory pInv = this.GetComponent<PlayerInventory>();
         if (pInv.ObjectInHand == null)//Player is not holding anything.
         {//Find the object within the pickup range.
-            Ray ray;
-            if (MouseLookEnabled == true)
-            {
-                ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            }
-            else
-            {
-                ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            }
+            Ray ray = GetInteractionRay();
             RaycastHit hit = new RaycastHit();
             if (Physics.Raycast(ray, out hit, GetPickupRange()))
             {
@@ -358,15 +396,7 @@ public class Character : UWEBase
 
     public virtual void LookMode()
     {//Look at the clicked item.
-        Ray ray;
-        if (MouseLookEnabled == true)
-        {
-            ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-        }
-        else
-        {
-            ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        }
+        Ray ray = GetInteractionRay();
 
         RaycastHit hit = new RaycastHit();
         if (Physics.Raycast(ray, out hit, lookRange))
