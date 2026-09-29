@@ -30179,13 +30179,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::OverworldTerrainController
   StartInOverworld: 1
   OverworldStartPos: {x: 0, y: 5, z: 0}
-  OverworldStartTile: {x: 630, y: 1300}
+  OverworldStartTile: {x: 680, y: 1330}
   HeightmapResourcePath: UIX/britannia_heightmap
   TilesPerPixel: 1
   TileWorldSize: 1
+  OverworldAreaScale: 2
   ChunkSizeSamples: 64
-  ActiveChunkRadius: 2
-  HighDetailUnloadMargin: 3
+  ActiveChunkRadius: 1
+  HighDetailUnloadMargin: 2
   TerrainDecimationStep: 2
   LoadWholeMapAtStartup: 0
   LoadDistantChunks: 1
@@ -30199,7 +30200,7 @@ MonoBehaviour:
   StartSecond: 0
   ClockRateSecondsPerGameSecond: 20
   OverworldFarClip: 16000
-  HeightScale: 80
+  HeightScale: 100
   PerlinStrength: 0
   PerlinScale: 0.0005
   SeaLevelOffset: 1
@@ -30210,7 +30211,7 @@ MonoBehaviour:
   WaterAnimFrameTime: 0.2
   WaterSurfaceEpsilon: 0.02
   LavaSurfaceAltitude: 20
-  SnowLineAltitude: 35
+  SnowLineAltitude: 45
   SnowTransitionWidth: 4
   SnowNoiseScale: 5
   SnowNoiseAmplitude: 3
@@ -30220,6 +30221,7 @@ MonoBehaviour:
   StoneTransitionWidth: 4
   StoneNoiseScale: 5
   StoneNoiseAmplitude: 2
+  SandSlopeAngleDegrees: 4
   GrassTextureIndex: 181
   StoneTextureIndex: 253
   DirtTextureIndex: 182
@@ -30245,7 +30247,7 @@ MonoBehaviour:
   UseTransitionTileTexturing: 1
   TransitionPixelsPerTile: 32
   TransitionTilesFolder: Assets/Generated/OverworldTransitions
-  TransitionTexturingDiagnostics: 1
+  TransitionTexturingDiagnostics: 0
   TransitionDiagLogEveryNChunks: 1
 --- !u!4 &853464905
 Transform:
@@ -30275,7 +30277,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OverworldSkyController
   SunLight: {fileID: 0}
-  MaxSunlightIntensity: 0.75
+  MaxSunlightIntensity: 0.6
   MinWeatherDurationSeconds: 1600
   MaxWeatherDurationSeconds: 1200
 --- !u!114 &853464907
@@ -30291,8 +30293,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OverworldNatureFlatsController
   EnableNatureFlats: 1
-  TreeMaterials: []
-  TerrainSpriteMaterials: []
   NatureSeed: 2048
   BaseDensity: 0.05
   ClusterDensity: 0.45
@@ -30323,6 +30323,9 @@ MonoBehaviour:
   LavaColor:
     serializedVersion: 2
     rgba: 4278190335
+  ShorelineColor:
+    serializedVersion: 2
+    rgba: 4278232575
   DirtTemperateColor:
     serializedVersion: 2
     rgba: 4281558681
@@ -30361,12 +30364,19 @@ MonoBehaviour:
     ElevationDensityMultiplier: 1
     SlopeDensityMultiplier: 0.6
     Categories:
-      Trees:
-      - {fileID: 2100000, guid: 19ab25b9ebcee063a98377fc21d70494, type: 2}
-      - {fileID: 2100000, guid: 71267cf979135fb93b62b828a2a7d37f, type: 2}
-      Bushes: []
-      Flowers: []
-      Rocks: []
+      TreeTextures:
+      - {fileID: 2800000, guid: bd1bada0c53373d1db2f31c48eeacfe5, type: 3}
+      - {fileID: 2800000, guid: 7fcaa8138ce556ffdac446aebd7be106, type: 3}
+      - {fileID: 2800000, guid: a3111ee44f7e4af4092a08433956ab69, type: 3}
+      - {fileID: 2800000, guid: 04a9936bcd73e3058b2ca6f322506c6a, type: 3}
+      - {fileID: 2800000, guid: 020675cd1ac267d75b856641ec0af128, type: 3}
+      - {fileID: 2800000, guid: dc68e25ededa1f9269df27f06a534107, type: 3}
+      - {fileID: 2800000, guid: 09dd7a393a16beaebb38df11a9c3fb2b, type: 3}
+      - {fileID: 2800000, guid: 1a7a84540a394a65babc5ce3c5cfe496, type: 3}
+      BushTextures:
+      - {fileID: 2800000, guid: 0bb193354c4629ce28652c99f4a472d0, type: 3}
+      FlowerTextures: []
+      RockTextures: []
   - Name: Mountain
     ClimateId: 1
     BaseDensity: 0.2
@@ -30395,10 +30405,10 @@ MonoBehaviour:
     ElevationDensityMultiplier: 1
     SlopeDensityMultiplier: 0.6
     Categories:
-      Trees: []
-      Bushes: []
-      Flowers: []
-      Rocks: []
+      TreeTextures: []
+      BushTextures: []
+      FlowerTextures: []
+      RockTextures: []
   - Name: Rainforest
     ClimateId: 2
     BaseDensity: 0.3
@@ -30427,10 +30437,10 @@ MonoBehaviour:
     ElevationDensityMultiplier: 1
     SlopeDensityMultiplier: 0.6
     Categories:
-      Trees: []
-      Bushes: []
-      Flowers: []
-      Rocks: []
+      TreeTextures: []
+      BushTextures: []
+      FlowerTextures: []
+      RockTextures: []
   - Name: Desert
     ClimateId: 3
     BaseDensity: 0.12
@@ -30459,10 +30469,10 @@ MonoBehaviour:
     ElevationDensityMultiplier: 1
     SlopeDensityMultiplier: 0.6
     Categories:
-      Trees: []
-      Bushes: []
-      Flowers: []
-      Rocks: []
+      TreeTextures: []
+      BushTextures: []
+      FlowerTextures: []
+      RockTextures: []
   - Name: Swamp
     ClimateId: 4
     BaseDensity: 0.22
@@ -30491,10 +30501,10 @@ MonoBehaviour:
     ElevationDensityMultiplier: 1
     SlopeDensityMultiplier: 0.6
     Categories:
-      Trees: []
-      Bushes: []
-      Flowers: []
-      Rocks: []
+      TreeTextures: []
+      BushTextures: []
+      FlowerTextures: []
+      RockTextures: []
 --- !u!1 &855120957
 GameObject:
   m_ObjectHideFlags: 0
