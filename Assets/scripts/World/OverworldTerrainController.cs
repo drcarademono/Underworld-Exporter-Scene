@@ -84,6 +84,10 @@ public class OverworldTerrainController : MonoBehaviour
     public int LavaTextureIndex = 252;
 
     [Header("Custom Material Overrides")]
+    [Tooltip("Overrides the overworld water material. When Animate Water is enabled, assign Water Animation Frame Overrides as well to keep the custom water animated.")]
+    public Material WaterMaterialOverride;
+    [Tooltip("Optional replacement frames for animated water, in playback order. PNG textures can be assigned here; when populated these are used instead of frames extracted from UW2 T64.TR.")]
+    public Texture2D[] WaterAnimationFrameOverrides;
     public Material GrassMaterialOverride;
     public Material StoneMaterialOverride;
     public Material DirtMaterialOverride;

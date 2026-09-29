@@ -1105,7 +1105,7 @@ public class GameWorldController : UWEBase
             }
         }
 
-        overworldWaterMat = BuildOverworldSurfaceMaterial(overworld.WaterTextureIndex, null, new Color(0.15f, 0.28f, 0.35f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
+        overworldWaterMat = BuildOverworldSurfaceMaterial(overworld.WaterTextureIndex, overworld.WaterMaterialOverride, new Color(0.15f, 0.28f, 0.35f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
         overworldGrassMat = BuildOverworldSurfaceMaterial(overworld.GrassTextureIndex, overworld.GrassMaterialOverride, new Color(0.22f, 0.58f, 0.22f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
         overworldStoneMat = BuildOverworldSurfaceMaterial(overworld.StoneTextureIndex, overworld.StoneMaterialOverride, new Color(0.45f, 0.45f, 0.45f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
         overworldSnowMat = BuildOverworldSurfaceMaterial(overworld.SnowTextureIndex, overworld.SnowMaterialOverride, Color.white, overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
@@ -1115,14 +1115,30 @@ public class GameWorldController : UWEBase
         overworldLavaMat = BuildOverworldSurfaceMaterial(overworld.LavaTextureIndex, overworld.LavaMaterialOverride, new Color(0.72f, 0.22f, 0.04f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
         if (overworld.AnimateWater)
         {
-            int frameCount = Mathf.Max(1, (overworld.WaterTextureAnimEndIndex - overworld.WaterTextureIndex) + 1);
+            bool hasFrameOverrides = (overworld.WaterAnimationFrameOverrides != null) && (overworld.WaterAnimationFrameOverrides.Length > 0);
+            bool hasMaterialOverride = (overworld.WaterMaterialOverride != null) && (overworld.WaterMaterialOverride.mainTexture is Texture2D);
+            int frameCount = hasFrameOverrides
+                ? overworld.WaterAnimationFrameOverrides.Length
+                : (hasMaterialOverride ? 1 : Mathf.Max(1, (overworld.WaterTextureAnimEndIndex - overworld.WaterTextureIndex) + 1));
             overworldWaterFrames = new Texture2D[frameCount];
             for (int i = 0; i < frameCount; i++)
             {
-                overworldWaterFrames[i] = LoadUW2TerrainTexture(overworld.WaterTextureIndex + i);
+                Texture2D frame = hasFrameOverrides
+                    ? overworld.WaterAnimationFrameOverrides[i]
+                    : (hasMaterialOverride ? overworld.WaterMaterialOverride.mainTexture as Texture2D : null);
+                if (frame == null)
+                {
+                    frame = LoadUW2TerrainTexture(overworld.WaterTextureIndex + i);
+                }
+                overworldWaterFrames[i] = MaybeEnableOverworldMipmaps(frame, overworld);
             }
             overworldWaterFrameIndex = 0;
             overworldWaterAnimTimer = 0f;
+            if ((overworldWaterFrames.Length > 0) && (overworldWaterFrames[0] != null))
+            {
+                overworldWaterFrames[0].wrapMode = TextureWrapMode.Repeat;
+                overworldWaterMat.mainTexture = overworldWaterFrames[0];
+            }
         }
         else
         {
