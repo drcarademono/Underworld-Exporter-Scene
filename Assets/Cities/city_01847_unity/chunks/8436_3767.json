@@ -1,0 +1,116 @@
+{
+  "format": "retro-city-unity-map-pixel-v1",
+  "schema_version": 1,
+  "settlement_id": "CITY01847",
+  "map_pixel_xy": [
+    8436,
+    3767
+  ],
+  "map_pixel_size_units": 64,
+  "world_bounds_units_xy": {
+    "min": [
+      539904,
+      241088
+    ],
+    "max": [
+      539968,
+      241152
+    ]
+  },
+  "settlement_local_bounds_xy": {
+    "min": [
+      960.0,
+      448.0
+    ],
+    "max": [
+      1024.0,
+      512.0
+    ]
+  },
+  "district_ids": [
+    "D02"
+  ],
+  "owned_building_ids": [
+    "B000160",
+    "B000163",
+    "B000385",
+    "B000387"
+  ],
+  "referenced_building_ids": [
+    "B000161",
+    "B000212",
+    "B000213",
+    "B000407"
+  ],
+  "door_ids_present": [
+    "B000160-D01",
+    "B000163-D01",
+    "B000163-D02",
+    "B000212-D01",
+    "B000213-D01",
+    "B000385-D02",
+    "B000385-D03",
+    "B000385-D04",
+    "B000385-D05",
+    "B000385-D06",
+    "B000385-D07",
+    "B000387-D01",
+    "B000387-D02"
+  ],
+  "street_segments": [
+    {
+      "segment_id": "S00047@8436_3767#01",
+      "street_id": "S00047",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          34.0,
+          0.0
+        ],
+        [
+          34.0,
+          64.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00158@8436_3767#01",
+      "street_id": "S00158",
+      "kind": "civic",
+      "width_units": 9,
+      "points_map_pixel_local_xy": [
+        [
+          0.0,
+          52.0
+        ],
+        [
+          64.0,
+          52.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00176@8436_3767#01",
+      "street_id": "S00176",
+      "kind": "lane",
+      "width_units": 4,
+      "points_map_pixel_local_xy": [
+        [
+          0.0,
+          30.0
+        ],
+        [
+          31.0,
+          30.0
+        ]
+      ]
+    }
+  ],
+  "field_slices": [],
+  "plaza_slices": [],
+  "special_site_ids": [],
+  "fringe_plot_ids": [],
+  "farmstead_ids": [],
+  "road_connector_ids": []
+}

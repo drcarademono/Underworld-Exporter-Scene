@@ -1,0 +1,118 @@
+{
+  "format": "retro-city-unity-map-pixel-v1",
+  "schema_version": 1,
+  "settlement_id": "CITY01847",
+  "map_pixel_xy": [
+    8433,
+    3770
+  ],
+  "map_pixel_size_units": 64,
+  "world_bounds_units_xy": {
+    "min": [
+      539712,
+      241280
+    ],
+    "max": [
+      539776,
+      241344
+    ]
+  },
+  "settlement_local_bounds_xy": {
+    "min": [
+      768.0,
+      640.0
+    ],
+    "max": [
+      832.0,
+      704.0
+    ]
+  },
+  "district_ids": [
+    "D03"
+  ],
+  "owned_building_ids": [
+    "B000564",
+    "B000565",
+    "B000566",
+    "B000567",
+    "B000568",
+    "B000569",
+    "B000570",
+    "B000571"
+  ],
+  "referenced_building_ids": [
+    "B000558"
+  ],
+  "door_ids_present": [
+    "B000564-D01",
+    "B000565-D01",
+    "B000565-D02",
+    "B000565-D03",
+    "B000565-D04",
+    "B000565-D05",
+    "B000565-D06",
+    "B000565-D07",
+    "B000566-D01",
+    "B000566-D02",
+    "B000567-D01",
+    "B000567-D02",
+    "B000567-D03",
+    "B000567-D04",
+    "B000567-D05",
+    "B000567-D06",
+    "B000567-D07",
+    "B000567-D08",
+    "B000567-D09",
+    "B000568-D01",
+    "B000568-D02",
+    "B000568-D03",
+    "B000568-D04",
+    "B000568-D05",
+    "B000568-D06",
+    "B000568-D07",
+    "B000568-D08",
+    "B000569-D01",
+    "B000570-D01",
+    "B000571-D01"
+  ],
+  "street_segments": [
+    {
+      "segment_id": "S00001@8433_3770#01",
+      "street_id": "S00001",
+      "kind": "legacy",
+      "width_units": 8,
+      "points_map_pixel_local_xy": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          37.0,
+          0.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00001@8433_3770#02",
+      "street_id": "S00001",
+      "kind": "legacy",
+      "width_units": 8,
+      "points_map_pixel_local_xy": [
+        [
+          37.0,
+          0.0
+        ],
+        [
+          64.0,
+          27.0
+        ]
+      ]
+    }
+  ],
+  "field_slices": [],
+  "plaza_slices": [],
+  "special_site_ids": [],
+  "fringe_plot_ids": [],
+  "farmstead_ids": [],
+  "road_connector_ids": []
+}

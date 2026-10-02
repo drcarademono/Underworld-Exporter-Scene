@@ -1,0 +1,70 @@
+{
+  "format": "retro-city-unity-map-pixel-v1",
+  "schema_version": 1,
+  "settlement_id": "CITY01847",
+  "map_pixel_xy": [
+    8441,
+    3765
+  ],
+  "map_pixel_size_units": 64,
+  "world_bounds_units_xy": {
+    "min": [
+      540224,
+      240960
+    ],
+    "max": [
+      540288,
+      241024
+    ]
+  },
+  "settlement_local_bounds_xy": {
+    "min": [
+      1280.0,
+      320.0
+    ],
+    "max": [
+      1344.0,
+      384.0
+    ]
+  },
+  "district_ids": [],
+  "owned_building_ids": [],
+  "referenced_building_ids": [],
+  "door_ids_present": [],
+  "street_segments": [],
+  "field_slices": [
+    {
+      "field_id": "F000028",
+      "kind": "market_garden",
+      "zone": "intensive",
+      "polygons_map_pixel_local": [
+        {
+          "outer": [
+            [
+              46.0,
+              4.0
+            ],
+            [
+              0.0,
+              4.0
+            ],
+            [
+              0.0,
+              64.0
+            ],
+            [
+              46.0,
+              64.0
+            ]
+          ],
+          "holes": []
+        }
+      ]
+    }
+  ],
+  "plaza_slices": [],
+  "special_site_ids": [],
+  "fringe_plot_ids": [],
+  "farmstead_ids": [],
+  "road_connector_ids": []
+}

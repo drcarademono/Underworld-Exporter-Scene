@@ -1,0 +1,175 @@
+{
+  "format": "retro-city-unity-map-pixel-v1",
+  "schema_version": 1,
+  "settlement_id": "CITY01847",
+  "map_pixel_xy": [
+    8434,
+    3773
+  ],
+  "map_pixel_size_units": 64,
+  "world_bounds_units_xy": {
+    "min": [
+      539776,
+      241472
+    ],
+    "max": [
+      539840,
+      241536
+    ]
+  },
+  "settlement_local_bounds_xy": {
+    "min": [
+      832.0,
+      832.0
+    ],
+    "max": [
+      896.0,
+      896.0
+    ]
+  },
+  "district_ids": [],
+  "owned_building_ids": [],
+  "referenced_building_ids": [],
+  "door_ids_present": [],
+  "street_segments": [
+    {
+      "segment_id": "S00208@8434_3773#01",
+      "street_id": "S00208",
+      "kind": "farm_track",
+      "width_units": 2,
+      "points_map_pixel_local_xy": [
+        [
+          0.0,
+          60.0
+        ],
+        [
+          60.0,
+          0.0
+        ]
+      ]
+    }
+  ],
+  "field_slices": [
+    {
+      "field_id": "F000035",
+      "kind": "cropland",
+      "zone": "mixed",
+      "polygons_map_pixel_local": [
+        {
+          "outer": [
+            [
+              47.0,
+              33.0
+            ],
+            [
+              47.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              33.0
+            ]
+          ],
+          "holes": []
+        }
+      ]
+    },
+    {
+      "field_id": "F000036",
+      "kind": "fallow",
+      "zone": "mixed",
+      "polygons_map_pixel_local": [
+        {
+          "outer": [
+            [
+              47.0,
+              33.0
+            ],
+            [
+              64.0,
+              33.0
+            ],
+            [
+              64.0,
+              0.0
+            ],
+            [
+              47.0,
+              0.0
+            ]
+          ],
+          "holes": []
+        }
+      ]
+    },
+    {
+      "field_id": "F000045",
+      "kind": "cropland",
+      "zone": "outer",
+      "polygons_map_pixel_local": [
+        {
+          "outer": [
+            [
+              32.0,
+              33.0
+            ],
+            [
+              0.0,
+              33.0
+            ],
+            [
+              0.0,
+              64.0
+            ],
+            [
+              32.0,
+              64.0
+            ]
+          ],
+          "holes": []
+        }
+      ]
+    },
+    {
+      "field_id": "F000046",
+      "kind": "pasture",
+      "zone": "outer",
+      "polygons_map_pixel_local": [
+        {
+          "outer": [
+            [
+              37.0,
+              33.0
+            ],
+            [
+              32.0,
+              38.0
+            ],
+            [
+              32.0,
+              64.0
+            ],
+            [
+              64.0,
+              64.0
+            ],
+            [
+              64.0,
+              33.0
+            ]
+          ],
+          "holes": []
+        }
+      ]
+    }
+  ],
+  "plaza_slices": [],
+  "special_site_ids": [],
+  "fringe_plot_ids": [],
+  "farmstead_ids": [],
+  "road_connector_ids": []
+}

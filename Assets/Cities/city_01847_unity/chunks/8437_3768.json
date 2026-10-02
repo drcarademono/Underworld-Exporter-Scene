@@ -1,0 +1,129 @@
+{
+  "format": "retro-city-unity-map-pixel-v1",
+  "schema_version": 1,
+  "settlement_id": "CITY01847",
+  "map_pixel_xy": [
+    8437,
+    3768
+  ],
+  "map_pixel_size_units": 64,
+  "world_bounds_units_xy": {
+    "min": [
+      539968,
+      241152
+    ],
+    "max": [
+      540032,
+      241216
+    ]
+  },
+  "settlement_local_bounds_xy": {
+    "min": [
+      1024.0,
+      512.0
+    ],
+    "max": [
+      1088.0,
+      576.0
+    ]
+  },
+  "district_ids": [
+    "D02"
+  ],
+  "owned_building_ids": [
+    "B000207",
+    "B000208",
+    "B000211",
+    "B000374",
+    "B000375"
+  ],
+  "referenced_building_ids": [
+    "B000209",
+    "B000210",
+    "B000212",
+    "B000373",
+    "B000610",
+    "B000614"
+  ],
+  "door_ids_present": [
+    "B000207-D01",
+    "B000208-D01",
+    "B000208-D02",
+    "B000210-D02",
+    "B000374-D01",
+    "B000375-D01",
+    "B000375-D02"
+  ],
+  "street_segments": [
+    {
+      "segment_id": "S00084@8437_3768#01",
+      "street_id": "S00084",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          0.0,
+          45.0
+        ],
+        [
+          57.0,
+          45.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00086@8437_3768#01",
+      "street_id": "S00086",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          57.0,
+          0.0
+        ],
+        [
+          57.0,
+          45.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00107@8437_3768#01",
+      "street_id": "S00107",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          57.0,
+          45.0
+        ],
+        [
+          64.0,
+          45.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00170@8437_3768#01",
+      "street_id": "S00170",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          0.0,
+          16.0
+        ],
+        [
+          54.0,
+          16.0
+        ]
+      ]
+    }
+  ],
+  "field_slices": [],
+  "plaza_slices": [],
+  "special_site_ids": [],
+  "fringe_plot_ids": [],
+  "farmstead_ids": [],
+  "road_connector_ids": []
+}

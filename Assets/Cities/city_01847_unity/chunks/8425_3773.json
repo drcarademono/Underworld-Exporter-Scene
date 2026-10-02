@@ -1,0 +1,69 @@
+{
+  "format": "retro-city-unity-map-pixel-v1",
+  "schema_version": 1,
+  "settlement_id": "CITY01847",
+  "map_pixel_xy": [
+    8425,
+    3773
+  ],
+  "map_pixel_size_units": 64,
+  "world_bounds_units_xy": {
+    "min": [
+      539200,
+      241472
+    ],
+    "max": [
+      539264,
+      241536
+    ]
+  },
+  "settlement_local_bounds_xy": {
+    "min": [
+      256.0,
+      832.0
+    ],
+    "max": [
+      320.0,
+      896.0
+    ]
+  },
+  "district_ids": [
+    "D06"
+  ],
+  "owned_building_ids": [
+    "B000450",
+    "B000451"
+  ],
+  "referenced_building_ids": [
+    "B000452"
+  ],
+  "door_ids_present": [
+    "B000450-D01",
+    "B000450-D02",
+    "B000451-D01"
+  ],
+  "street_segments": [
+    {
+      "segment_id": "S00147@8425_3773#01",
+      "street_id": "S00147",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          0.0,
+          12.0
+        ],
+        [
+          64.0,
+          12.0
+        ]
+      ]
+    }
+  ],
+  "field_slices": [],
+  "plaza_slices": [],
+  "special_site_ids": [],
+  "fringe_plot_ids": [],
+  "farmstead_ids": [],
+  "road_connector_ids": []
+}

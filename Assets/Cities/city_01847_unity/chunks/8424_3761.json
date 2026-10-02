@@ -1,0 +1,98 @@
+{
+  "format": "retro-city-unity-map-pixel-v1",
+  "schema_version": 1,
+  "settlement_id": "CITY01847",
+  "map_pixel_xy": [
+    8424,
+    3761
+  ],
+  "map_pixel_size_units": 64,
+  "world_bounds_units_xy": {
+    "min": [
+      539136,
+      240704
+    ],
+    "max": [
+      539200,
+      240768
+    ]
+  },
+  "settlement_local_bounds_xy": {
+    "min": [
+      192.0,
+      64.0
+    ],
+    "max": [
+      256.0,
+      128.0
+    ]
+  },
+  "district_ids": [],
+  "owned_building_ids": [],
+  "referenced_building_ids": [],
+  "door_ids_present": [],
+  "street_segments": [],
+  "field_slices": [
+    {
+      "field_id": "F000000",
+      "kind": "orchard",
+      "zone": "mixed",
+      "polygons_map_pixel_local": [
+        {
+          "outer": [
+            [
+              17.0,
+              18.0
+            ],
+            [
+              0.0,
+              18.0
+            ],
+            [
+              0.0,
+              64.0
+            ],
+            [
+              17.0,
+              64.0
+            ]
+          ],
+          "holes": []
+        }
+      ]
+    },
+    {
+      "field_id": "F000001",
+      "kind": "cropland",
+      "zone": "mixed",
+      "polygons_map_pixel_local": [
+        {
+          "outer": [
+            [
+              17.0,
+              18.0
+            ],
+            [
+              17.0,
+              64.0
+            ],
+            [
+              64.0,
+              64.0
+            ],
+            [
+              64.0,
+              18.0
+            ]
+          ],
+          "holes": []
+        }
+      ]
+    }
+  ],
+  "plaza_slices": [],
+  "special_site_ids": [],
+  "fringe_plot_ids": [],
+  "farmstead_ids": [],
+  "road_connector_ids": []
+}

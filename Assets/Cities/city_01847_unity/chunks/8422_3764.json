@@ -1,0 +1,48 @@
+{
+  "format": "retro-city-unity-map-pixel-v1",
+  "schema_version": 1,
+  "settlement_id": "CITY01847",
+  "map_pixel_xy": [
+    8422,
+    3764
+  ],
+  "map_pixel_size_units": 64,
+  "world_bounds_units_xy": {
+    "min": [
+      539008,
+      240896
+    ],
+    "max": [
+      539072,
+      240960
+    ]
+  },
+  "settlement_local_bounds_xy": {
+    "min": [
+      64.0,
+      256.0
+    ],
+    "max": [
+      128.0,
+      320.0
+    ]
+  },
+  "district_ids": [],
+  "owned_building_ids": [
+    "B000690"
+  ],
+  "referenced_building_ids": [],
+  "door_ids_present": [
+    "B000690-D01",
+    "B000690-D02"
+  ],
+  "street_segments": [],
+  "field_slices": [],
+  "plaza_slices": [],
+  "special_site_ids": [],
+  "fringe_plot_ids": [
+    "FR0014"
+  ],
+  "farmstead_ids": [],
+  "road_connector_ids": []
+}

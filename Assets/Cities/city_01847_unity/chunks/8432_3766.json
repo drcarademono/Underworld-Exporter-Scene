@@ -1,0 +1,121 @@
+{
+  "format": "retro-city-unity-map-pixel-v1",
+  "schema_version": 1,
+  "settlement_id": "CITY01847",
+  "map_pixel_xy": [
+    8432,
+    3766
+  ],
+  "map_pixel_size_units": 64,
+  "world_bounds_units_xy": {
+    "min": [
+      539648,
+      241024
+    ],
+    "max": [
+      539712,
+      241088
+    ]
+  },
+  "settlement_local_bounds_xy": {
+    "min": [
+      704.0,
+      384.0
+    ],
+    "max": [
+      768.0,
+      448.0
+    ]
+  },
+  "district_ids": [
+    "D02"
+  ],
+  "owned_building_ids": [
+    "B000008",
+    "B000009",
+    "B000010",
+    "B000011",
+    "B000012",
+    "B000013",
+    "B000014"
+  ],
+  "referenced_building_ids": [
+    "B000007"
+  ],
+  "door_ids_present": [
+    "B000008-D01",
+    "B000008-D02",
+    "B000009-D01",
+    "B000010-D01",
+    "B000011-D01",
+    "B000011-D02",
+    "B000012-D01",
+    "B000013-D01",
+    "B000014-D01",
+    "B000014-D02",
+    "B000014-D03",
+    "B000014-D04",
+    "B000014-D05",
+    "B000014-D06",
+    "B000014-D07",
+    "B000014-D08"
+  ],
+  "street_segments": [
+    {
+      "segment_id": "S00002@8432_3766#01",
+      "street_id": "S00002",
+      "kind": "civic",
+      "width_units": 9,
+      "points_map_pixel_local_xy": [
+        [
+          0.0,
+          60.0
+        ],
+        [
+          58.0,
+          60.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00003@8432_3766#01",
+      "street_id": "S00003",
+      "kind": "civic",
+      "width_units": 9,
+      "points_map_pixel_local_xy": [
+        [
+          58.0,
+          60.0
+        ],
+        [
+          58.0,
+          64.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00007@8432_3766#01",
+      "street_id": "S00007",
+      "kind": "street",
+      "width_units": 6,
+      "points_map_pixel_local_xy": [
+        [
+          58.0,
+          0.0
+        ],
+        [
+          58.0,
+          60.0
+        ]
+      ]
+    }
+  ],
+  "field_slices": [],
+  "plaza_slices": [],
+  "special_site_ids": [
+    "SP0001"
+  ],
+  "fringe_plot_ids": [],
+  "farmstead_ids": [],
+  "road_connector_ids": []
+}

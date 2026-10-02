@@ -1,0 +1,140 @@
+{
+  "format": "retro-city-unity-map-pixel-v1",
+  "schema_version": 1,
+  "settlement_id": "CITY01847",
+  "map_pixel_xy": [
+    8440,
+    3766
+  ],
+  "map_pixel_size_units": 64,
+  "world_bounds_units_xy": {
+    "min": [
+      540160,
+      241024
+    ],
+    "max": [
+      540224,
+      241088
+    ]
+  },
+  "settlement_local_bounds_xy": {
+    "min": [
+      1216.0,
+      384.0
+    ],
+    "max": [
+      1280.0,
+      448.0
+    ]
+  },
+  "district_ids": [
+    "D05"
+  ],
+  "owned_building_ids": [],
+  "referenced_building_ids": [
+    "B000628",
+    "B000629"
+  ],
+  "door_ids_present": [],
+  "street_segments": [
+    {
+      "segment_id": "S00118@8440_3766#01",
+      "street_id": "S00118",
+      "kind": "lane",
+      "width_units": 4,
+      "points_map_pixel_local_xy": [
+        [
+          0.0,
+          60.0
+        ],
+        [
+          8.0,
+          60.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00119@8440_3766#01",
+      "street_id": "S00119",
+      "kind": "lane",
+      "width_units": 4,
+      "points_map_pixel_local_xy": [
+        [
+          8.0,
+          60.0
+        ],
+        [
+          8.0,
+          64.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00126@8440_3766#01",
+      "street_id": "S00126",
+      "kind": "lane",
+      "width_units": 4,
+      "points_map_pixel_local_xy": [
+        [
+          8.0,
+          0.0
+        ],
+        [
+          8.0,
+          60.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00192@8440_3766#01",
+      "street_id": "S00192",
+      "kind": "lane",
+      "width_units": 4,
+      "points_map_pixel_local_xy": [
+        [
+          0.0,
+          22.0
+        ],
+        [
+          5.0,
+          22.0
+        ]
+      ]
+    }
+  ],
+  "field_slices": [
+    {
+      "field_id": "F000028",
+      "kind": "market_garden",
+      "zone": "intensive",
+      "polygons_map_pixel_local": [
+        {
+          "outer": [
+            [
+              39.0,
+              27.0
+            ],
+            [
+              64.0,
+              27.0
+            ],
+            [
+              64.0,
+              0.0
+            ],
+            [
+              39.0,
+              0.0
+            ]
+          ],
+          "holes": []
+        }
+      ]
+    }
+  ],
+  "plaza_slices": [],
+  "special_site_ids": [],
+  "fringe_plot_ids": [],
+  "farmstead_ids": [],
+  "road_connector_ids": []
+}

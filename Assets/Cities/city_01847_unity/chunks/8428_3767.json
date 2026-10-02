@@ -1,0 +1,148 @@
+{
+  "format": "retro-city-unity-map-pixel-v1",
+  "schema_version": 1,
+  "settlement_id": "CITY01847",
+  "map_pixel_xy": [
+    8428,
+    3767
+  ],
+  "map_pixel_size_units": 64,
+  "world_bounds_units_xy": {
+    "min": [
+      539392,
+      241088
+    ],
+    "max": [
+      539456,
+      241152
+    ]
+  },
+  "settlement_local_bounds_xy": {
+    "min": [
+      448.0,
+      448.0
+    ],
+    "max": [
+      512.0,
+      512.0
+    ]
+  },
+  "district_ids": [
+    "D01",
+    "D07"
+  ],
+  "owned_building_ids": [
+    "B000292",
+    "B000293",
+    "B000300",
+    "B000311",
+    "B000312",
+    "B000313",
+    "B000314"
+  ],
+  "referenced_building_ids": [
+    "B000294",
+    "B000299"
+  ],
+  "door_ids_present": [
+    "B000292-D01",
+    "B000292-D02",
+    "B000293-D01",
+    "B000293-D02",
+    "B000299-D04",
+    "B000299-D05",
+    "B000299-D08",
+    "B000299-D09",
+    "B000300-D01",
+    "B000311-D01",
+    "B000311-D02",
+    "B000311-D03",
+    "B000311-D04",
+    "B000311-D05",
+    "B000311-D06",
+    "B000311-D07",
+    "B000311-D08",
+    "B000312-D01",
+    "B000312-D02",
+    "B000313-D02",
+    "B000313-D03",
+    "B000313-D04",
+    "B000313-D05",
+    "B000313-D06",
+    "B000313-D07",
+    "B000314-D01",
+    "B000314-D02"
+  ],
+  "street_segments": [
+    {
+      "segment_id": "S00029@8428_3767#01",
+      "street_id": "S00029",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          62.0,
+          0.0
+        ],
+        [
+          62.0,
+          64.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00159@8428_3767#01",
+      "street_id": "S00159",
+      "kind": "civic",
+      "width_units": 9,
+      "points_map_pixel_local_xy": [
+        [
+          64.0,
+          20.0
+        ],
+        [
+          0.0,
+          20.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00172@8428_3767#01",
+      "street_id": "S00172",
+      "kind": "lane",
+      "width_units": 4,
+      "points_map_pixel_local_xy": [
+        [
+          0.0,
+          62.0
+        ],
+        [
+          59.0,
+          62.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00202@8428_3767#01",
+      "street_id": "S00202",
+      "kind": "passage",
+      "width_units": 2,
+      "points_map_pixel_local_xy": [
+        [
+          41.0,
+          0.0
+        ],
+        [
+          41.0,
+          12.0
+        ]
+      ]
+    }
+  ],
+  "field_slices": [],
+  "plaza_slices": [],
+  "special_site_ids": [],
+  "fringe_plot_ids": [],
+  "farmstead_ids": [],
+  "road_connector_ids": []
+}

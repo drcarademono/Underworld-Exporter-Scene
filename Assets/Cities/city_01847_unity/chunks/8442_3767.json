@@ -1,0 +1,93 @@
+{
+  "format": "retro-city-unity-map-pixel-v1",
+  "schema_version": 1,
+  "settlement_id": "CITY01847",
+  "map_pixel_xy": [
+    8442,
+    3767
+  ],
+  "map_pixel_size_units": 64,
+  "world_bounds_units_xy": {
+    "min": [
+      540288,
+      241088
+    ],
+    "max": [
+      540352,
+      241152
+    ]
+  },
+  "settlement_local_bounds_xy": {
+    "min": [
+      1344.0,
+      448.0
+    ],
+    "max": [
+      1408.0,
+      512.0
+    ]
+  },
+  "district_ids": [],
+  "owned_building_ids": [],
+  "referenced_building_ids": [],
+  "door_ids_present": [],
+  "street_segments": [
+    {
+      "segment_id": "S00155@8442_3767#01",
+      "street_id": "S00155",
+      "kind": "farm_track",
+      "width_units": 2,
+      "points_map_pixel_local_xy": [
+        [
+          0.0,
+          42.0
+        ],
+        [
+          10.0,
+          52.0
+        ],
+        [
+          22.0,
+          52.0
+        ]
+      ]
+    }
+  ],
+  "field_slices": [
+    {
+      "field_id": "F000029",
+      "kind": "cropland",
+      "zone": "intensive",
+      "polygons_map_pixel_local": [
+        {
+          "outer": [
+            [
+              51.0,
+              22.0
+            ],
+            [
+              22.0,
+              22.0
+            ],
+            [
+              22.0,
+              64.0
+            ],
+            [
+              51.0,
+              64.0
+            ]
+          ],
+          "holes": []
+        }
+      ]
+    }
+  ],
+  "plaza_slices": [],
+  "special_site_ids": [],
+  "fringe_plot_ids": [],
+  "farmstead_ids": [],
+  "road_connector_ids": [
+    "CITY01847-ROAD-E"
+  ]
+}

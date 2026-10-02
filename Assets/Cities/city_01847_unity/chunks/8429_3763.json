@@ -1,0 +1,119 @@
+{
+  "format": "retro-city-unity-map-pixel-v1",
+  "schema_version": 1,
+  "settlement_id": "CITY01847",
+  "map_pixel_xy": [
+    8429,
+    3763
+  ],
+  "map_pixel_size_units": 64,
+  "world_bounds_units_xy": {
+    "min": [
+      539456,
+      240832
+    ],
+    "max": [
+      539520,
+      240896
+    ]
+  },
+  "settlement_local_bounds_xy": {
+    "min": [
+      512.0,
+      192.0
+    ],
+    "max": [
+      576.0,
+      256.0
+    ]
+  },
+  "district_ids": [],
+  "owned_building_ids": [],
+  "referenced_building_ids": [],
+  "door_ids_present": [],
+  "street_segments": [
+    {
+      "segment_id": "S00150@8429_3763#01",
+      "street_id": "S00150",
+      "kind": "lane",
+      "width_units": 4,
+      "points_map_pixel_local_xy": [
+        [
+          0.0,
+          62.0
+        ],
+        [
+          58.0,
+          62.0
+        ]
+      ]
+    }
+  ],
+  "field_slices": [
+    {
+      "field_id": "F000016",
+      "kind": "orchard",
+      "zone": "mixed",
+      "polygons_map_pixel_local": [
+        {
+          "outer": [
+            [
+              27.0,
+              10.0
+            ],
+            [
+              27.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              10.0
+            ]
+          ],
+          "holes": []
+        }
+      ]
+    },
+    {
+      "field_id": "F000017",
+      "kind": "pasture",
+      "zone": "mixed",
+      "polygons_map_pixel_local": [
+        {
+          "outer": [
+            [
+              27.0,
+              5.0
+            ],
+            [
+              32.0,
+              10.0
+            ],
+            [
+              64.0,
+              10.0
+            ],
+            [
+              64.0,
+              0.0
+            ],
+            [
+              27.0,
+              0.0
+            ]
+          ],
+          "holes": []
+        }
+      ]
+    }
+  ],
+  "plaza_slices": [],
+  "special_site_ids": [],
+  "fringe_plot_ids": [],
+  "farmstead_ids": [],
+  "road_connector_ids": []
+}

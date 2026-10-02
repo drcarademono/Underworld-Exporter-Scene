@@ -1,0 +1,123 @@
+{
+  "format": "retro-city-unity-map-pixel-v1",
+  "schema_version": 1,
+  "settlement_id": "CITY01847",
+  "map_pixel_xy": [
+    8435,
+    3770
+  ],
+  "map_pixel_size_units": 64,
+  "world_bounds_units_xy": {
+    "min": [
+      539840,
+      241280
+    ],
+    "max": [
+      539904,
+      241344
+    ]
+  },
+  "settlement_local_bounds_xy": {
+    "min": [
+      896.0,
+      640.0
+    ],
+    "max": [
+      960.0,
+      704.0
+    ]
+  },
+  "district_ids": [
+    "D02"
+  ],
+  "owned_building_ids": [
+    "B000146",
+    "B000315",
+    "B000346",
+    "B000347",
+    "B000353",
+    "B000354"
+  ],
+  "referenced_building_ids": [
+    "B000133",
+    "B000339",
+    "B000340",
+    "B000348",
+    "B000352"
+  ],
+  "door_ids_present": [
+    "B000146-D01",
+    "B000146-D02",
+    "B000315-D01",
+    "B000340-D02",
+    "B000341-D01",
+    "B000346-D01",
+    "B000346-D02",
+    "B000347-D01",
+    "B000347-D02",
+    "B000348-D02",
+    "B000352-D01",
+    "B000353-D01",
+    "B000354-D01"
+  ],
+  "street_segments": [
+    {
+      "segment_id": "S00001@8435_3770#01",
+      "street_id": "S00001",
+      "kind": "legacy",
+      "width_units": 8,
+      "points_map_pixel_local_xy": [
+        [
+          0.0,
+          35.0
+        ],
+        [
+          11.0,
+          24.0
+        ],
+        [
+          64.0,
+          24.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00089@8435_3770#01",
+      "street_id": "S00089",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          14.0,
+          0.0
+        ],
+        [
+          14.0,
+          20.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00090@8435_3770#01",
+      "street_id": "S00090",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          14.0,
+          28.0
+        ],
+        [
+          14.0,
+          64.0
+        ]
+      ]
+    }
+  ],
+  "field_slices": [],
+  "plaza_slices": [],
+  "special_site_ids": [],
+  "fringe_plot_ids": [],
+  "farmstead_ids": [],
+  "road_connector_ids": []
+}

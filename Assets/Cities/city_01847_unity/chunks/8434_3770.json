@@ -1,0 +1,117 @@
+{
+  "format": "retro-city-unity-map-pixel-v1",
+  "schema_version": 1,
+  "settlement_id": "CITY01847",
+  "map_pixel_xy": [
+    8434,
+    3770
+  ],
+  "map_pixel_size_units": 64,
+  "world_bounds_units_xy": {
+    "min": [
+      539776,
+      241280
+    ],
+    "max": [
+      539840,
+      241344
+    ]
+  },
+  "settlement_local_bounds_xy": {
+    "min": [
+      832.0,
+      640.0
+    ],
+    "max": [
+      896.0,
+      704.0
+    ]
+  },
+  "district_ids": [
+    "D02",
+    "D03"
+  ],
+  "owned_building_ids": [
+    "B000142",
+    "B000143",
+    "B000144",
+    "B000145"
+  ],
+  "referenced_building_ids": [
+    "B000133",
+    "B000141",
+    "B000558",
+    "B000568"
+  ],
+  "door_ids_present": [
+    "B000133-D06",
+    "B000141-D01",
+    "B000141-D02",
+    "B000141-D06",
+    "B000142-D01",
+    "B000143-D01",
+    "B000144-D01",
+    "B000145-D01",
+    "B000145-D02"
+  ],
+  "street_segments": [
+    {
+      "segment_id": "S00001@8434_3770#01",
+      "street_id": "S00001",
+      "kind": "legacy",
+      "width_units": 8,
+      "points_map_pixel_local_xy": [
+        [
+          0.0,
+          27.0
+        ],
+        [
+          36.0,
+          63.0
+        ],
+        [
+          64.0,
+          35.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00081@8434_3770#01",
+      "street_id": "S00081",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          9.0,
+          0.0
+        ],
+        [
+          9.0,
+          30.343
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00082@8434_3770#01",
+      "street_id": "S00082",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          9.0,
+          41.657
+        ],
+        [
+          9.0,
+          64.0
+        ]
+      ]
+    }
+  ],
+  "field_slices": [],
+  "plaza_slices": [],
+  "special_site_ids": [],
+  "fringe_plot_ids": [],
+  "farmstead_ids": [],
+  "road_connector_ids": []
+}

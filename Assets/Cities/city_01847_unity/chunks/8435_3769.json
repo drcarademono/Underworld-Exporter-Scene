@@ -1,0 +1,132 @@
+{
+  "format": "retro-city-unity-map-pixel-v1",
+  "schema_version": 1,
+  "settlement_id": "CITY01847",
+  "map_pixel_xy": [
+    8435,
+    3769
+  ],
+  "map_pixel_size_units": 64,
+  "world_bounds_units_xy": {
+    "min": [
+      539840,
+      241216
+    ],
+    "max": [
+      539904,
+      241280
+    ]
+  },
+  "settlement_local_bounds_xy": {
+    "min": [
+      896.0,
+      576.0
+    ],
+    "max": [
+      960.0,
+      640.0
+    ]
+  },
+  "district_ids": [
+    "D02"
+  ],
+  "owned_building_ids": [
+    "B000134",
+    "B000340",
+    "B000341",
+    "B000370",
+    "B000371"
+  ],
+  "referenced_building_ids": [
+    "B000133",
+    "B000135",
+    "B000136",
+    "B000339"
+  ],
+  "door_ids_present": [
+    "B000133-D01",
+    "B000133-D02",
+    "B000133-D03",
+    "B000133-D07",
+    "B000134-D01",
+    "B000134-D02",
+    "B000135-D01",
+    "B000135-D02",
+    "B000135-D04",
+    "B000340-D01",
+    "B000370-D01",
+    "B000371-D01"
+  ],
+  "street_segments": [
+    {
+      "segment_id": "S00033@8435_3769#01",
+      "street_id": "S00033",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          14.0,
+          0.0
+        ],
+        [
+          14.0,
+          46.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00089@8435_3769#01",
+      "street_id": "S00089",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          14.0,
+          46.0
+        ],
+        [
+          14.0,
+          64.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00163@8435_3769#01",
+      "street_id": "S00163",
+      "kind": "lane",
+      "width_units": 4,
+      "points_map_pixel_local_xy": [
+        [
+          17.0,
+          57.0
+        ],
+        [
+          64.0,
+          57.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00174@8435_3769#01",
+      "street_id": "S00174",
+      "kind": "lane",
+      "width_units": 4,
+      "points_map_pixel_local_xy": [
+        [
+          17.0,
+          21.0
+        ],
+        [
+          64.0,
+          21.0
+        ]
+      ]
+    }
+  ],
+  "field_slices": [],
+  "plaza_slices": [],
+  "special_site_ids": [],
+  "fringe_plot_ids": [],
+  "farmstead_ids": [],
+  "road_connector_ids": []
+}

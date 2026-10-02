@@ -1,0 +1,166 @@
+{
+  "format": "retro-city-unity-map-pixel-v1",
+  "schema_version": 1,
+  "settlement_id": "CITY01847",
+  "map_pixel_xy": [
+    8429,
+    3765
+  ],
+  "map_pixel_size_units": 64,
+  "world_bounds_units_xy": {
+    "min": [
+      539456,
+      240960
+    ],
+    "max": [
+      539520,
+      241024
+    ]
+  },
+  "settlement_local_bounds_xy": {
+    "min": [
+      512.0,
+      320.0
+    ],
+    "max": [
+      576.0,
+      384.0
+    ]
+  },
+  "district_ids": [
+    "D02",
+    "D07"
+  ],
+  "owned_building_ids": [
+    "B000476",
+    "B000485",
+    "B000486",
+    "B000493",
+    "B000494",
+    "B000495"
+  ],
+  "referenced_building_ids": [
+    "B000475",
+    "B000477",
+    "B000478",
+    "B000479",
+    "B000511",
+    "B000512"
+  ],
+  "door_ids_present": [
+    "B000475-D01",
+    "B000476-D02",
+    "B000478-D02",
+    "B000479-D01",
+    "B000485-D01",
+    "B000485-D02",
+    "B000486-D01",
+    "B000486-D02",
+    "B000493-D01",
+    "B000493-D02",
+    "B000493-D03",
+    "B000493-D04",
+    "B000493-D05",
+    "B000493-D06",
+    "B000493-D07",
+    "B000493-D08",
+    "B000493-D09",
+    "B000494-D01",
+    "B000494-D02",
+    "B000495-D01",
+    "B000495-D02",
+    "B000495-D03",
+    "B000495-D04",
+    "B000495-D05",
+    "B000495-D06",
+    "B000495-D07"
+  ],
+  "street_segments": [
+    {
+      "segment_id": "S00024@8429_3765#01",
+      "street_id": "S00024",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          58.0,
+          63.0
+        ],
+        [
+          64.0,
+          63.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00034@8429_3765#01",
+      "street_id": "S00034",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          0.0,
+          63.0
+        ],
+        [
+          58.0,
+          63.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00070@8429_3765#01",
+      "street_id": "S00070",
+      "kind": "lane",
+      "width_units": 4,
+      "points_map_pixel_local_xy": [
+        [
+          58.0,
+          10.0
+        ],
+        [
+          58.0,
+          63.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00071@8429_3765#01",
+      "street_id": "S00071",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          58.0,
+          10.0
+        ],
+        [
+          64.0,
+          10.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00181@8429_3765#01",
+      "street_id": "S00181",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          1.0,
+          32.0
+        ],
+        [
+          55.0,
+          32.0
+        ]
+      ]
+    }
+  ],
+  "field_slices": [],
+  "plaza_slices": [],
+  "special_site_ids": [],
+  "fringe_plot_ids": [],
+  "farmstead_ids": [],
+  "road_connector_ids": []
+}

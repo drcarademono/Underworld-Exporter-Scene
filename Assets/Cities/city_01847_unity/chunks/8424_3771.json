@@ -1,0 +1,118 @@
+{
+  "format": "retro-city-unity-map-pixel-v1",
+  "schema_version": 1,
+  "settlement_id": "CITY01847",
+  "map_pixel_xy": [
+    8424,
+    3771
+  ],
+  "map_pixel_size_units": 64,
+  "world_bounds_units_xy": {
+    "min": [
+      539136,
+      241344
+    ],
+    "max": [
+      539200,
+      241408
+    ]
+  },
+  "settlement_local_bounds_xy": {
+    "min": [
+      192.0,
+      704.0
+    ],
+    "max": [
+      256.0,
+      768.0
+    ]
+  },
+  "district_ids": [
+    "D06"
+  ],
+  "owned_building_ids": [],
+  "referenced_building_ids": [
+    "B000551",
+    "B000552",
+    "B000553",
+    "B000633",
+    "B000634"
+  ],
+  "door_ids_present": [
+    "B000553-D01",
+    "B000633-D02",
+    "B000634-D03"
+  ],
+  "street_segments": [
+    {
+      "segment_id": "S00080@8424_3771#01",
+      "street_id": "S00080",
+      "kind": "lane",
+      "width_units": 4,
+      "points_map_pixel_local_xy": [
+        [
+          43.0,
+          0.0
+        ],
+        [
+          43.0,
+          2.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00102@8424_3771#01",
+      "street_id": "S00102",
+      "kind": "lane",
+      "width_units": 4,
+      "points_map_pixel_local_xy": [
+        [
+          0.0,
+          2.0
+        ],
+        [
+          43.0,
+          2.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00131@8424_3771#01",
+      "street_id": "S00131",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          43.0,
+          2.0
+        ],
+        [
+          43.0,
+          64.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00193@8424_3771#01",
+      "street_id": "S00193",
+      "kind": "lane",
+      "width_units": 4,
+      "points_map_pixel_local_xy": [
+        [
+          12.0,
+          5.0
+        ],
+        [
+          12.0,
+          64.0
+        ]
+      ]
+    }
+  ],
+  "field_slices": [],
+  "plaza_slices": [],
+  "special_site_ids": [],
+  "fringe_plot_ids": [],
+  "farmstead_ids": [],
+  "road_connector_ids": []
+}

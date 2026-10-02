@@ -1,0 +1,103 @@
+{
+  "format": "retro-city-unity-map-pixel-v1",
+  "schema_version": 1,
+  "settlement_id": "CITY01847",
+  "map_pixel_xy": [
+    8440,
+    3770
+  ],
+  "map_pixel_size_units": 64,
+  "world_bounds_units_xy": {
+    "min": [
+      540160,
+      241280
+    ],
+    "max": [
+      540224,
+      241344
+    ]
+  },
+  "settlement_local_bounds_xy": {
+    "min": [
+      1216.0,
+      640.0
+    ],
+    "max": [
+      1280.0,
+      704.0
+    ]
+  },
+  "district_ids": [
+    "D02"
+  ],
+  "owned_building_ids": [
+    "B000700",
+    "B000701"
+  ],
+  "referenced_building_ids": [
+    "B000330",
+    "B000331"
+  ],
+  "door_ids_present": [
+    "B000330-D01",
+    "B000700-D01",
+    "B000700-D02",
+    "B000700-D03",
+    "B000701-D01"
+  ],
+  "street_segments": [
+    {
+      "segment_id": "S00123@8440_3770#01",
+      "street_id": "S00123",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          8.0,
+          0.0
+        ],
+        [
+          8.0,
+          64.0
+        ]
+      ]
+    }
+  ],
+  "field_slices": [
+    {
+      "field_id": "F000030",
+      "kind": "orchard",
+      "zone": "mixed",
+      "polygons_map_pixel_local": [
+        {
+          "outer": [
+            [
+              44.0,
+              64.0
+            ],
+            [
+              64.0,
+              64.0
+            ],
+            [
+              64.0,
+              0.0
+            ],
+            [
+              44.0,
+              0.0
+            ]
+          ],
+          "holes": []
+        }
+      ]
+    }
+  ],
+  "plaza_slices": [],
+  "special_site_ids": [],
+  "fringe_plot_ids": [
+    "FR0022"
+  ],
+  "farmstead_ids": [],
+  "road_connector_ids": []
+}

@@ -1,0 +1,115 @@
+{
+  "format": "retro-city-unity-map-pixel-v1",
+  "schema_version": 1,
+  "settlement_id": "CITY01847",
+  "map_pixel_xy": [
+    8435,
+    3765
+  ],
+  "map_pixel_size_units": 64,
+  "world_bounds_units_xy": {
+    "min": [
+      539840,
+      240960
+    ],
+    "max": [
+      539904,
+      241024
+    ]
+  },
+  "settlement_local_bounds_xy": {
+    "min": [
+      896.0,
+      320.0
+    ],
+    "max": [
+      960.0,
+      384.0
+    ]
+  },
+  "district_ids": [
+    "D02"
+  ],
+  "owned_building_ids": [
+    "B000671"
+  ],
+  "referenced_building_ids": [],
+  "door_ids_present": [
+    "B000671-D01",
+    "B000671-D02"
+  ],
+  "street_segments": [
+    {
+      "segment_id": "S00036@8435_3765#01",
+      "street_id": "S00036",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          0.0,
+          63.0
+        ],
+        [
+          14.0,
+          63.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00048@8435_3765#01",
+      "street_id": "S00048",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          14.0,
+          63.0
+        ],
+        [
+          64.0,
+          63.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00112@8435_3765#01",
+      "street_id": "S00112",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          14.0,
+          10.0
+        ],
+        [
+          64.0,
+          10.0
+        ]
+      ]
+    },
+    {
+      "segment_id": "S00114@8435_3765#01",
+      "street_id": "S00114",
+      "kind": "street",
+      "width_units": 5,
+      "points_map_pixel_local_xy": [
+        [
+          0.0,
+          10.0
+        ],
+        [
+          14.0,
+          10.0
+        ]
+      ]
+    }
+  ],
+  "field_slices": [],
+  "plaza_slices": [],
+  "special_site_ids": [
+    "SP0005"
+  ],
+  "fringe_plot_ids": [],
+  "farmstead_ids": [],
+  "road_connector_ids": []
+}
