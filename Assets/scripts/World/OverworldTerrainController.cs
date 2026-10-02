@@ -51,15 +51,6 @@ public class OverworldTerrainController : MonoBehaviour
     [Range(0f, 30f)] public float SeaLevelOffset = 6f;
     [Range(0.3f, 0.95f)] public float SteepSlopeNormalThreshold = 0.78f;
 
-    [Header("Procedural City Prototype")]
-    [Tooltip("Spawns the CITY01847 building-mass prototype and levels the terrain beneath it.")]
-    public bool SpawnProceduralCity = true;
-    [Tooltip("Northwest city corner in overworld map-pixel coordinates.")]
-    public Vector2Int ProceduralCityNorthwest = new Vector2Int(680, 1330);
-    [Tooltip("Distance, in overworld map pixels, over which the city plateau blends back into natural terrain.")]
-    [Range(1f, 16f)] public float ProceduralCityTerrainBlend = 6f;
-    public string ProceduralCityResourcePath = "Cities/city_01847_buildings";
-
     [Header("UW2 Terrain Texture Indices")]
     public int WaterTextureIndex = 184;
     public int WaterTextureAnimEndIndex = 188;
