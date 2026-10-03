@@ -1088,6 +1088,17 @@ public class GameWorldController : UWEBase
         }
         cachedOverworldHeightmap = heightmap;
 
+        // City terrain has to choose its finished, level elevation before either
+        // the city meshes or the surrounding terrain chunks are constructed.
+        CityController city = FindObjectOfType<CityController>();
+        if (city != null)
+        {
+            int citySampleX;
+            int citySampleZ;
+            city.GetTerrainAnchorSample(Mathf.Max(1, overworld.TilesPerPixel), out citySampleX, out citySampleZ);
+            city.SetTerrainElevation(SampleRawTerrainHeightAt(citySampleX, citySampleZ, Mathf.Max(1, overworld.TilesPerPixel), heightmap, overworld));
+        }
+
         OverworldTerrainRoot = new GameObject("OverworldTerrainRoot");
         loadedOverworldChunks.Clear();
         lowDetailOverworldChunks.Clear();
@@ -2125,6 +2136,15 @@ public class GameWorldController : UWEBase
     }
 
     private float SampleTerrainHeightAt(int sampleX, int sampleZ, int tilesPerPixel, Texture2D heightmap, OverworldTerrainController overworld)
+    {
+        float rawHeight = SampleRawTerrainHeightAt(sampleX, sampleZ, tilesPerPixel, heightmap, overworld);
+        return CityController.BlendTerrainHeight(
+            sampleX * GetOverworldTileWorldSize(overworld),
+            sampleZ * GetOverworldTileWorldSize(overworld),
+            rawHeight);
+    }
+
+    private float SampleRawTerrainHeightAt(int sampleX, int sampleZ, int tilesPerPixel, Texture2D heightmap, OverworldTerrainController overworld)
     {
         int px = Mathf.Clamp(sampleX * tilesPerPixel, 0, heightmap.width - 1);
         int pz = Mathf.Clamp(sampleZ * tilesPerPixel, 0, heightmap.height - 1);
