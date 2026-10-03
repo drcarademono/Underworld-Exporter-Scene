@@ -10,7 +10,8 @@ public class OverworldTerrainController : MonoBehaviour
     [Header("Heightmap Sampling")]
     public string HeightmapResourcePath = "UIX/britannia_heightmap";
     public int TilesPerPixel = 8;
-    public float TileWorldSize = 8f;
+    [Tooltip("World-space metres per overworld map pixel. CITY01847 chunks are 64 one-metre units wide.")]
+    public float TileWorldSize = 64f;
     [Tooltip("Scales how much real-world area each map pixel covers. Use 2 for double-size overworld, 4 for quadruple-size.")]
     [Range(1, 4)] public int OverworldAreaScale = 1;
 

@@ -30182,8 +30182,8 @@ MonoBehaviour:
   OverworldStartTile: {x: 680, y: 1330}
   HeightmapResourcePath: UIX/britannia_heightmap
   TilesPerPixel: 1
-  TileWorldSize: 1
-  OverworldAreaScale: 2
+  TileWorldSize: 64
+  OverworldAreaScale: 1
   ChunkSizeSamples: 64
   ActiveChunkRadius: 1
   HighDetailUnloadMargin: 2
