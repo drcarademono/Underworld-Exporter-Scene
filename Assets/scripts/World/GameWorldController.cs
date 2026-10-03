@@ -238,6 +238,7 @@ public class GameWorldController : UWEBase
     private int overworldTerrainMapWidth = 0;
     private int overworldTerrainMapHeight = 0;
     private Texture2D cachedOverworldHeightmap = null;
+    private OverworldCityController overworldCityController = null;
     private readonly Queue<OverworldChunkBuildRequest> overworldChunkBuildQueue = new Queue<OverworldChunkBuildRequest>();
     private readonly HashSet<Vector2Int> queuedOverworldChunks = new HashSet<Vector2Int>();
     private readonly Dictionary<Vector2Int, OverworldChunkBuildRequest> pendingOverworldChunkRequests = new Dictionary<Vector2Int, OverworldChunkBuildRequest>();
@@ -1113,6 +1114,24 @@ public class GameWorldController : UWEBase
         overworldSandMat = BuildOverworldSurfaceMaterial(overworld.SandTextureIndex, overworld.SandMaterialOverride, new Color(0.82f, 0.74f, 0.46f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
         overworldSwampMat = BuildOverworldSurfaceMaterial(overworld.SwampTextureIndex, overworld.SwampMaterialOverride, new Color(0.18f, 0.32f, 0.18f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
         overworldLavaMat = BuildOverworldSurfaceMaterial(overworld.LavaTextureIndex, overworld.LavaMaterialOverride, new Color(0.72f, 0.22f, 0.04f), overworld.ChunkSizeSamples, overworld.ChunkSizeSamples);
+        Material cityMaterial = ((MaterialMasterList != null) && (MaterialMasterList.Length > 207))
+            ? MaterialMasterList[207]
+            : null;
+        if (cityMaterial == null)
+        {
+            cityMaterial = Resources.Load<Material>("UW2/Materials/Textures/uw2_207");
+        }
+        overworldCityController = FindObjectOfType<OverworldCityController>();
+        if (overworldCityController == null)
+        {
+            overworldCityController = overworld.gameObject.AddComponent<OverworldCityController>();
+        }
+        overworldCityController.Initialize(
+            overworld,
+            (sampleX, sampleZ) => SampleTerrainHeightNatural(sampleX, sampleZ, tpp, heightmap, overworld),
+            cityMaterial);
+        overworldCityController.SpawnBuildings(OverworldTerrainRoot.transform, overworld);
+
         if (overworld.AnimateWater)
         {
             bool hasFrameOverrides = (overworld.WaterAnimationFrameOverrides != null) && (overworld.WaterAnimationFrameOverrides.Length > 0);
@@ -1568,6 +1587,7 @@ public class GameWorldController : UWEBase
                 float fullPerlinDisplacement = fullNoise * overworld.PerlinStrength * Mathf.Max(1f, overworld.HeightScale * 0.2f);
                 float fullY = fullShapedElevation * overworld.HeightScale + fullPerlinDisplacement - overworld.SeaLevelOffset;
                 if (fullY < 0f) { fullY = 0f; }
+                if (overworldCityController != null) { fullY = overworldCityController.BlendTerrainHeight(fullGlobalX, fullGlobalZ, fullY); }
 
                 int fullIndex = (fz * fullSampleWidth) + fx;
                 int climateId = SampleClimateIdAtSample(fullGlobalX, fullGlobalZ, natureFlatsForTerrain);
@@ -1850,6 +1870,7 @@ public class GameWorldController : UWEBase
                     float fullPerlinDisplacement = fullNoise * overworld.PerlinStrength * Mathf.Max(1f, overworld.HeightScale * 0.2f);
                     float fullY = fullShapedElevation * overworld.HeightScale + fullPerlinDisplacement - overworld.SeaLevelOffset;
                     if (fullY < 0f) { fullY = 0f; }
+                    if (overworldCityController != null) { fullY = overworldCityController.BlendTerrainHeight(fullGlobalX, fullGlobalZ, fullY); }
                     int idx = ez * texWidth + ex;
                     int climateId = SampleClimateIdAtSample(fullGlobalX, fullGlobalZ, natureFlatsForTerrain);
                     terrainClassExpanded[idx] = ClassifyOverworldTerrainSample(fullY, fullGlobalX, fullGlobalZ, fullPx, fullPz, tilesPerPixel, heightmap, overworld, climateId);
@@ -2125,6 +2146,14 @@ public class GameWorldController : UWEBase
     }
 
     private float SampleTerrainHeightAt(int sampleX, int sampleZ, int tilesPerPixel, Texture2D heightmap, OverworldTerrainController overworld)
+    {
+        float naturalHeight = SampleTerrainHeightNatural(sampleX, sampleZ, tilesPerPixel, heightmap, overworld);
+        return (overworldCityController == null)
+            ? naturalHeight
+            : overworldCityController.BlendTerrainHeight(sampleX, sampleZ, naturalHeight);
+    }
+
+    private float SampleTerrainHeightNatural(int sampleX, int sampleZ, int tilesPerPixel, Texture2D heightmap, OverworldTerrainController overworld)
     {
         int px = Mathf.Clamp(sampleX * tilesPerPixel, 0, heightmap.width - 1);
         int pz = Mathf.Clamp(sampleZ * tilesPerPixel, 0, heightmap.height - 1);
