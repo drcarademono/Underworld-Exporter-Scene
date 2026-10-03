@@ -30,6 +30,7 @@ public sealed class CityController : MonoBehaviour
     private readonly List<GameObject> spawnedBuildings = new List<GameObject>();
     private CityBuildingCollection cityData;
     private Transform buildingRoot;
+    private Transform overworldTerrainRoot;
     private Material buildingMaterial;
     private float terrainElevation;
     private bool hasTerrainElevation;
@@ -45,7 +46,10 @@ public sealed class CityController : MonoBehaviour
 
     private void Start()
     {
-        SpawnBuildings();
+        // GameWorldController normally supplies the freshly-created root. This
+        // fallback also supports entering Play mode with an existing root.
+        GameObject existingRoot = GameObject.Find("OverworldTerrainRoot");
+        if (existingRoot != null) { AttachToOverworldTerrain(existingRoot.transform); }
     }
 
     private void OnEnable()
@@ -107,13 +111,24 @@ public sealed class CityController : MonoBehaviour
     [ContextMenu("Rebuild Buildings")]
     public void SpawnBuildings()
     {
+        if (overworldTerrainRoot == null)
+        {
+            GameObject existingRoot = GameObject.Find("OverworldTerrainRoot");
+            if (existingRoot != null) { overworldTerrainRoot = existingRoot.transform; }
+        }
+        if (overworldTerrainRoot == null)
+        {
+            Debug.LogWarning("CityController is waiting for OverworldTerrainRoot before spawning buildings.", this);
+            return;
+        }
+
         if (cityData == null) { LoadCityData(); }
         ClearBuildings();
         if (cityData == null || cityData.buildings == null) { return; }
 
         GameObject rootObject = new GameObject("CITY01847 Buildings");
         buildingRoot = rootObject.transform;
-        buildingRoot.SetParent(transform, false);
+        buildingRoot.SetParent(overworldTerrainRoot, false);
         buildingRoot.position = new Vector3(
             NorthwestMapPixelOrigin.x * MapPixelSize,
             hasTerrainElevation ? terrainElevation : 0f,
@@ -125,6 +140,17 @@ public sealed class CityController : MonoBehaviour
             if (building == null || building.outer == null || building.outer.Length < 3) { continue; }
             CreateBuilding(building);
         }
+    }
+
+    /// <summary>
+    /// Parents city geometry to the same lifecycle root as the streamed
+    /// overworld chunks, then creates the buildings after that root exists.
+    /// </summary>
+    public void AttachToOverworldTerrain(Transform terrainRoot)
+    {
+        if (terrainRoot == null) { return; }
+        overworldTerrainRoot = terrainRoot;
+        SpawnBuildings();
     }
 
     private void LoadCityData()

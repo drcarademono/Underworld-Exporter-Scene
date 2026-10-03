@@ -1100,6 +1100,10 @@ public class GameWorldController : UWEBase
         }
 
         OverworldTerrainRoot = new GameObject("OverworldTerrainRoot");
+        if (city != null)
+        {
+            city.AttachToOverworldTerrain(OverworldTerrainRoot.transform);
+        }
         loadedOverworldChunks.Clear();
         lowDetailOverworldChunks.Clear();
         noNatureOverworldChunks.Clear();
