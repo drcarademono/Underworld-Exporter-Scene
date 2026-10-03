@@ -97,20 +97,75 @@ public sealed class OverworldCityController : MonoBehaviour
             float depth = Mathf.Max(0.01f, (building.max_y - building.min_y) * HorizontalScale);
             float height = Mathf.Max(0.01f, building.height * BuildingHeightScale);
 
-            GameObject cuboid = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            GameObject cuboid = CreateBuildingCuboid(width, height, depth);
             cuboid.name = string.IsNullOrEmpty(building.id) ? "Building" : building.id;
             cuboid.transform.SetParent(root.transform, false);
             cuboid.transform.position = new Vector3(
                 originWorldX + (((building.min_x + building.max_x) * 0.5f) * HorizontalScale),
                 plateauHeight + (height * 0.5f),
                 originWorldZ + (((building.min_y + building.max_y) * 0.5f) * HorizontalScale));
-            cuboid.transform.localScale = new Vector3(width, height, depth);
-
             MeshRenderer renderer = cuboid.GetComponent<MeshRenderer>();
-            if (renderer != null) { renderer.sharedMaterial = GetBuildingMaterial(i); }
+            if (renderer != null)
+            {
+                renderer.sharedMaterial = GetBuildingMaterial(i);
+                EnsureTextureRepeats(renderer.sharedMaterial);
+            }
         }
 
         Debug.Log("Spawned " + city.buildings.Length + " CITY01847 building cuboids at " + Northwest + ".");
+    }
+
+    private static GameObject CreateBuildingCuboid(float width, float height, float depth)
+    {
+        GameObject cuboid = new GameObject();
+        MeshFilter filter = cuboid.AddComponent<MeshFilter>();
+        cuboid.AddComponent<MeshRenderer>();
+
+        float halfWidth = width * 0.5f;
+        float halfHeight = height * 0.5f;
+        float halfDepth = depth * 0.5f;
+        Mesh mesh = new Mesh { name = "CityBuildingCuboid" };
+        mesh.vertices = new[]
+        {
+            // South, north, west, east, top, and bottom. Each face needs its own
+            // vertices so its UV axes can follow that face's physical dimensions.
+            new Vector3(-halfWidth, -halfHeight, -halfDepth), new Vector3(-halfWidth, halfHeight, -halfDepth), new Vector3(halfWidth, halfHeight, -halfDepth), new Vector3(halfWidth, -halfHeight, -halfDepth),
+            new Vector3(halfWidth, -halfHeight, halfDepth), new Vector3(halfWidth, halfHeight, halfDepth), new Vector3(-halfWidth, halfHeight, halfDepth), new Vector3(-halfWidth, -halfHeight, halfDepth),
+            new Vector3(-halfWidth, -halfHeight, halfDepth), new Vector3(-halfWidth, halfHeight, halfDepth), new Vector3(-halfWidth, halfHeight, -halfDepth), new Vector3(-halfWidth, -halfHeight, -halfDepth),
+            new Vector3(halfWidth, -halfHeight, -halfDepth), new Vector3(halfWidth, halfHeight, -halfDepth), new Vector3(halfWidth, halfHeight, halfDepth), new Vector3(halfWidth, -halfHeight, halfDepth),
+            new Vector3(-halfWidth, halfHeight, -halfDepth), new Vector3(-halfWidth, halfHeight, halfDepth), new Vector3(halfWidth, halfHeight, halfDepth), new Vector3(halfWidth, halfHeight, -halfDepth),
+            new Vector3(-halfWidth, -halfHeight, halfDepth), new Vector3(-halfWidth, -halfHeight, -halfDepth), new Vector3(halfWidth, -halfHeight, -halfDepth), new Vector3(halfWidth, -halfHeight, halfDepth)
+        };
+        mesh.uv = new[]
+        {
+            new Vector2(0f, 0f), new Vector2(0f, height), new Vector2(width, height), new Vector2(width, 0f),
+            new Vector2(0f, 0f), new Vector2(0f, height), new Vector2(width, height), new Vector2(width, 0f),
+            new Vector2(0f, 0f), new Vector2(0f, height), new Vector2(depth, height), new Vector2(depth, 0f),
+            new Vector2(0f, 0f), new Vector2(0f, height), new Vector2(depth, height), new Vector2(depth, 0f),
+            new Vector2(0f, 0f), new Vector2(0f, depth), new Vector2(width, depth), new Vector2(width, 0f),
+            new Vector2(0f, 0f), new Vector2(0f, depth), new Vector2(width, depth), new Vector2(width, 0f)
+        };
+        mesh.triangles = new[]
+        {
+            0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7,
+            8, 9, 10, 8, 10, 11, 12, 13, 14, 12, 14, 15,
+            16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23
+        };
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        filter.sharedMesh = mesh;
+
+        BoxCollider collider = cuboid.AddComponent<BoxCollider>();
+        collider.size = new Vector3(width, height, depth);
+        return cuboid;
+    }
+
+    private static void EnsureTextureRepeats(Material material)
+    {
+        if (material != null && material.mainTexture != null)
+        {
+            material.mainTexture.wrapMode = TextureWrapMode.Repeat;
+        }
     }
 
     private Material GetBuildingMaterial(int buildingIndex)
